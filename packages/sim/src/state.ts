@@ -3,7 +3,7 @@ import type { AgentState } from './ai/routine';
 import type { MemoryRecord } from './ai/memory';
 import type { BattleAction, BattleState } from './battle/types';
 import type { TilePos } from './core/vec';
-import type { Effect } from './missions/types';
+import type { ChoiceOption, Effect } from './missions/types';
 import type { ProgressionState } from './progression';
 import type { MarketState, TerritoryState } from './factions/territory';
 import type { LawState } from './law/law';
@@ -90,13 +90,14 @@ export type SimCommand =
   | { type: 'party.withdraw'; storageIndex: number }
   | { type: 'shop.buy'; shopId: string; itemId: string; qty: number }
   | { type: 'market.sellWildling'; from: 'party' | 'storage'; index: number }
-  | { type: 'mission.accept'; missionId: string };
+  | { type: 'mission.accept'; missionId: string }
+  | { type: 'dialogue.choose'; optionId: string };
 
 export type Focus =
   | { kind: 'npc'; id: string; label: string }
   | { kind: 'building'; id: string; label: string };
 
-export const SNAPSHOT_VERSION = 9;
+export const SNAPSHOT_VERSION = 10;
 
 /** Everything needed to resume a simulation. The district layout is regenerated from seed + districtId. */
 export interface SimSnapshot {
@@ -124,6 +125,8 @@ export interface SimSnapshot {
   market: MarketState;
   factions: { agents: FactionAgent[]; lastControllers: Record<string, string | null> } | null;
   world: WorldState;
+  /** A dialogue choice waiting for the player. */
+  pendingChoice: { speaker: string; options: ChoiceOption[] } | null;
   /** Parked state of the districts the player is not in. */
   away: Record<string, { npcs: NpcState[]; wildlings: WildlingEntity[]; vehicles: VehicleState[]; territory: TerritoryState }>;
 }

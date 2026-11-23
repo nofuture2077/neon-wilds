@@ -108,5 +108,7 @@ export const DOWNTOWN_NPCS: NpcDefinition[] = [
   { id: 'npc-dt-rex', name: 'Rex Montague', archetype: 'socialite', appearance: { skin: s(2), hair: 0x111111, top: 0xb37dff, bottom: 0x1a1a24 } },
   { id: 'npc-dt-sol', name: 'Sol', archetype: 'busker', appearance: { skin: s(4), hair: 0x3a2412, top: 0xf2a541, bottom: 0x3d405b } },
   { id: 'npc-dt-guard1', name: 'Aegis Guard Park', archetype: 'aegis-guard', appearance: { skin: s(1), hair: 0x1a1a1a, top: 0xe8ecf4, bottom: 0x2b2f3a } },
+  { id: 'npc-wren', name: 'Dr. Tobias Wren', archetype: 'office-worker', stationary: true, post: 'Halcyon Wellness Clinic', appearance: { skin: s(0), hair: 0x8a8a8a, top: 0xf0f6ff, bottom: 0x2b2f3a } },
+  { id: 'npc-ashgrave', name: 'Corvin Ashgrave', archetype: 'socialite', spawn: 'mission', stationary: true, post: 'Lumen Spire', appearance: { skin: s(1), hair: 0xd7d7d7, top: 0x1a1a24, bottom: 0x111118 } },
   { id: 'npc-dt-guard2', name: 'Aegis Guard Moreau', archetype: 'aegis-guard', appearance: { skin: s(3), hair: 0x1a1a1a, top: 0xe8ecf4, bottom: 0x2b2f3a } },
 ];

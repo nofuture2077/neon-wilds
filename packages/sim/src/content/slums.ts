@@ -286,5 +286,7 @@ export const SLUMS_NPCS: NpcDefinition[] = [
   { id: 'npc-wren', name: 'Wren Ishikawa', archetype: 'tinkerer', appearance: { skin: s(1), hair: 0x101010, top: 0x2a9d8f, bottom: 0x264653 } },
   { id: 'npc-priya', name: 'Priya Lund', archetype: 'night-worker', appearance: { skin: s(2), hair: 0x2b1a0e, top: 0xb5838d, bottom: 0x40394a } },
   { id: 'npc-aegis', name: 'Aegis Agent Kerr', archetype: 'aegis-agent', spawn: 'mission', stationary: true, appearance: { skin: s(0), hair: 0x1a1a1a, top: 0xe8ecf4, bottom: 0x2b2f3a } },
+  { id: 'npc-rook', name: 'Mother Rook', archetype: 'old-timer', spawn: 'mission', stationary: true, appearance: { skin: s(3), hair: 0xd7d7d7, top: 0x9b2335, bottom: 0x1f1f28 } },
+  { id: 'npc-handler', name: 'Aegis Handler Voss', archetype: 'aegis-agent', spawn: 'mission', stationary: true, appearance: { skin: s(0), hair: 0x111111, top: 0xe8ecf4, bottom: 0x1a1d26 } },
   { id: 'npc-vik', name: 'Vik Torrance', archetype: 'rival-trainer', spawn: 'mission', stationary: true, appearance: { skin: s(2), hair: 0xff6b35, top: 0x3a3a3a, bottom: 0x1c1c24 } },
 ];

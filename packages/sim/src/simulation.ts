@@ -30,9 +30,10 @@ import { Rng, deriveSeed } from './core/rng';
 import { clampMagnitude, turnToward } from './core/vec';
 import { createWildling, displayName, healFully, maxHp } from './creatures/wildling';
 import { migrateSnapshot } from './migrations';
-import { checkAutoStart, checkDeadlines, isObjective, offerFrom, startMission, trigger, type MissionHost } from './missions/runtime';
+import { checkAutoStart, checkDeadlines, isObjective, offerFrom, optionAvailable, startMission, trigger, type MissionHost } from './missions/runtime';
+import { buildEpilogue } from './missions/epilogue';
 import { type MissionGenContext, generateBoard, generateNpcRequest } from './missions/generator';
-import type { Effect } from './missions/types';
+import type { ChoiceOption, Effect } from './missions/types';
 import type { WildlingInstance } from './creatures/model';
 import { moveAndCollide } from './physics/collision';
 import {
@@ -59,7 +60,7 @@ import { describeLocation } from './world/location';
 import { Pathfinder } from './world/pathfinding';
 import { RoadNetwork } from './world/roads';
 import { type FactionAgent, factionTick, newFactionAgents, noteTerritoryChange } from './factions/strategy';
-import { type WorldState, eventActive, newWorldState, worldHour } from './world/director';
+import { WORLD_EVENT_INFO, type WorldState, eventActive, newWorldState, worldHour } from './world/director';
 import { type LawContext, type LawState, clearWanted, newLawState, onCrime, pursuitTarget, updateLaw } from './law/law';
 import { ARCHETYPE_FACTION, repTier } from './content/factions';
 import {
@@ -141,6 +142,8 @@ export class Simulation implements MissionHost {
   private encounterCooldownUntilTick: number;
   private nextEntityId: number;
   private pendingEffects: Effect[];
+  /** A dialogue choice waiting for the player. */
+  pendingChoice: { speaker: string; options: ChoiceOption[] } | null = null;
   /** Bumped whenever progression changes so the UI can refresh lazily. */
   private _progressVersion = 0;
   readonly player: PlayerState;
@@ -184,6 +187,7 @@ export class Simulation implements MissionHost {
       this.lastControllers = snapshot.factions ? { ...snapshot.factions.lastControllers } : { ...this.territory.controllers };
       this.world = cloneData(snapshot.world);
       this.away = cloneData(snapshot.away ?? {});
+      this.pendingChoice = cloneData(snapshot.pendingChoice ?? null);
     } else if (config) {
       this.rng = new Rng(deriveSeed(seed, 'simulation'));
       this._tick = 0;
@@ -372,6 +376,7 @@ export class Simulation implements MissionHost {
       factions: { agents: cloneData(this.factionAgents), lastControllers: { ...this.lastControllers } },
       world: cloneData(this.world),
       away: cloneData(this.away),
+      pendingChoice: cloneData(this.pendingChoice),
     };
   }
 
@@ -442,8 +447,36 @@ export class Simulation implements MissionHost {
         if (fromStorage >= 0) p.storage.splice(fromStorage, 1);
         else {
           const i = p.party.findIndex((w) => w.speciesId === effect.species);
-          if (i >= 0 && p.party.length > 1) p.party.splice(i, 1);
+          // Story hand-overs (the Glitchling) may take your last Wildling.
+          if (i >= 0 && (p.party.length > 1 || effect.species === 'glitchling')) p.party.splice(i, 1);
         }
+        break;
+      }
+      case 'choice': {
+        const options = effect.options.filter((o) => optionAvailable(p, o.when));
+        this.pendingChoice = { speaker: effect.speaker, options };
+        this.emit({
+          type: 'message',
+          speaker: effect.speaker,
+          pages: effect.pages.map((x) => this.personalise(x)),
+          choices: options.map((o) => ({ id: o.id, label: this.personalise(o.label) })),
+        });
+        break;
+      }
+      case 'world-event':
+        this.world.event = { id: effect.id, untilHour: this.absHour + 3 };
+        this.emit({ type: 'world.event', id: effect.id, status: 'started', title: WORLD_EVENT_INFO[effect.id].title, text: WORLD_EVENT_INFO[effect.id].text });
+        break;
+      case 'ending': {
+        p.flags[`ending-${effect.id}`] = true;
+        const slums = this.layout.id === 'slums' ? this.territory : this.away.slums?.territory;
+        const epilogue = buildEpilogue(effect.id, {
+          progression: p,
+          npcs: [...this.npcs, ...Object.values(this.away).flatMap((a) => a.npcs)],
+          slumsControllers: slums?.controllers ?? {},
+          playerName: this.player.name,
+        });
+        this.emit({ type: 'game.ending', ending: effect.id, title: epilogue.title, slides: epilogue.slides });
         break;
       }
       case 'remember': {
@@ -499,6 +532,16 @@ export class Simulation implements MissionHost {
         case 'market.sellWildling':
           this.sellWildling(cmd.from, cmd.index);
           break;
+        case 'dialogue.choose': {
+          const choice = this.pendingChoice;
+          const option = choice?.options.find((o) => o.id === cmd.optionId);
+          if (!choice || !option) break;
+          this.pendingChoice = null;
+          for (const e of option.effects) this.applyEffect(e);
+          checkAutoStart(this); // choices can unlock story missions (flags, fragments)
+          this._progressVersion++;
+          break;
+        }
         case 'mission.accept': {
           const def = this.progression.generated.find((m) => m.id === cmd.missionId);
           if (def && !def.giver && this.progression.board.includes(def.id)) {
@@ -773,7 +816,8 @@ export class Simulation implements MissionHost {
     );
     return this.content.npcs.map((def) => {
       const archetype = this.archetype(def.archetype);
-      const tile = this.rng.pick(spawns);
+      const postBuilding = def.post ? this.layout.buildings.find((b) => b.name === def.post) : undefined;
+      const tile = postBuilding ? this.freeTileNear(postBuilding.entrance.tx, postBuilding.entrance.ty, postBuilding) : this.rng.pick(spawns);
       const x = tile.tx + 0.5;
       const y = tile.ty + 0.5;
       const stationary = def.stationary ?? false;
@@ -1438,6 +1482,7 @@ export class Simulation implements MissionHost {
   /** Hourly: NPCs with needs post requests; stale offers expire; the archive stays small. */
   private missionHour(): void {
     const p = this.progression;
+    checkAutoStart(this);
     if (!p.missions.some((m) => m.id === 'last-run' && m.status === 'completed')) return;
     const offered = p.generated.filter((m) => m.giver && p.board.includes(m.id));
     if (offered.length < 2 && this.rng.chance(0.35)) {

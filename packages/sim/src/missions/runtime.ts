@@ -1,7 +1,7 @@
 import { MISSIONS } from '../content/missions';
 import type { SimEvent } from '../core/events';
 import type { ProgressionState } from '../progression';
-import type { Effect, MissionDef, MissionRuntime, ObjectiveDef } from './types';
+import type { ChoiceOption, Effect, MissionDef, MissionRuntime, ObjectiveDef } from './types';
 
 /** What the mission runtime needs from the simulation. */
 export interface MissionHost {
@@ -31,7 +31,23 @@ function isKnown(p: ProgressionState, id: string): boolean {
 }
 
 function requirementsMet(p: ProgressionState, def: MissionDef): boolean {
-  return def.requires.every((r) => isCompleted(p, r));
+  return (
+    def.requires.every((r) => isCompleted(p, r)) &&
+    (def.requiresFlags ?? []).every((f) => p.flags[f]) &&
+    !(def.blockedByFlags ?? []).some((f) => p.flags[f]) &&
+    Object.entries(def.requiresItems ?? {}).every(([item, n]) => (p.inventory[item] ?? 0) >= n)
+  );
+}
+
+/** Is a dialogue option available given flags and reputation? */
+export function optionAvailable(p: ProgressionState, when: ChoiceOption['when']): boolean {
+  if (!when) return true;
+  const check = (c: { flags?: string[]; minRep?: Record<string, number> }) =>
+    (c.flags ?? []).every((f) => p.flags[f]) && Object.entries(c.minRep ?? {}).every(([f, v]) => (p.reputation[f] ?? 0) >= v);
+  if (!check(when)) return false;
+  if ((when.notFlags ?? []).some((f) => p.flags[f])) return false;
+  if (when.anyOf && !when.anyOf.some(check)) return false;
+  return true;
 }
 
 export function startMission(host: MissionHost, def: MissionDef): void {

@@ -14,6 +14,39 @@ export const TRAINERS: Record<string, TrainerDefinition> = {
     ],
     defeated: ['This isn’t over. Halcyon remembers its property.'],
   },
+  'npc-handler': {
+    npcId: 'npc-handler',
+    name: 'Handler Voss',
+    party: [
+      { species: 'scrapup', level: 11 },
+      { species: 'gearhound', level: 14 },
+    ],
+    ai: 'skilled',
+    items: { 'patch-kit': 1 },
+    reward: 260,
+    challenge: [
+      'Those strays are tagged Halcyon assets. Step away from the van.',
+      'Fine. Let’s see how a courier handles a tethered Gearhound. It doesn’t feel pain anymore — we made sure of that.',
+    ],
+    defeated: ['The tether... it’s flickering. That wasn’t supposed to happen.'],
+  },
+  'npc-ashgrave': {
+    npcId: 'npc-ashgrave',
+    name: 'Corvin Ashgrave',
+    party: [
+      { species: 'neonyx', level: 18 },
+      { species: 'gearhound', level: 19 },
+      { species: 'heistcoon', level: 21 },
+    ],
+    ai: 'skilled',
+    items: { 'med-spray': 2 },
+    reward: 800,
+    challenge: [
+      'Forty years ago this city was fog, fear and teeth. We gave it light. We gave it quiet.',
+      'You want to tear that down for a glitching pet? Very well. Let me show you what order looks like.',
+    ],
+    defeated: ['...So the Glitchling can hear the Hush. And it sings back. Then the choice is yours, courier.'],
+  },
   'npc-vik': {
     npcId: 'npc-vik',
     name: 'Vik Torrance',

@@ -165,7 +165,9 @@ export class WorldScene extends Phaser.Scene {
     if (store.paused) return;
 
     let input: PlayerInput = NO_INPUT;
-    if (store.battle) {
+    if (store.ending) {
+      // The epilogue screen owns input.
+    } else if (store.battle) {
       if (frame.confirm) store.battleAdvance();
     } else if (store.dialogue) {
       if (frame.confirm) store.advanceDialogue();
@@ -291,7 +293,11 @@ export class WorldScene extends Phaser.Scene {
         store.openDialogue({ source: { kind: 'sign', buildingId: event.buildingId }, speaker: event.name, pages: [event.text] });
         break;
       case 'message':
-        store.openDialogue({ source: { kind: 'message' }, speaker: event.speaker, pages: event.pages });
+        store.openDialogue({ source: { kind: 'message' }, speaker: event.speaker, pages: event.pages, ...(event.choices ? { choices: event.choices } : {}) });
+        break;
+      case 'game.ending':
+        useGameStore.setState({ ending: { title: event.title, slides: event.slides, index: -1 } });
+        this.autosaveRequested = true;
         break;
       case 'bark':
         this.barks.show(event.actorId, event.text, event.emote);

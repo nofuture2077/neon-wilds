@@ -22,6 +22,14 @@ export interface DialogueState {
   speaker: string;
   pages: string[];
   page: number;
+  /** Options shown on the last page; the dialogue can only be left by choosing. */
+  choices?: { id: string; label: string }[];
+}
+
+export interface EndingState {
+  title: string;
+  slides: { heading: string; text: string }[];
+  index: number;
 }
 
 export interface HudState {
@@ -99,6 +107,7 @@ interface GameStore {
   battle: BattleUiState | null;
   shopId: string | null;
   boardOpen: boolean;
+  ending: EndingState | null;
   /** Set by the game host; UI intents travel to the simulation through here. */
   commandSink: ((cmd: SimCommand) => void) | null;
   /** Set by the game host; returns a consistent snapshot for saving, or null if saving is not allowed now. */
@@ -115,6 +124,7 @@ interface GameStore {
   openDialogue(d: Omit<DialogueState, 'page'>): void;
   /** Next page, next queued dialogue, or close. Returns the closed dialogue if the last one closed. */
   advanceDialogue(): DialogueState | null;
+  chooseDialogue(optionId: string): void;
   pushToast(text: string, tone?: Toast['tone']): void;
   dismissToast(id: number): void;
   setProgress(p: ProgressView): void;
@@ -151,6 +161,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   battle: null,
   shopId: null,
   boardOpen: false,
+  ending: null,
   commandSink: null,
   snapshotSource: null,
   queries: null,
@@ -208,6 +219,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({ dialogue: { ...d, page: d.page + 1 } });
       return null;
     }
+    if (d.choices?.length) return null; // a decision is required
     const [next, ...rest] = get().dialogueQueue;
     if (next) {
       set({ dialogue: { ...next, page: 0 }, dialogueQueue: rest });
@@ -215,6 +227,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
     set({ dialogue: null });
     return d;
+  },
+  chooseDialogue: (optionId) => {
+    const d = get().dialogue;
+    if (!d?.choices?.some((c) => c.id === optionId)) return;
+    get().command({ type: 'dialogue.choose', optionId });
+    set({ dialogue: { ...d, choices: [] } });
+    get().advanceDialogue();
   },
   pushToast: (text, tone = 'info') => set((s) => ({ toasts: [...s.toasts.slice(-4), { id: toastSeq++, text, tone }] })),
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),

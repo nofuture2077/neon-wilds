@@ -7,6 +7,7 @@ import { Hud } from './ui/Hud';
 import { MainMenu } from './ui/MainMenu';
 import { BattleUi } from './ui/BattleUi';
 import { JobBoard } from './ui/JobBoard';
+import { EndingScreen } from './ui/EndingScreen';
 import { PauseMenu } from './ui/PauseMenu';
 import { ShopModal } from './ui/ShopModal';
 
@@ -29,6 +30,7 @@ export function App() {
       <ShopModal />
       <JobBoard />
       <PauseMenu />
+      <EndingScreen />
     </div>
   );
 }

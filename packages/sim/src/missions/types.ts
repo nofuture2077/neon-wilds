@@ -11,7 +11,20 @@ export type Effect =
   | { type: 'set-flag'; flag: string }
   | { type: 'reputation'; faction: string; delta: number }
   | { type: 'remember'; npc: string; kind: 'helped' | 'saw-battle-win'; important: boolean }
-  | { type: 'take-wildling'; species: string };
+  | { type: 'take-wildling'; species: string }
+  | { type: 'choice'; speaker: string; pages: string[]; options: ChoiceOption[] }
+  | { type: 'world-event'; id: 'blackout' | 'night-market' | 'recall-drive' | 'saints-procession' }
+  | { type: 'ending'; id: EndingId };
+
+export type EndingId = 'chorus' | 'lights-out' | 'the-quiet' | 'vargas-city';
+
+/** A dialogue option. `when` gates it on flags/reputation; effects run when chosen. */
+export interface ChoiceOption {
+  id: string;
+  label: string;
+  when?: { flags?: string[]; notFlags?: string[]; minRep?: Record<string, number>; anyOf?: Array<{ flags?: string[]; minRep?: Record<string, number> }> };
+  effects: Effect[];
+}
 
 export type ObjectiveKind = 'inspect' | 'talk' | 'defeat' | 'resolve-tag' | 'capture' | 'disrupt';
 
@@ -31,6 +44,11 @@ export interface MissionDef {
   summary: string;
   /** Mission ids that must be completed first. */
   requires: string[];
+  /** Story flags that must be set / must not be set. */
+  requiresFlags?: string[];
+  blockedByFlags?: string[];
+  /** Items the player must hold (e.g. two Hush Fragments). */
+  requiresItems?: Record<string, number>;
   /** Starts automatically when requirements are met; otherwise offered by `giver`. */
   autoStart?: boolean;
   giver?: string;

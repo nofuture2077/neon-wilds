@@ -42,6 +42,8 @@ export interface NpcDefinition {
   spawn?: 'start' | 'mission';
   /** Stands in place (guards, trainers waiting for a challenger). */
   stationary?: boolean;
+  /** Building name to stand next to (stationary NPCs). */
+  post?: string;
 }
 
 export interface TrainerDefinition {

@@ -60,6 +60,8 @@ const STEPS: Record<number, (s: AnySnapshot) => AnySnapshot> = {
   }),
   // v8 → v9: multi-district city.
   8: (s) => ({ ...s, version: 9, away: {} }),
+  // v9 → v10: story choices.
+  9: (s) => ({ ...s, version: 10, pendingChoice: null }),
 };
 
 export function migrateSnapshot(raw: unknown): SimSnapshot {

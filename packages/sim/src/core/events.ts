@@ -15,7 +15,8 @@ export type SimEvent =
   | { type: 'npc.fled'; npcId: string }
   | { type: 'building.inspected'; buildingId: string; name: string; text: string }
   | { type: 'clock.hour'; hour: number }
-  | { type: 'message'; speaker: string; pages: string[] }
+  | { type: 'message'; speaker: string; pages: string[]; choices?: { id: string; label: string }[] }
+  | { type: 'game.ending'; ending: string; title: string; slides: { heading: string; text: string }[] }
   | { type: 'notice'; text: string }
   | { type: 'mission.started'; missionId: string; title: string }
   | { type: 'mission.updated'; missionId: string; objective: string }

@@ -10,6 +10,7 @@ export const ITEMS: Record<string, ItemDef> = Object.fromEntries(
       { id: 'med-spray', name: 'Med Spray', category: 'medicine', price: 140, heal: 70, description: 'Saint Ottilie’s own mix. Restores 70 HP.' },
       { id: 'cleanse-tab', name: 'Cleanse Tab', category: 'medicine', price: 80, cures: true, description: 'Cures any status condition.' },
       { id: 'courier-capsule', name: 'Sealed Capsule', category: 'key', price: 0, description: 'FRAGILE / DO NOT OPEN / DO NOT LOSE. It is warm, and it hums.' },
+      { id: 'hush-fragment', name: 'Hush Fragment', category: 'key', price: 0, description: 'A page of the original Lighting schematics. The waveform printed on it is a perfect circle — a halo.' },
       { id: 'coin-tin', name: 'Marisol’s Coin Tin', category: 'key', price: 0, description: 'Dented, sticky, and full of small change.' },
     ] satisfies ItemDef[]
   ).map((i) => [i.id, i]),

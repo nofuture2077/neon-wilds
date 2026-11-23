@@ -60,6 +60,17 @@ describe('gameStore dialogue', () => {
     expect(useGameStore.getState().advanceDialogue()?.speaker).toBe('B');
   });
 
+  it('a dialogue with choices cannot be skipped, only answered', () => {
+    const sent: unknown[] = [];
+    useGameStore.setState({ commandSink: (c) => sent.push(c) });
+    useGameStore.getState().openDialogue({ source: { kind: 'message' }, speaker: 'Rook', pages: ['Choose.'], choices: [{ id: 'a', label: 'A' }] });
+    expect(useGameStore.getState().advanceDialogue()).toBeNull();
+    expect(useGameStore.getState().dialogue).not.toBeNull();
+    useGameStore.getState().chooseDialogue('a');
+    expect(sent).toEqual([{ type: 'dialogue.choose', optionId: 'a' }]);
+    expect(useGameStore.getState().dialogue).toBeNull();
+  });
+
   it('does not re-render when the HUD is unchanged', () => {
     const hud = { district: 'The Slums', location: 'Cinder Row', clock: '18:30', isNight: false, prompt: null, promptKey: 'E', speed: null, vehicleHealth: null, stars: 0, seen: false, turf: null, weather: 'clear', worldEvent: null, waypoint: null };
     useGameStore.getState().setHud(hud);
