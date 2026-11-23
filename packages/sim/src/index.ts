@@ -32,3 +32,5 @@ export * from './content/skills';
 export * from './content/items';
 export * from './content/missions';
 export * from './content/trainers';
+export * from './world/roads';
+export * from './world/vehicles';

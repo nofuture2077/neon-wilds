@@ -8,6 +8,7 @@ import {
   battleView,
   getSpecies,
   progressView,
+  vehicleClass,
   type PlayerInput,
   type SimEvent,
 } from '@neon-wilds/sim';
@@ -22,6 +23,7 @@ import { renderCity } from '../render/CityRenderer';
 import { Depth } from '../render/depth';
 import { Lighting, darknessAt } from '../render/lighting';
 import { WildlingViews } from '../render/WildlingViews';
+import { SignalViews, VehicleViews } from '../render/VehicleViews';
 
 /** Max simulation catch-up per frame (prevents a spiral of death after a tab stall). */
 const MAX_FRAME_SECONDS = 0.25;
@@ -38,6 +40,11 @@ export class WorldScene extends Phaser.Scene {
   private lighting!: Lighting;
   private barks!: BarkLayer;
   private wildlingViews!: WildlingViews;
+  private vehicleViews!: VehicleViews;
+  private signals!: SignalViews;
+  private cameraTarget!: Phaser.GameObjects.Zone;
+  private baseZoom = 3;
+  private pendingAction = false;
   private focusMarker!: Phaser.GameObjects.Image;
   private player!: ActorView;
   private readonly npcViews = new Map<string, ActorView>();
@@ -74,6 +81,8 @@ export class WorldScene extends Phaser.Scene {
     }
     const textRes = () => this.cameras.main.zoom * window.devicePixelRatio;
     this.wildlingViews = new WildlingViews(this, textRes);
+    this.vehicleViews = new VehicleViews(this);
+    this.signals = new SignalViews(this, this.sim.roads);
     this.focusMarker = this.add.image(0, 0, TEXTURES.focus).setDepth(Depth.focus).setVisible(false);
     this.barks = new BarkLayer(this, textRes);
     this.controls = new InputMapper(this);
@@ -82,7 +91,8 @@ export class WorldScene extends Phaser.Scene {
     cam.setBounds(0, 0, layout.map.width * TILE_SIZE, layout.map.height * TILE_SIZE);
     cam.setBackgroundColor('#07070f');
     this.player.sync(this.sim.player, 1, 0);
-    cam.startFollow(this.player.sprite, true, 0.14, 0.14);
+    this.cameraTarget = this.add.zone(this.player.sprite.x, this.player.sprite.y, 1, 1);
+    cam.startFollow(this.cameraTarget, true, 0.12, 0.12);
     this.applyZoom();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
 
@@ -125,13 +135,15 @@ export class WorldScene extends Phaser.Scene {
       if (frame.confirm) store.advanceDialogue();
     } else if (!store.shopId) {
       this.pendingInteract ||= frame.confirm;
-      input = { moveX: frame.moveX, moveY: frame.moveY, run: frame.run, interact: false };
+      this.pendingAction ||= frame.action;
+      input = { moveX: frame.moveX, moveY: frame.moveY, run: frame.run, interact: false, action: false };
     }
 
     this.accumulator += Math.min(deltaMs / 1000, MAX_FRAME_SECONDS);
     while (this.accumulator >= DT) {
-      this.sim.step(this.pendingInteract ? { ...input, interact: true } : input);
+      this.sim.step({ ...input, interact: this.pendingInteract, action: this.pendingAction });
       this.pendingInteract = false;
+      this.pendingAction = false;
       this.accumulator -= DT;
       for (const event of this.sim.drainEvents()) this.handleEvent(event);
     }
@@ -166,6 +178,25 @@ export class WorldScene extends Phaser.Scene {
 
   private render(alpha: number, deltaSeconds: number): void {
     this.player.sync(this.sim.player, alpha, deltaSeconds);
+    const driving = this.sim.playerVehicle;
+    this.player.setVisible(!driving);
+    const darkness = darknessAt(this.sim.minutes);
+    this.vehicleViews.sync(this.sim.vehicles, alpha, deltaSeconds * 1000, darkness, this.time.now);
+    this.signals.update(this.sim.tick);
+
+    // Camera: look ahead of a moving car and zoom out with speed (GTA 2 style).
+    const cam = this.cameras.main;
+    if (driving) {
+      const pos = this.vehicleViews.positionOf(driving.id) ?? { x: this.player.sprite.x, y: this.player.sprite.y };
+      this.cameraTarget.setPosition(pos.x + driving.vx * 10, pos.y + driving.vy * 10);
+      const speed01 = Math.min(1, Math.abs(driving.speed) / 9);
+      const target = this.baseZoom - speed01 * 1.1;
+      cam.setZoom(Phaser.Math.Linear(cam.zoom, target, 0.03));
+    } else {
+      this.cameraTarget.setPosition(this.player.sprite.x, this.player.sprite.y);
+      if (Math.abs(cam.zoom - this.baseZoom) > 0.01) cam.setZoom(Phaser.Math.Linear(cam.zoom, this.baseZoom, 0.08));
+      else cam.setZoom(this.baseZoom);
+    }
     for (const npc of this.sim.npcs) {
       const view = this.npcViews.get(npc.id);
       if (!view) continue;
@@ -174,10 +205,10 @@ export class WorldScene extends Phaser.Scene {
     }
     this.wildlingViews.sync(this.sim.wildlings, alpha, deltaSeconds, this.time.now);
 
-    this.lighting.update(darknessAt(this.sim.minutes), this.time.now);
+    this.lighting.update(darkness, this.time.now);
     this.barks.update((id) => {
       const view = id === 'player' ? this.player : this.npcViews.get(id);
-      return view ? { x: view.sprite.x, y: view.sprite.y } : null;
+      return view ? { x: view.sprite.x, y: view.sprite.y } : this.vehicleViews.positionOf(id);
     });
 
     const focus = this.sim.focus;
@@ -210,6 +241,24 @@ export class WorldScene extends Phaser.Scene {
         break;
       case 'npc.shoved':
         this.cameras.main.shake(90, 0.004);
+        break;
+      case 'vehicle.crash':
+        if (event.vehicleId === this.sim.player.vehicleId) this.cameras.main.shake(120, Math.min(0.02, event.impact * 0.0025));
+        break;
+      case 'vehicle.honk':
+        this.barks.show(event.vehicleId, 'HONK!', 'anger');
+        break;
+      case 'vehicle.entered':
+        if (event.how === 'carjacked') store.pushToast('Carjacked! That will not go unnoticed.', 'warning');
+        else if (event.how === 'stolen') store.pushToast('You hot-wired the car.', 'warning');
+        break;
+      case 'vehicle.exploded': {
+        this.cameras.main.shake(300, 0.012);
+        this.cameras.main.flash(180, 255, 160, 60);
+        break;
+      }
+      case 'vehicle.wrecked':
+        if (event.vehicleId === this.sim.player.vehicleId) store.pushToast('The car is wrecked — get clear!', 'warning');
         break;
       case 'notice':
         store.pushToast(event.text, 'info');
@@ -258,13 +307,32 @@ export class WorldScene extends Phaser.Scene {
     const m = Math.floor(sim.minutes);
     const clock = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
     const focus = sim.focus;
-    const prompt = !focus ? null : focus.kind === 'npc' ? `Talk to ${focus.label}` : `Visit ${focus.label}`;
+    const driving = sim.playerVehicle;
+    let prompt: string | null = null;
+    let promptKey = 'E';
+    if (driving) {
+      if (Math.abs(driving.speed) < 3) {
+        prompt = 'Get out';
+        promptKey = 'F';
+      }
+    } else if (focus) {
+      prompt = focus.kind === 'npc' ? `Talk to ${focus.label}` : `Visit ${focus.label}`;
+    } else {
+      const car = sim.nearbyVehicle();
+      if (car) {
+        prompt = car.driver === 'ai' ? 'Carjack' : car.stolen ? 'Get in' : 'Steal car';
+        promptKey = 'F';
+      }
+    }
     useGameStore.getState().setHud({
       district: sim.districtName,
       location: sim.locationLabel(),
       clock,
       isNight: sim.isNight,
       prompt,
+      promptKey,
+      speed: driving ? Math.round(Math.abs(driving.speed) * 12) : null,
+      vehicleHealth: driving ? Math.round((driving.hp / vehicleClass(driving).hp) * 100) : null,
     });
   }
 
@@ -276,8 +344,8 @@ export class WorldScene extends Phaser.Scene {
 
   /** Integer zoom keeps pixels crisp; aim for roughly 16 tiles of vertical view. */
   private applyZoom(): void {
-    const zoom = Math.max(2, Math.min(6, Math.round(this.scale.height / (TILE_SIZE * 16))));
-    this.cameras.main.setZoom(zoom);
+    this.baseZoom = Math.max(2, Math.min(6, Math.round(this.scale.height / (TILE_SIZE * 16))));
+    this.cameras.main.setZoom(this.baseZoom);
   }
 
   private onResize(): void {

@@ -44,10 +44,30 @@ export function Hud() {
           </div>
         )}
       </div>
+      {hud.speed !== null && (
+        <div className="panel absolute bottom-6 left-6 flex items-end gap-4 px-4 py-3">
+          <div>
+            <div className="font-pixel text-[8px] text-slate-400">SPEED</div>
+            <div className="font-pixel text-2xl text-neon-cyan">
+              {hud.speed}
+              <span className="ml-1 text-[10px] text-slate-400">km/h</span>
+            </div>
+          </div>
+          <div className="w-28">
+            <div className="font-pixel text-[8px] text-slate-400">CAR</div>
+            <div className="h-2 w-full border border-black bg-night-950">
+              <div
+                className="h-full"
+                style={{ width: `${hud.vehicleHealth ?? 0}%`, background: (hud.vehicleHealth ?? 0) > 35 ? '#4fffb0' : '#ff4f5e' }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {hud.prompt && !overlay && (
         <div className="absolute inset-x-0 bottom-10 flex justify-center">
           <div className="panel px-4 py-2 font-term text-2xl">
-            <span className="mr-2 font-pixel text-xs text-neon-yellow">[E]</span>
+            <span className="mr-2 font-pixel text-xs text-neon-yellow">[{hud.promptKey}]</span>
             {hud.prompt}
           </div>
         </div>

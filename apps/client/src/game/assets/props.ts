@@ -1,10 +1,11 @@
 import { createCanvas, ellipse, px, rect, shade, type PixelCanvas } from './canvas';
 import { CAR_COLORS } from './palette';
 
-/** Parked car, 14x28, nose pointing north. */
-export function buildCar(variant: number): PixelCanvas {
-  const pc = createCanvas(14, 28);
+/** Car, 14x28 (sedan 14x30), nose pointing north. */
+export function buildCar(variant: number, long = false): PixelCanvas {
+  const pc = createCanvas(14, long ? 30 : 28);
   const c = pc.ctx;
+  if (long) c.translate(0, 1);
   const body = CAR_COLORS[variant % CAR_COLORS.length]!;
   rect(c, 1, 1, 12, 26, 0x0c0c10);
   rect(c, 2, 1, 10, 26, body);
@@ -93,5 +94,55 @@ export function buildFocusMarker(): PixelCanvas {
   rect(c, 1, 2, 5, 1, 0xfff275);
   rect(c, 2, 3, 3, 1, 0xfff275);
   rect(c, 3, 4, 1, 1, 0xfff275);
+  return pc;
+}
+
+/** Courier van, 16x34, nose north. */
+export function buildVan(variant: number): PixelCanvas {
+  const pc = createCanvas(16, 34);
+  const c = pc.ctx;
+  const body = [0xd0d0d8, 0x3a3346, 0xe8b830, 0x4a7a9a, 0xc0563a, 0x6a8a4a][variant % 6]!;
+  rect(c, 1, 1, 14, 32, 0x0c0c10);
+  rect(c, 2, 1, 12, 32, body);
+  rect(c, 3, 3, 10, 4, 0x1c2733);
+  rect(c, 4, 3, 3, 1, 0x6f8aa3);
+  rect(c, 3, 8, 10, 23, shade(body, 1.1));
+  rect(c, 3, 8, 10, 1, shade(body, 0.7));
+  rect(c, 5, 14, 6, 10, shade(body, 0.92));
+  px(c, 3, 1, 0xfff4c2);
+  px(c, 12, 1, 0xfff4c2);
+  rect(c, 3, 32, 2, 1, 0xd0303a);
+  rect(c, 11, 32, 2, 1, 0xd0303a);
+  return pc;
+}
+
+/** Warden cruiser, 14x30, black and white with a light bar. */
+export function buildCruiser(): PixelCanvas {
+  const pc = createCanvas(14, 30);
+  const c = pc.ctx;
+  rect(c, 1, 1, 12, 28, 0x0c0c10);
+  rect(c, 2, 1, 10, 28, 0x1a1c24);
+  rect(c, 2, 9, 10, 11, 0xe8ecf4);
+  rect(c, 3, 7, 8, 3, 0x1c2733);
+  rect(c, 3, 20, 8, 3, 0x1c2733);
+  rect(c, 3, 13, 4, 2, 0xff3b3b);
+  rect(c, 7, 13, 4, 2, 0x3b6bff);
+  px(c, 3, 1, 0xfff4c2);
+  px(c, 10, 1, 0xfff4c2);
+  return pc;
+}
+
+/** Signal head seen from above: a dark pole cap. */
+export function buildSignal(): PixelCanvas {
+  const pc = createCanvas(5, 5);
+  ellipse(pc.ctx, 2.5, 2.5, 2.4, 2.4, 0x111118);
+  ellipse(pc.ctx, 2.5, 2.5, 1.4, 1.4, 0xffffff);
+  return pc;
+}
+
+/** Soft smoke puff (tinted at runtime). */
+export function buildPuff(): PixelCanvas {
+  const pc = createCanvas(8, 8);
+  ellipse(pc.ctx, 4, 4, 3.8, 3.8, 0xffffff, 0.8);
   return pc;
 }

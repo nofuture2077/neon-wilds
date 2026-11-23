@@ -25,7 +25,16 @@ export type SimEvent =
   | { type: 'battle.ended'; battleId: string; outcome: 'win' | 'lose' | 'fled' | 'captured' }
   | { type: 'shop.opened'; shopId: string }
   | { type: 'wildling.received'; speciesId: string; destination: 'party' | 'storage' }
-  | { type: 'blackout'; lostMoney: number };
+  | { type: 'blackout'; lostMoney: number }
+  | { type: 'vehicle.entered'; vehicleId: string; how: 'own' | 'stolen' | 'carjacked' }
+  | { type: 'vehicle.exited'; vehicleId: string }
+  | { type: 'vehicle.crash'; vehicleId: string; impact: number }
+  | { type: 'vehicle.honk'; vehicleId: string }
+  | { type: 'vehicle.wrecked'; vehicleId: string }
+  | { type: 'vehicle.exploded'; vehicleId: string; x: number; y: number }
+  | { type: 'crime'; kind: CrimeKind; x: number; y: number; severity: number; witnessed: boolean };
+
+export type CrimeKind = 'vehicle-theft' | 'carjacking' | 'hit-pedestrian' | 'assault' | 'assault-officer' | 'property-damage';
 
 export type SimEventType = SimEvent['type'];
 

@@ -3,6 +3,10 @@ import type { PixelCanvas } from './canvas';
 import {
   buildBench,
   buildCar,
+  buildCruiser,
+  buildPuff,
+  buildSignal,
+  buildVan,
   buildDumpster,
   buildFocusMarker,
   buildGlow,
@@ -36,6 +40,10 @@ export const TEXTURES = {
   glow: 'fx-glow',
   focus: 'ui-focus',
   car: (variant: number) => `prop-car-${variant % CAR_COLORS.length}`,
+  vehicle: (classId: string, variant: number) =>
+    classId === 'cruiser' ? 'veh-cruiser' : classId === 'van' ? `veh-van-${variant % 6}` : `veh-${classId}-${variant % CAR_COLORS.length}`,
+  signal: 'prop-signal',
+  puff: 'fx-puff',
   snare: 'fx-snare',
   creature: creatureKey,
 } as const;
@@ -50,6 +58,16 @@ export const MANIFEST: Record<string, AssetSource> = {
   [TEXTURES.glow]: { kind: 'procedural', build: () => buildGlow(64) },
   [TEXTURES.focus]: { kind: 'procedural', build: buildFocusMarker },
   [TEXTURES.snare]: { kind: 'procedural', build: buildSnare },
+  [TEXTURES.signal]: { kind: 'procedural', build: buildSignal },
+  [TEXTURES.puff]: { kind: 'procedural', build: buildPuff },
+  ['veh-cruiser']: { kind: 'procedural', build: buildCruiser },
+  ...Object.fromEntries(
+    [0, 1, 2, 3, 4, 5].flatMap((v) => [
+      [`veh-van-${v}`, { kind: 'procedural', build: () => buildVan(v) } satisfies AssetSource],
+      [`veh-compact-${v}`, { kind: 'procedural', build: () => buildCar(v) } satisfies AssetSource],
+      [`veh-sedan-${v}`, { kind: 'procedural', build: () => buildCar(v, true) } satisfies AssetSource],
+    ]),
+  ),
   ...Object.fromEntries(
     Object.keys(SPECIES).flatMap((id) =>
       (['small', 'large'] as const).map((size) => [

@@ -8,6 +8,8 @@ export interface FrameInput {
   confirm: boolean;
   /** Pressed this frame (pause menu). */
   pause: boolean;
+  /** Pressed this frame (enter / exit vehicle). */
+  action: boolean;
 }
 
 const STICK_DEADZONE = 0.2;
@@ -16,8 +18,8 @@ const STICK_DEADZONE = 0.2;
  * Maps keyboard and gamepad to abstract per-frame intent. Gameplay code never
  * looks at physical keys, so rebinding and new devices only touch this file.
  *
- * Keyboard: WASD / arrows move, Shift runs, E / Space / Enter interacts, Esc pauses.
- * Gamepad (standard mapping): left stick / d-pad move, A interacts, B or RT runs, Start pauses.
+ * Keyboard: WASD / arrows move, Shift runs (handbrake in cars), E / Space / Enter interacts, F enters/exits vehicles, Esc pauses.
+ * Gamepad (standard mapping): left stick / d-pad move, A interacts, B or RT runs, Y enters/exits vehicles, Start pauses.
  */
 export class InputMapper {
   private readonly keys: Record<string, Phaser.Input.Keyboard.Key>;
@@ -27,6 +29,8 @@ export class InputMapper {
   // loses presses that start and end within a single frame (fast taps).
   private latchedConfirm = false;
   private latchedPause = false;
+  private latchedAction = false;
+  private prevPadAction = false;
 
   constructor(private readonly scene: Phaser.Scene) {
     const kb = scene.input.keyboard;
@@ -52,6 +56,7 @@ export class InputMapper {
       if (ev.repeat) return;
       if (ev.code === 'KeyE' || ev.code === 'Space' || ev.code === 'Enter' || ev.code === 'NumpadEnter') this.latchedConfirm = true;
       if (ev.code === 'Escape') this.latchedPause = true;
+      if (ev.code === 'KeyF') this.latchedAction = true;
     };
     kb.on('keydown', onKeyDown);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => kb.off('keydown', onKeyDown));
@@ -66,8 +71,10 @@ export class InputMapper {
     let run = down('run');
     let confirm = this.latchedConfirm;
     let pause = this.latchedPause;
+    let action = this.latchedAction;
     this.latchedConfirm = false;
     this.latchedPause = false;
+    this.latchedAction = false;
 
     const pad = this.pad();
     if (pad) {
@@ -86,11 +93,14 @@ export class InputMapper {
       const padPause = pad.buttons.length > 9 ? pad.buttons[9]!.pressed : false;
       confirm = confirm || (padConfirm && !this.prevPadConfirm);
       pause = pause || (padPause && !this.prevPadPause);
+      const padAction = pad.Y;
+      action = action || (padAction && !this.prevPadAction);
       this.prevPadConfirm = padConfirm;
       this.prevPadPause = padPause;
+      this.prevPadAction = padAction;
     }
 
-    return { moveX, moveY, run, confirm, pause };
+    return { moveX, moveY, run, confirm, pause, action };
   }
 
   private pad(): Phaser.Input.Gamepad.Gamepad | null {

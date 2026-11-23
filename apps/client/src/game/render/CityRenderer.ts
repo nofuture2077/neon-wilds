@@ -59,12 +59,9 @@ function renderProp(scene: Phaser.Scene, p: Prop, lighting: Lighting): void {
   const cx = (p.x + p.w / 2) * T;
   const cy = (p.y + p.h / 2) * T;
   switch (p.kind) {
-    case 'parked-car': {
-      const rotation = { north: 0, south: Math.PI, east: Math.PI / 2, west: -Math.PI / 2 }[p.facing];
-      scene.add.image(cx + 2, cy + 3, TEXTURES.car(p.variant)).setRotation(rotation).setTint(0x000000).setAlpha(0.35).setDepth(Depth.shadows);
-      scene.add.image(cx, cy, TEXTURES.car(p.variant)).setRotation(rotation).setDepth(Depth.actors - 1);
+    case 'parked-car':
+      // Parked cars are simulated vehicles now (VehicleViews renders them).
       break;
-    }
     case 'street-lamp': {
       // Lamp heads lean over the curb.
       const off = { north: [0, -5], south: [0, 5], east: [5, 0], west: [-5, 0] }[p.facing];

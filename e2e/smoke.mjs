@@ -2,7 +2,7 @@
 /**
  * End-to-end smoke test: drives a real browser through the core loop.
  *   menu → character creation → Last Run mission → Glitchling → trainer battle →
- *   wild battle + capture → pause menu → save → quit → continue.
+ *   wild battle + capture → pause menu → save → quit → continue → steal a car and drive.
  * Fails on any console error. Usage: BASE_URL=http://localhost:5173 node e2e/smoke.mjs
  * CHROME_PATH can point at a local Chrome; otherwise Playwright's Chromium is used.
  */
@@ -176,6 +176,26 @@ await page.waitForFunction(() => window.__NEON_WILDS__?.sim?.progression?.party?
 assert(true, 'continued from save with party restored');
 await page.waitForTimeout(500);
 await step('10-continued');
+
+// Steal a parked car and drive.
+await sim(() => {
+  const { sim } = window.__NEON_WILDS__;
+  const car = sim.vehicles.find((v) => v.driver === 'none' && v.wreckedTick === null);
+  sim.player.x = sim.player.prevX = car.x;
+  sim.player.y = sim.player.prevY = car.y + 1.2;
+});
+await page.waitForTimeout(200);
+await press('f');
+const before = await sim(() => ({ ...window.__NEON_WILDS__.sim.player }));
+await page.keyboard.down('w');
+await page.waitForTimeout(900);
+await page.keyboard.up('w');
+await step('11-driving');
+const after = await sim(() => ({ ...window.__NEON_WILDS__.sim.player }));
+assert(after.vehicleId && Math.hypot(after.x - before.x, after.y - before.y) > 1, 'stole a car and drove it');
+await page.waitForTimeout(1500);
+await press('f');
+assert(await sim(() => window.__NEON_WILDS__.sim.player.vehicleId === null), 'got out of the car');
 
 const fps = await page.evaluate(
   () =>

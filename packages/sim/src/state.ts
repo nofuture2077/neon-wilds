@@ -3,6 +3,7 @@ import type { BattleAction, BattleState } from './battle/types';
 import type { TilePos } from './core/vec';
 import type { Effect } from './missions/types';
 import type { ProgressionState } from './progression';
+import type { VehicleState } from './world/vehicles';
 import type { WildlingEntity } from './world/wildlings';
 
 export interface ActorState {
@@ -26,6 +27,8 @@ export interface PlayerState extends ActorState {
   vy: number;
   running: boolean;
   conversationWith: string | null;
+  /** Vehicle the player is driving, if any. */
+  vehicleId: string | null;
 }
 
 export type NpcMode = 'idle' | 'walking' | 'talking' | 'fleeing' | 'confronting' | 'stationary';
@@ -57,9 +60,11 @@ export interface PlayerInput {
   run: boolean;
   /** Edge-triggered: true only on the step the button was pressed. */
   interact: boolean;
+  /** Edge-triggered: enter / exit vehicle. */
+  action?: boolean;
 }
 
-export const NO_INPUT: PlayerInput = Object.freeze({ moveX: 0, moveY: 0, run: false, interact: false });
+export const NO_INPUT: PlayerInput = Object.freeze({ moveX: 0, moveY: 0, run: false, interact: false, action: false });
 
 export type SimCommand =
   /** All UI dialogue for the current interaction has been dismissed. */
@@ -75,7 +80,7 @@ export type Focus =
   | { kind: 'npc'; id: string; label: string }
   | { kind: 'building'; id: string; label: string };
 
-export const SNAPSHOT_VERSION = 2;
+export const SNAPSHOT_VERSION = 3;
 
 /** Everything needed to resume a simulation. The district layout is regenerated from seed + districtId. */
 export interface SimSnapshot {
@@ -94,4 +99,6 @@ export interface SimSnapshot {
   pendingEffects: Effect[];
   encounterCooldownUntilTick: number;
   nextEntityId: number;
+  /** Null means "regenerate parked cars from the layout" (used when migrating older saves). */
+  vehicles: VehicleState[] | null;
 }

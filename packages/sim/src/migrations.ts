@@ -21,6 +21,13 @@ const STEPS: Record<number, (s: AnySnapshot) => AnySnapshot> = {
     encounterCooldownUntilTick: 0,
     nextEntityId: 1,
   }),
+  // v2 (Milestone 2) → v3 (Milestone 3): vehicles.
+  2: (s) => ({
+    ...s,
+    version: 3,
+    player: { ...(s.player as Record<string, unknown>), vehicleId: null },
+    vehicles: null,
+  }),
 };
 
 export function migrateSnapshot(raw: unknown): SimSnapshot {

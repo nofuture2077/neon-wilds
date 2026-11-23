@@ -52,6 +52,20 @@ import type { Building, DistrictLayout } from './world/district';
 import { generateDistrict } from './world/generator';
 import { describeLocation } from './world/location';
 import { Pathfinder } from './world/pathfinding';
+import { RoadNetwork } from './world/roads';
+import {
+  type VehicleContext,
+  type VehicleState,
+  bodyCircles,
+  coast,
+  driveAi,
+  drivePlayer,
+  manageTraffic,
+  parkedVehiclesFromLayout,
+  resolveVehicleContacts,
+  updateWrecks,
+  vehicleClass,
+} from './world/vehicles';
 import { Tile } from './world/tiles';
 import {
   type WildlingContext,
@@ -103,6 +117,8 @@ export class Simulation implements MissionHost {
   readonly npcs: NpcState[];
   readonly wildlings: WildlingEntity[];
   readonly progression: ProgressionState;
+  readonly vehicles: VehicleState[];
+  readonly roads: RoadNetwork;
   private _battle: BattleState | null;
 
   private constructor(private readonly seed: number, districtId: string, snapshot: SimSnapshot | null, config: NewGameConfig | null) {
@@ -115,6 +131,7 @@ export class Simulation implements MissionHost {
       height: map.height,
       passable: (tx, ty) => map.isPedestrianWalkable(tx, ty),
     });
+    this.roads = new RoadNetwork(this.layout);
     this.creaturePathfinder = new Pathfinder({
       width: map.width,
       height: map.height,
@@ -134,6 +151,7 @@ export class Simulation implements MissionHost {
       this.pendingEffects = cloneData(snapshot.pendingEffects);
       this.encounterCooldownUntilTick = snapshot.encounterCooldownUntilTick;
       this.nextEntityId = snapshot.nextEntityId;
+      this.vehicles = snapshot.vehicles ? cloneData(snapshot.vehicles) : parkedVehiclesFromLayout(this.layout);
     } else if (config) {
       this.rng = new Rng(deriveSeed(seed, 'simulation'));
       this._tick = 0;
@@ -154,6 +172,7 @@ export class Simulation implements MissionHost {
         vy: 0,
         running: false,
         conversationWith: null,
+        vehicleId: null,
       };
       this.npcs = this.spawnNpcs();
       this.wildlings = [];
@@ -162,6 +181,7 @@ export class Simulation implements MissionHost {
       this.pendingEffects = [];
       this.encounterCooldownUntilTick = 0;
       this.nextEntityId = 1;
+      this.vehicles = parkedVehiclesFromLayout(this.layout);
       checkAutoStart(this);
     } else {
       throw new Error('Simulation requires a snapshot or a config');
@@ -241,7 +261,10 @@ export class Simulation implements MissionHost {
     if (this._battle) return; // the overworld is frozen during turn-based battles
 
     this.advanceClock();
-    this.updatePlayer(input);
+    const vctx = this.vehicleContext();
+    if (input.action) this.toggleVehicle();
+    if (this.player.vehicleId) this.updateDriving(input, vctx);
+    else this.updatePlayer(input);
 
     const ctx = this.npcContext();
     for (const npc of this.npcs) updateNpc(npc, ctx);
@@ -249,10 +272,17 @@ export class Simulation implements MissionHost {
     if (this._tick % 30 === 0) manageSpawns(this.wildlings, wctx);
     updateWildlings(this.wildlings, wctx);
 
+    this.updateVehicles(vctx);
     this.resolveContacts(ctx);
-    this.checkEncounters();
+    this.resolveVehicleActorContacts(ctx);
+    const driving = this.playerVehicle;
+    if (driving) {
+      this.player.x = driving.x;
+      this.player.y = driving.y;
+    }
+    if (!this.player.vehicleId) this.checkEncounters();
     this.updateFocus();
-    if (input.interact) this.interact();
+    if (input.interact && !this.player.vehicleId) this.interact();
     this.maybeAmbientBark(ctx);
   }
 
@@ -273,6 +303,7 @@ export class Simulation implements MissionHost {
       pendingEffects: cloneData(this.pendingEffects),
       encounterCooldownUntilTick: this.encounterCooldownUntilTick,
       nextEntityId: this.nextEntityId,
+      vehicles: cloneData(this.vehicles),
     };
   }
 
@@ -706,6 +737,157 @@ export class Simulation implements MissionHost {
     return { tx, ty };
   }
 
+  // ---------------------------------------------------------------------------
+  // Vehicles
+
+  private vehicleContext(): VehicleContext {
+    const p = this.player;
+    const obstacles: { x: number; y: number }[] = [];
+    if (!p.vehicleId) obstacles.push(p);
+    for (const n of this.npcs) if (n.present) obstacles.push(n);
+    for (const w of this.wildlings) obstacles.push(w);
+    return {
+      layout: this.layout,
+      roads: this.roads,
+      rng: this.rng,
+      events: this.events,
+      tick: this._tick,
+      obstacles,
+      nextId: () => `car-${this.nextEntityId++}`,
+    };
+  }
+
+  get playerVehicle(): VehicleState | null {
+    const id = this.player.vehicleId;
+    return id ? (this.vehicles.find((v) => v.id === id) ?? null) : null;
+  }
+
+  /** Nearest enterable vehicle within reach of the player on foot. */
+  nearbyVehicle(): VehicleState | null {
+    let best: VehicleState | null = null;
+    let bestD = 1.9;
+    for (const v of this.vehicles) {
+      if (v.wreckedTick !== null || v.driver === 'police') continue;
+      const d = Math.hypot(v.x - this.player.x, v.y - this.player.y);
+      if (d < bestD) {
+        bestD = d;
+        best = v;
+      }
+    }
+    return best;
+  }
+
+  private toggleVehicle(): void {
+    const p = this.player;
+    if (p.conversationWith) return;
+    const current = this.playerVehicle;
+    if (current) {
+      if (Math.abs(current.speed) > 3) return;
+      const f = { x: Math.cos(current.heading), y: Math.sin(current.heading) };
+      const side = vehicleClass(current).width / 2 + 0.45;
+      for (const s of [-1, 1]) {
+        const x = current.x + f.y * side * s;
+        const y = current.y - f.x * side * s;
+        if (!this.layout.map.isSolid(Math.floor(x), Math.floor(y))) {
+          p.x = p.prevX = x;
+          p.y = p.prevY = y;
+          break;
+        }
+      }
+      current.driver = 'none';
+      p.vehicleId = null;
+      p.vx = p.vy = 0;
+      this.emit({ type: 'vehicle.exited', vehicleId: current.id });
+      return;
+    }
+    const v = this.nearbyVehicle();
+    if (!v) return;
+    let how: 'own' | 'stolen' | 'carjacked' = 'own';
+    if (v.driver === 'ai') {
+      how = 'carjacked';
+      this.reportCrime('carjacking', v.x, v.y, 3);
+      this.emit({ type: 'notice', text: 'The driver scrambles out, screaming for the Wardens.' });
+    } else if (!v.stolen) {
+      how = 'stolen';
+      this.reportCrime('vehicle-theft', v.x, v.y, 1);
+    }
+    v.driver = 'player';
+    v.ai = null;
+    v.stolen = true;
+    p.vehicleId = v.id;
+    p.running = false;
+    this.emit({ type: 'vehicle.entered', vehicleId: v.id, how });
+  }
+
+  private updateDriving(input: PlayerInput, vctx: VehicleContext): void {
+    const v = this.playerVehicle;
+    const p = this.player;
+    if (!v) {
+      p.vehicleId = null;
+      return;
+    }
+    drivePlayer(v, { throttle: -input.moveY, steer: input.moveX, handbrake: input.run }, vctx);
+    p.prevX = p.x;
+    p.prevY = p.y;
+    p.x = v.x;
+    p.y = v.y;
+    p.heading = v.heading;
+    p.speed = Math.abs(v.speed);
+    p.running = false;
+    if (v.wreckedTick !== null) {
+      // Bail out of a wreck.
+      this.toggleVehicleForce(v);
+    }
+  }
+
+  private toggleVehicleForce(v: VehicleState): void {
+    const before = v.speed;
+    v.speed = 0;
+    this.toggleVehicle();
+    v.speed = before;
+    if (this.player.vehicleId) {
+      this.player.vehicleId = null;
+      v.driver = 'none';
+    }
+  }
+
+  private updateVehicles(vctx: VehicleContext): void {
+    if (this._tick % 30 === 0) manageTraffic(this.vehicles, vctx, this.player);
+    for (const v of this.vehicles) {
+      if (v.driver === 'player') continue;
+      if (v.driver === 'ai' || v.driver === 'police') driveAi(v, this.vehicles, vctx);
+      else coast(v, vctx);
+    }
+    resolveVehicleContacts(this.vehicles, vctx);
+    updateWrecks(this.vehicles, vctx);
+  }
+
+  /** Keep people and Wildlings out of car bodies; fast player cars knock them flying. */
+  private resolveVehicleActorContacts(ctx: NpcContext): void {
+    const p = this.player;
+    for (const v of this.vehicles) {
+      const speed = Math.hypot(v.vx, v.vy);
+      for (const c of bodyCircles(v)) {
+        if (!p.vehicleId) pushOut(p, c, PLAYER_HALF_EXTENT, this.layout);
+        for (const npc of this.npcs) {
+          if (!npc.present) continue;
+          if (pushOut(npc, c, NPC_HALF_EXTENT, this.layout) && speed > 1.5 && v.driver === 'player' && this._tick >= npc.shoveCooldownUntilTick) {
+            onShoved(npc, this.npcs, ctx);
+            this.reportCrime('hit-pedestrian', npc.x, npc.y, 2);
+          }
+        }
+        for (const w of this.wildlings) {
+          if (pushOut(w, c, 0.25, this.layout) && speed > 1.5) w.calmUntilTick = this._tick + TICK_RATE * 3;
+        }
+      }
+    }
+  }
+
+  /** Record a crime. Witnesses and the wanted level are handled by the law system. */
+  reportCrime(kind: import('./core/events').CrimeKind, x: number, y: number, severity: number): void {
+    this.emit({ type: 'crime', kind, x, y, severity, witnessed: false });
+  }
+
   private advanceClock(): void {
     const before = this.hour;
     this._minutes = (this._minutes + DT * GAME_MINUTES_PER_SECOND) % 1440;
@@ -900,3 +1082,17 @@ export class Simulation implements MissionHost {
   }
 }
 
+
+function pushOut(a: { x: number; y: number }, c: { x: number; y: number; r: number }, half: number, layout: DistrictLayout): boolean {
+  const dx = a.x - c.x;
+  const dy = a.y - c.y;
+  const dist = Math.hypot(dx, dy);
+  const min = c.r + half;
+  if (dist >= min) return false;
+  const nx = dist > 1e-6 ? dx / dist : 1;
+  const ny = dist > 1e-6 ? dy / dist : 0;
+  const res = moveAndCollide(layout.map, a.x, a.y, half, nx * (min - dist), ny * (min - dist));
+  a.x = res.x;
+  a.y = res.y;
+  return true;
+}

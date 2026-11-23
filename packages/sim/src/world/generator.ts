@@ -356,19 +356,19 @@ function placeStreetFurniture(
   const isLane = (tx: number, ty: number) => map.get(tx, ty) === Tile.Road;
   for (let x = x0 + 2; x <= x0 + bw - 4; x++) {
     if (isLane(x, y0 - 1) && isLane(x + 1, y0 - 1) && rng.chance(0.14)) {
-      addProp({ kind: 'parked-car', x, y: y0 - 1, w: 2, h: 1, solid: true, variant: rng.int(0, 5), facing: 'east' });
+      addProp({ kind: 'parked-car', x, y: y0 - 1, w: 2, h: 1, solid: false, variant: rng.int(0, 5), facing: 'east' });
       x += 3;
     }
   }
   for (let x = x0 + 2; x <= x0 + bw - 4; x++) {
     if (isLane(x, y0 + bh) && isLane(x + 1, y0 + bh) && rng.chance(0.14)) {
-      addProp({ kind: 'parked-car', x, y: y0 + bh, w: 2, h: 1, solid: true, variant: rng.int(0, 5), facing: 'west' });
+      addProp({ kind: 'parked-car', x, y: y0 + bh, w: 2, h: 1, solid: false, variant: rng.int(0, 5), facing: 'west' });
       x += 3;
     }
   }
   for (let y = y0 + 2; y <= y0 + bh - 4; y++) {
     if (isLane(x0 - 1, y) && isLane(x0 - 1, y + 1) && rng.chance(0.14)) {
-      addProp({ kind: 'parked-car', x: x0 - 1, y, w: 1, h: 2, solid: true, variant: rng.int(0, 5), facing: 'south' });
+      addProp({ kind: 'parked-car', x: x0 - 1, y, w: 1, h: 2, solid: false, variant: rng.int(0, 5), facing: 'south' });
       y += 3;
     }
   }
