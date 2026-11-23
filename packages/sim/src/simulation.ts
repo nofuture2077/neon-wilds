@@ -30,7 +30,8 @@ import { Rng, deriveSeed } from './core/rng';
 import { clampMagnitude, turnToward } from './core/vec';
 import { createWildling, displayName, healFully, maxHp } from './creatures/wildling';
 import { migrateSnapshot } from './migrations';
-import { checkAutoStart, isObjective, offerFrom, startMission, trigger, type MissionHost } from './missions/runtime';
+import { checkAutoStart, checkDeadlines, isObjective, offerFrom, startMission, trigger, type MissionHost } from './missions/runtime';
+import { type MissionGenContext, generateBoard, generateNpcRequest } from './missions/generator';
 import type { Effect } from './missions/types';
 import type { WildlingInstance } from './creatures/model';
 import { moveAndCollide } from './physics/collision';
@@ -322,7 +323,10 @@ export class Simulation implements MissionHost {
         npc.prevY = npc.y;
       }
     }
-    if (this._tick % 60 === 0) this.manageCrowd();
+    if (this._tick % 60 === 0) {
+      this.manageCrowd();
+      checkDeadlines(this, this.now);
+    }
     this.reactToPlayer(ctx);
     const wctx = this.wildlingContext(ctx.pathBudget);
     if (this._tick % 30 === 0) manageSpawns(this.wildlings, wctx);
@@ -427,6 +431,15 @@ export class Simulation implements MissionHost {
       case 'reputation':
         this.changeReputation(effect.faction, effect.delta);
         break;
+      case 'take-wildling': {
+        const fromStorage = p.storage.findIndex((w) => w.speciesId === effect.species);
+        if (fromStorage >= 0) p.storage.splice(fromStorage, 1);
+        else {
+          const i = p.party.findIndex((w) => w.speciesId === effect.species);
+          if (i >= 0 && p.party.length > 1) p.party.splice(i, 1);
+        }
+        break;
+      }
       case 'remember': {
         const npc = this.npcs.find((n) => n.id === effect.npc);
         if (npc) remember(npc.memory, { kind: effect.kind, salience: 1, important: effect.important, secondhand: false, at: this.now });
@@ -480,6 +493,14 @@ export class Simulation implements MissionHost {
         case 'market.sellWildling':
           this.sellWildling(cmd.from, cmd.index);
           break;
+        case 'mission.accept': {
+          const def = this.progression.generated.find((m) => m.id === cmd.missionId);
+          if (def && !def.giver && this.progression.board.includes(def.id)) {
+            startMission(this, def);
+            this._progressVersion++;
+          }
+          break;
+        }
       }
     }
   }
@@ -694,6 +715,10 @@ export class Simulation implements MissionHost {
     this.emit({ type: 'battle.ended', battleId: battle.id, outcome });
     if ((outcome === 'win' || outcome === 'captured') && battle.questTag) trigger(this, 'resolve-tag', battle.questTag);
     if (outcome === 'win' && battle.trainerId) trigger(this, 'defeat', battle.trainerId);
+    if (outcome === 'captured') {
+      const caught = battle.enemy.party[battle.enemy.active];
+      if (caught) trigger(this, 'capture', caught.speciesId);
+    }
     this._progressVersion++;
   }
 
@@ -1244,6 +1269,7 @@ export class Simulation implements MissionHost {
     if (after !== before) {
       this.events.push({ type: 'clock.hour', hour: after });
       this.strategyHour();
+      this.missionHour();
       for (const npc of this.npcs) decayMemories(npc.memory);
       recoverDemand(this.market);
       this._progressVersion++;
@@ -1252,6 +1278,62 @@ export class Simulation implements MissionHost {
 
   get absHour(): number {
     return this._day * 24 + this.hour;
+  }
+
+  private missionGenContext(): MissionGenContext {
+    return {
+      layout: this.layout,
+      npcs: this.npcs,
+      progression: this.progression,
+      territory: this.territory,
+      factions: this.factionAgents,
+      rng: this.rng,
+      now: this.now,
+      hour: this.hour,
+      player: this.player,
+      locationOf: (x, y) => describeLocation(this.layout, x, y),
+    };
+  }
+
+  private nextMissionId = () => `gen-${this.progression.missionSeq++}`;
+
+  /** Hourly: NPCs with needs post requests; stale offers expire; the archive stays small. */
+  private missionHour(): void {
+    const p = this.progression;
+    if (!p.missions.some((m) => m.id === 'last-run' && m.status === 'completed')) return;
+    const offered = p.generated.filter((m) => m.giver && p.board.includes(m.id));
+    if (offered.length < 2 && this.rng.chance(0.35)) {
+      const def = generateNpcRequest(this.missionGenContext(), this.nextMissionId);
+      if (def) {
+        p.generated.push(def);
+        p.board.push(def.id);
+        this._progressVersion++;
+      }
+    }
+    // Forget offers nobody took and old finished jobs.
+    const known = new Set(p.missions.map((m) => m.id));
+    p.generated = p.generated.filter((m) => p.board.includes(m.id) || known.has(m.id));
+  }
+
+  /** The Courier Co-op job board (refreshed daily). */
+  private openJobBoard(): void {
+    const p = this.progression;
+    if (p.boardDay !== this._day || !p.generated.some((m) => !m.giver && p.board.includes(m.id))) {
+      p.board = p.board.filter((id) => p.generated.find((m) => m.id === id)?.giver);
+      for (const def of generateBoard(this.missionGenContext(), this.nextMissionId)) {
+        p.generated.push(def);
+        p.board.push(def.id);
+      }
+      p.boardDay = this._day;
+      this._progressVersion++;
+    }
+    this.emit({ type: 'board.opened' });
+  }
+
+  /** NPCs who currently have a job for the player (for the "!" marker). */
+  npcsWithOffers(): string[] {
+    const p = this.progression;
+    return p.generated.filter((m) => m.giver && p.board.includes(m.id)).map((m) => m.giver!);
   }
 
   /** Hourly world simulation: weather and events, then each faction plans and acts. */
@@ -1436,6 +1518,7 @@ export class Simulation implements MissionHost {
         this.reportCrime('assault', npc.x, npc.y, 0.5);
         const faction = ARCHETYPE_FACTION[npc.archetypeId];
         if (faction) this.changeReputation(faction, -3);
+        if (faction && npc.id.startsWith('crew-')) trigger(this, 'disrupt', faction);
       }
     }
   }
@@ -1519,6 +1602,10 @@ export class Simulation implements MissionHost {
   private inspectBuilding(b: Building): void {
     if (isObjective(this.progression, 'inspect', b.name)) {
       trigger(this, 'inspect', b.name);
+      return;
+    }
+    if (b.name === 'Vesper Courier Co-op' && this.progression.missions.some((m) => m.id === 'last-run' && m.status === 'completed')) {
+      this.openJobBoard();
       return;
     }
     if (b.service?.kind === 'clinic') {

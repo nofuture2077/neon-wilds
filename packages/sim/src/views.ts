@@ -1,12 +1,12 @@
 import { FACTIONS, type RepTier, repTier } from './content/factions';
 import { ITEMS, SHOPS } from './content/items';
-import { MISSIONS } from './content/missions';
 import { SKILLS } from './content/skills';
 import { SPECIES, getSpecies } from './content/wildlings';
 import type { StatusKind, WildlingInstance } from './creatures/model';
 import type { ElementType } from './creatures/types';
 import { computeStats, displayName, maxHp, xpForLevel } from './creatures/wildling';
-import { currentObjective } from './missions/runtime';
+import { currentObjective, missionDef } from './missions/runtime';
+import { describeLocation } from './world/location';
 import type { Simulation } from './simulation';
 
 /**
@@ -65,7 +65,7 @@ export interface ProgressView {
   party: WildlingView[];
   storage: WildlingView[];
   index: { id: string; name: string; types: ElementType[]; seen: boolean; caught: boolean; lore: string }[];
-  missions: { id: string; title: string; summary: string; status: 'active' | 'completed'; objective: string | null }[];
+  missions: { id: string; title: string; summary: string; status: 'active' | 'completed' | 'failed'; objective: string | null }[];
 }
 
 export function progressView(sim: Simulation): ProgressView {
@@ -86,8 +86,8 @@ export function progressView(sim: Simulation): ProgressView {
       lore: s.lore,
     })),
     missions: p.missions.map((rt) => {
-      const def = MISSIONS.find((m) => m.id === rt.id)!;
-      return { id: rt.id, title: def.title, summary: def.summary, status: rt.status, objective: currentObjective(rt)?.text ?? null };
+      const def = missionDef(rt.id, p);
+      return { id: rt.id, title: def.title, summary: def.summary, status: rt.status, objective: currentObjective(rt, p)?.text ?? null };
     }),
   };
 }
@@ -206,23 +206,39 @@ export interface MapView {
   markers: { x: number; y: number; label: string }[];
 }
 
-export function mapView(sim: Simulation): MapView {
+/** Where the player needs to go for each active objective (doors, NPCs, quest Wildlings). */
+export function objectiveMarkers(sim: Simulation): { x: number; y: number; label: string; where: string }[] {
   const layout = sim.layout;
-  const markers: MapView['markers'] = [];
+  const markers: { x: number; y: number; label: string; where: string }[] = [];
+  const push = (x: number, y: number, label: string) => markers.push({ x, y, label, where: describeLocation(layout, x, y) });
   for (const rt of sim.progression.missions) {
-    const obj = currentObjective(rt);
+    const obj = currentObjective(rt, sim.progression);
     if (!obj) continue;
     if (obj.kind === 'inspect') {
       const b = layout.buildings.find((x) => x.name === obj.target);
-      if (b) markers.push({ x: b.entrance.tx + 0.5, y: b.entrance.ty + 0.5, label: obj.text });
+      if (b) push(b.entrance.tx + 0.5, b.entrance.ty + 0.5, obj.text);
     } else if (obj.kind === 'talk' || obj.kind === 'defeat') {
       const n = sim.npcs.find((x) => x.id === obj.target && x.present);
-      if (n) markers.push({ x: n.x, y: n.y, label: obj.text });
+      if (n) {
+        const b = n.indoors ? layout.buildings.find((x) => x.id === n.indoors) : null;
+        if (b) push(b.entrance.tx + 0.5, b.entrance.ty + 0.5, `${obj.text} (inside)`);
+        else push(n.x, n.y, obj.text);
+      }
     } else if (obj.kind === 'resolve-tag') {
       const w = sim.wildlings.find((x) => x.questTag === obj.target);
-      if (w) markers.push({ x: w.x, y: w.y, label: obj.text });
+      if (w) push(w.x, w.y, obj.text);
+    } else if (obj.kind === 'disrupt') {
+      const f = sim.factionAgents.find((x) => x.id === obj.target);
+      const crew = f?.op?.crew.map((id) => sim.npcs.find((n) => n.id === id && n.present)).find(Boolean);
+      if (crew) push(crew.x, crew.y, obj.text);
     }
   }
+  return markers;
+}
+
+export function mapView(sim: Simulation): MapView {
+  const layout = sim.layout;
+  const markers = objectiveMarkers(sim);
   return {
     width: layout.map.width,
     height: layout.map.height,
@@ -238,5 +254,29 @@ export function mapView(sim: Simulation): MapView {
       })),
     player: { x: sim.player.x, y: sim.player.y },
     markers,
+  };
+}
+
+export interface BoardView {
+  jobs: { id: string; title: string; summary: string; reward: string; deadline: string | null }[];
+}
+
+/** Offers on the Courier Co-op job board. */
+export function boardView(sim: Simulation): BoardView {
+  const p = sim.progression;
+  const clock = (abs: number) => {
+    const m = Math.floor(abs % 1440);
+    return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  };
+  return {
+    jobs: p.generated
+      .filter((m) => !m.giver && p.board.includes(m.id))
+      .map((m) => ({
+        id: m.id,
+        title: m.title,
+        summary: m.summary,
+        reward: m.generated?.reward ?? '',
+        deadline: m.generated?.deadlineMinutes != null ? clock(m.generated.deadlineMinutes) : null,
+      })),
   };
 }

@@ -10,9 +10,10 @@ export type Effect =
   | { type: 'spawn-quest-wildling'; species: string; level: number; tag: string }
   | { type: 'set-flag'; flag: string }
   | { type: 'reputation'; faction: string; delta: number }
-  | { type: 'remember'; npc: string; kind: 'helped' | 'saw-battle-win'; important: boolean };
+  | { type: 'remember'; npc: string; kind: 'helped' | 'saw-battle-win'; important: boolean }
+  | { type: 'take-wildling'; species: string };
 
-export type ObjectiveKind = 'inspect' | 'talk' | 'defeat' | 'resolve-tag';
+export type ObjectiveKind = 'inspect' | 'talk' | 'defeat' | 'resolve-tag' | 'capture' | 'disrupt';
 
 export interface ObjectiveDef {
   text: string;
@@ -37,10 +38,21 @@ export interface MissionDef {
   onStart?: Effect[];
   objectives: ObjectiveDef[];
   rewards: Effect[];
+  /** Present on procedurally generated missions. */
+  generated?: {
+    template: string;
+    /** Absolute in-game minute by which it must be done, or null. */
+    deadlineMinutes: number | null;
+    /** Effects applied if the mission fails (e.g. reputation loss). */
+    onFail: Effect[];
+    reward: string;
+  };
 }
 
 export interface MissionRuntime {
   id: string;
-  status: 'active' | 'completed';
+  status: 'active' | 'completed' | 'failed';
   objective: number;
+  /** Absolute in-game minute deadline (generated missions). */
+  deadline?: number | null;
 }

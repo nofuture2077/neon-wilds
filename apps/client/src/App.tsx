@@ -6,6 +6,7 @@ import { DialogueBox } from './ui/DialogueBox';
 import { Hud } from './ui/Hud';
 import { MainMenu } from './ui/MainMenu';
 import { BattleUi } from './ui/BattleUi';
+import { JobBoard } from './ui/JobBoard';
 import { PauseMenu } from './ui/PauseMenu';
 import { ShopModal } from './ui/ShopModal';
 
@@ -26,6 +27,7 @@ export function App() {
       <BattleUi />
       <DialogueBox />
       <ShopModal />
+      <JobBoard />
       <PauseMenu />
     </div>
   );

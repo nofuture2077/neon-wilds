@@ -52,6 +52,12 @@ const STEPS: Record<number, (s: AnySnapshot) => AnySnapshot> = {
   }),
   // v6 → v7: faction GOAP agents and the world director.
   6: (s) => ({ ...s, version: 7, factions: null, world: newWorldState() }),
+  // v7 → v8: procedural missions.
+  7: (s) => ({
+    ...s,
+    version: 8,
+    progression: { ...(s.progression as Record<string, unknown>), generated: [], board: [], missionSeq: 1, boardDay: -1 },
+  }),
 };
 
 export function migrateSnapshot(raw: unknown): SimSnapshot {

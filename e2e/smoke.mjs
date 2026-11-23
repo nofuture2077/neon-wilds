@@ -122,6 +122,20 @@ await press('e');
 await dismissDialogues();
 assert(await sim(() => window.__NEON_WILDS__.sim.progression.missions[0].status === 'completed'), 'Last Run completed');
 
+// Procedural jobs: the Co-op board opens after Last Run.
+await goto('Vesper Courier Co-op');
+await page.waitForTimeout(150);
+await press('e');
+await page.waitForTimeout(300);
+await step('06a-job-board');
+const accept = page.getByRole('button', { name: 'Accept' }).first();
+assert(await accept.isVisible().catch(() => false), 'job board offers generated jobs');
+await accept.click();
+await page.waitForTimeout(200);
+await press('Escape');
+await page.waitForTimeout(200);
+assert(await sim(() => window.__NEON_WILDS__.sim.progression.missions.some((m) => m.id.startsWith('gen-') && m.status === 'active')), 'accepted a generated job');
+
 // Wild encounter + capture.
 await sim(() => {
   const { sim } = window.__NEON_WILDS__;

@@ -4,7 +4,7 @@ import { CreatureIcon, HpBar } from './widgets';
 
 export function Hud() {
   const hud = useGameStore((s) => s.hud);
-  const overlay = useGameStore((s) => s.dialogue !== null || s.battle !== null || s.shopId !== null);
+  const overlay = useGameStore((s) => s.dialogue !== null || s.battle !== null || s.shopId !== null || s.boardOpen);
   const inBattle = useGameStore((s) => s.battle !== null);
   const progress = useGameStore((s) => s.progress);
   const playerName = useGameStore((s) => (s.session?.kind === 'new' ? s.session.setup.playerName : (s.session?.snapshot.player.name ?? '')));
@@ -30,6 +30,11 @@ export function Hud() {
           <div className="panel max-w-sm px-4 py-2">
             <div className="font-pixel text-[8px] text-neon-yellow">{objective.title}</div>
             <div className="font-term text-xl leading-tight text-slate-200">{objective.objective}</div>
+            {hud.waypoint && (
+              <div className="font-term text-lg leading-tight text-neon-yellow">
+                ▸ near {hud.waypoint.where} · {hud.waypoint.meters} m
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -88,6 +93,7 @@ export function Hud() {
           </div>
         </div>
       )}
+      {hud.waypoint && !hud.waypoint.onScreen && !overlay && <EdgeArrow angle={hud.waypoint.angle} meters={hud.waypoint.meters} />}
       <Toasts />
     </div>
   );
@@ -110,6 +116,34 @@ function Toasts() {
           {t.text}
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Arrow pinned to the screen edge, pointing at an off-screen objective. */
+function EdgeArrow({ angle, meters }: { angle: number; meters: number }) {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+  const mx = w / 2 - 70;
+  const my = h / 2 - 90;
+  const t = Math.min(Math.abs(mx / (dx || 1e-6)), Math.abs(my / (dy || 1e-6)));
+  const x = w / 2 + dx * t;
+  const y = h / 2 + dy * t;
+  return (
+    <div className="absolute flex flex-col items-center" style={{ left: x - 24, top: y - 24, width: 48 }}>
+      <div
+        className="h-0 w-0"
+        style={{
+          borderTop: '12px solid transparent',
+          borderBottom: '12px solid transparent',
+          borderLeft: '22px solid #fff275',
+          filter: 'drop-shadow(0 0 6px #fff275) drop-shadow(0 0 1px #000)',
+          transform: `rotate(${angle}rad)`,
+        }}
+      />
+      <span className="mt-1 rounded bg-black/70 px-1 font-pixel text-[9px] text-neon-yellow">{meters}m</span>
     </div>
   );
 }

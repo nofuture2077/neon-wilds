@@ -10,15 +10,16 @@ export interface MissionHost {
   emit(event: SimEvent): void;
 }
 
-export function missionDef(id: string): MissionDef {
-  const def = MISSIONS.find((m) => m.id === id);
+/** Handcrafted missions plus this save's generated ones. */
+export function missionDef(id: string, p: ProgressionState): MissionDef {
+  const def = MISSIONS.find((m) => m.id === id) ?? p.generated.find((m) => m.id === id);
   if (!def) throw new Error(`Unknown mission "${id}"`);
   return def;
 }
 
-export function currentObjective(rt: MissionRuntime): ObjectiveDef | null {
+export function currentObjective(rt: MissionRuntime, p: ProgressionState): ObjectiveDef | null {
   if (rt.status !== 'active') return null;
-  return missionDef(rt.id).objectives[rt.objective] ?? null;
+  return missionDef(rt.id, p).objectives[rt.objective] ?? null;
 }
 
 function isCompleted(p: ProgressionState, id: string): boolean {
@@ -35,7 +36,8 @@ function requirementsMet(p: ProgressionState, def: MissionDef): boolean {
 
 export function startMission(host: MissionHost, def: MissionDef): void {
   if (isKnown(host.progression, def.id)) return;
-  host.progression.missions.push({ id: def.id, status: 'active', objective: 0 });
+  host.progression.missions.push({ id: def.id, status: 'active', objective: 0, deadline: def.generated?.deadlineMinutes ?? null });
+  host.progression.board = host.progression.board.filter((id) => id !== def.id);
   host.emit({ type: 'mission.started', missionId: def.id, title: def.title });
   for (const e of def.onStart ?? []) host.applyEffect(e);
 }
@@ -49,11 +51,24 @@ export function checkAutoStart(host: MissionHost): void {
 
 /** A mission this NPC can offer right now, if any. */
 export function offerFrom(p: ProgressionState, npcId: string): MissionDef | null {
-  return MISSIONS.find((m) => m.giver === npcId && !m.autoStart && !isKnown(p, m.id) && requirementsMet(p, m)) ?? null;
+  const handcrafted = MISSIONS.find((m) => m.giver === npcId && !m.autoStart && !isKnown(p, m.id) && requirementsMet(p, m));
+  if (handcrafted) return handcrafted;
+  return p.generated.find((m) => m.giver === npcId && p.board.includes(m.id) && !isKnown(p, m.id)) ?? null;
+}
+
+/** Fail missions whose deadline has passed. */
+export function checkDeadlines(host: MissionHost, now: number): void {
+  for (const rt of host.progression.missions) {
+    if (rt.status !== 'active' || rt.deadline == null || now <= rt.deadline) continue;
+    rt.status = 'failed';
+    const def = missionDef(rt.id, host.progression);
+    for (const e of def.generated?.onFail ?? []) host.applyEffect(e);
+    host.emit({ type: 'mission.failed', missionId: def.id, title: def.title });
+  }
 }
 
 function advance(host: MissionHost, rt: MissionRuntime): void {
-  const def = missionDef(rt.id);
+  const def = missionDef(rt.id, host.progression);
   const obj = def.objectives[rt.objective];
   for (const e of obj?.onComplete ?? []) host.applyEffect(e);
   rt.objective++;
@@ -70,7 +85,7 @@ function advance(host: MissionHost, rt: MissionRuntime): void {
 /** Try to complete an active objective of the given kind/target. Returns the completed objective, if any. */
 export function trigger(host: MissionHost, kind: ObjectiveDef['kind'], target: string): ObjectiveDef | null {
   for (const rt of host.progression.missions) {
-    const obj = currentObjective(rt);
+    const obj = currentObjective(rt, host.progression);
     if (obj && obj.kind === kind && obj.target === target) {
       advance(host, rt);
       return obj;
@@ -82,7 +97,7 @@ export function trigger(host: MissionHost, kind: ObjectiveDef['kind'], target: s
 /** Does an active objective currently target this (kind, target)? */
 export function isObjective(p: ProgressionState, kind: ObjectiveDef['kind'], target: string): boolean {
   return p.missions.some((rt) => {
-    const obj = currentObjective(rt);
+    const obj = currentObjective(rt, p);
     return !!obj && obj.kind === kind && obj.target === target;
   });
 }

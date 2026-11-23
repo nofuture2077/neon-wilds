@@ -6,10 +6,12 @@ import {
   Simulation,
   TILE_SIZE,
   battleView,
+  boardView,
   describeLocation,
   factionsView,
   getSpecies,
   mapView,
+  objectiveMarkers,
   progressView,
   relationship,
   shopView,
@@ -116,6 +118,7 @@ export class WorldScene extends Phaser.Scene {
         shop: (id) => shopView(this.sim, id),
         factions: () => factionsView(this.sim),
         map: () => mapView(this.sim),
+        board: () => boardView(this.sim),
       },
     });
     if (session.kind === 'load') store.pushToast(`Loaded ${session.slot === 'auto' ? 'autosave' : 'save'}.`, 'info');
@@ -141,7 +144,8 @@ export class WorldScene extends Phaser.Scene {
     const frame = this.controls.read();
 
     if (frame.pause) {
-      if (store.shopId) store.setShop(null);
+      if (store.boardOpen) useGameStore.setState({ boardOpen: false });
+      else if (store.shopId) store.setShop(null);
       else if (!store.dialogue && !store.battle) store.setPaused(!store.paused);
     }
     if (store.paused) return;
@@ -151,7 +155,7 @@ export class WorldScene extends Phaser.Scene {
       if (frame.confirm) store.battleAdvance();
     } else if (store.dialogue) {
       if (frame.confirm) store.advanceDialogue();
-    } else if (!store.shopId) {
+    } else if (!store.shopId && !store.boardOpen) {
       this.pendingInteract ||= frame.confirm;
       this.pendingAction ||= frame.action;
       input = { moveX: frame.moveX, moveY: frame.moveY, run: frame.run, interact: false, action: false };
@@ -183,7 +187,7 @@ export class WorldScene extends Phaser.Scene {
 
   private canSave(): boolean {
     const s = useGameStore.getState();
-    return !this.sim.battle && !s.battle && !s.dialogue && !this.sim.player.conversationWith;
+    return !this.sim.battle && !s.battle && !s.dialogue && !s.boardOpen && !this.sim.player.conversationWith;
   }
 
   private autosave(): void {
@@ -201,6 +205,8 @@ export class WorldScene extends Phaser.Scene {
     const darkness = darknessAt(this.sim.minutes);
     this.vehicleViews.sync(this.sim.vehicles, alpha, deltaSeconds * 1000, darkness, this.time.now);
     this.signals.update(this.sim.tick, this.sim.world.event?.id === 'blackout');
+    this.syncOfferMarkers();
+    this.syncObjectiveMarker();
     this.territoryViews.update(this.sim.territory.controllers, darkness);
     this.syncOfficers(alpha, deltaSeconds);
 
@@ -373,6 +379,12 @@ export class WorldScene extends Phaser.Scene {
       case 'blackout':
         store.pushToast(`You blacked out and lost ${event.lostMoney}₵.`, 'warning');
         break;
+      case 'board.opened':
+        useGameStore.setState({ boardOpen: true });
+        break;
+      case 'mission.failed':
+        store.pushToast(`Mission failed: ${event.title}`, 'warning');
+        break;
       case 'shop.opened':
         if (SHOPS[event.shopId]) store.setShop(event.shopId);
         break;
@@ -390,6 +402,64 @@ export class WorldScene extends Phaser.Scene {
         break;
       default:
         break;
+    }
+  }
+
+  private readonly offerMarkers = new Map<string, Phaser.GameObjects.Text>();
+  private objectiveMarker: Phaser.GameObjects.Container | null = null;
+  private objective: { x: number; y: number; label: string; where: string } | null = null;
+
+  /** Bouncing yellow waypoint over the current objective (in world space, so it never lags). */
+  private syncObjectiveMarker(): void {
+    if (this.sim.tick % 15 === 0 || !this.objective) this.objective = objectiveMarkers(this.sim)[0] ?? null;
+    const o = this.objective;
+    if (!this.objectiveMarker) {
+      const glow = this.add.image(0, 0, TEXTURES.glow).setTint(0xfff275).setScale(0.5).setBlendMode(Phaser.BlendModes.ADD);
+      const arrow = this.add.image(0, 0, TEXTURES.focus).setScale(1.6).setTint(0xfff275);
+      this.objectiveMarker = this.add.container(0, 0, [glow, arrow]).setDepth(Depth.focus + 1);
+    }
+    if (!o) {
+      this.objectiveMarker.setVisible(false);
+      return;
+    }
+    const bob = Math.sin(this.time.now / 200) * 2.5;
+    this.objectiveMarker.setVisible(true).setPosition(o.x * TILE_SIZE, o.y * TILE_SIZE - 16 + bob);
+  }
+
+  private waypointHud(): { onScreen: boolean; x: number; y: number; angle: number; meters: number; where: string } | null {
+    const o = this.objective;
+    if (!o) return null;
+    const cam = this.cameras.main;
+    const sx = (o.x * TILE_SIZE - cam.worldView.x) * cam.zoom;
+    const sy = (o.y * TILE_SIZE - cam.worldView.y) * cam.zoom;
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const onScreen = sx > 40 && sx < w - 40 && sy > 60 && sy < h - 60;
+    const meters = Math.round(Math.hypot(o.x - this.sim.player.x, o.y - this.sim.player.y) * 2);
+    return { onScreen, x: Math.round(sx), y: Math.round(sy), angle: Math.round(Math.atan2(sy - h / 2, sx - w / 2) * 100) / 100, meters: Math.round(meters / 5) * 5, where: o.where };
+  }
+
+  /** Yellow "!" over NPCs who have a job for the player. */
+  private syncOfferMarkers(): void {
+    const ids = new Set(this.sim.npcsWithOffers());
+    for (const id of ids) {
+      const view = this.npcViews.get(id);
+      const npc = this.sim.npcs.find((n) => n.id === id);
+      if (!view || !npc || npc.indoors) continue;
+      let m = this.offerMarkers.get(id);
+      if (!m) {
+        m = this.add
+          .text(0, 0, '!', { fontFamily: 'VT323, monospace', fontSize: '12px', color: '#fff275', stroke: '#000', strokeThickness: 3, resolution: this.cameras.main.zoom * 2 })
+          .setOrigin(0.5, 1)
+          .setDepth(Depth.focus);
+        this.offerMarkers.set(id, m);
+      }
+      m.setPosition(view.sprite.x, view.sprite.y - 9 + Math.sin(this.time.now / 180) * 1.5).setVisible(true);
+    }
+    for (const [id, m] of this.offerMarkers) {
+      if (ids.has(id) && !this.sim.npcs.find((n) => n.id === id)?.indoors) continue;
+      m.destroy();
+      this.offerMarkers.delete(id);
     }
   }
 
@@ -492,6 +562,7 @@ export class WorldScene extends Phaser.Scene {
       turf: sim.controllerAtPlayer(),
       weather: sim.world.weather,
       worldEvent: sim.world.event ? sim.world.event.id : null,
+      waypoint: this.waypointHud(),
     });
   }
 

@@ -89,13 +89,14 @@ export type SimCommand =
   | { type: 'party.deposit'; partyIndex: number }
   | { type: 'party.withdraw'; storageIndex: number }
   | { type: 'shop.buy'; shopId: string; itemId: string; qty: number }
-  | { type: 'market.sellWildling'; from: 'party' | 'storage'; index: number };
+  | { type: 'market.sellWildling'; from: 'party' | 'storage'; index: number }
+  | { type: 'mission.accept'; missionId: string };
 
 export type Focus =
   | { kind: 'npc'; id: string; label: string }
   | { kind: 'building'; id: string; label: string };
 
-export const SNAPSHOT_VERSION = 7;
+export const SNAPSHOT_VERSION = 8;
 
 /** Everything needed to resume a simulation. The district layout is regenerated from seed + districtId. */
 export interface SimSnapshot {

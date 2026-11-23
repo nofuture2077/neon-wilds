@@ -241,7 +241,7 @@ function JournalTab() {
   const progress = useGameStore((s) => s.progress);
   if (!progress || progress.missions.length === 0) return <Empty text="No missions yet." />;
   const active = progress.missions.filter((m) => m.status === 'active');
-  const done = progress.missions.filter((m) => m.status === 'completed');
+  const done = progress.missions.filter((m) => m.status !== 'active');
   return (
     <div className="flex flex-col gap-4">
       {active.map((m) => (
@@ -251,10 +251,10 @@ function JournalTab() {
           <div className="mt-1 font-term text-xl">▸ {m.objective}</div>
         </div>
       ))}
-      {done.length > 0 && <h3 className="font-pixel text-[10px] text-slate-400">Completed</h3>}
+      {done.length > 0 && <h3 className="font-pixel text-[10px] text-slate-400">Finished</h3>}
       {done.map((m) => (
         <div key={m.id} className="border-2 border-night-700 bg-night-800 p-3 opacity-70">
-          <div className="font-pixel text-[10px]">✓ {m.title}</div>
+          <div className="font-pixel text-[10px]">{m.status === 'failed' ? '✗' : '✓'} {m.title}</div>
           <div className="font-term text-lg text-slate-400">{m.summary}</div>
         </div>
       ))}

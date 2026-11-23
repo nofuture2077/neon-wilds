@@ -1,5 +1,5 @@
 import type { WildlingInstance } from './creatures/model';
-import type { MissionRuntime } from './missions/types';
+import type { MissionDef, MissionRuntime } from './missions/types';
 
 export const PARTY_SIZE = 6;
 
@@ -16,6 +16,13 @@ export interface ProgressionState {
   nextUid: number;
   /** factionId → -100..100 */
   reputation: Record<string, number>;
+  /** Procedurally generated mission definitions (offered, active or finished). */
+  generated: MissionDef[];
+  /** Ids of generated missions currently on offer. */
+  board: string[];
+  missionSeq: number;
+  /** Day the job board was last refreshed. */
+  boardDay: number;
 }
 
 export function newProgression(): ProgressionState {
@@ -30,6 +37,10 @@ export function newProgression(): ProgressionState {
     defeatedTrainers: [],
     nextUid: 1,
     reputation: { saints: 0, halcyon: 0, compact: 0, choir: 0, 'iron-chain': 0, wardens: 0 },
+    generated: [],
+    board: [],
+    missionSeq: 1,
+    boardDay: -1,
   };
 }
 
