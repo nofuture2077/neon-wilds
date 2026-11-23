@@ -8,7 +8,7 @@
 | 2 | Creature gameplay | **Done** | Complete creature collection loop, plus local saves |
 | 3 | Open-world sandbox | **Done** | Vehicles, traffic, police and wanted levels, factions, economy |
 | 4 | Traditional game AI | **Done** | Living world: HSM and utility NPCs, memory, relationships, Wildling BTs, faction GOAP, simulation LOD |
-| 5 | Story and content | Next | Playable campaign: Acts I–III, faction arcs, procedural missions, endings |
+| 5 | Story and content | **In progress**: core campaign playable start to finish ([review](reviews/M5.md)) | Playable campaign: Acts I–III, faction arcs, procedural missions, endings |
 | 6 | Backend and persistence | Planned | Accounts, cloud saves, sync, leaderboards |
 | 7 | Polish | Planned | Audio, animation, performance, UX, balancing, regression suite |
 
@@ -65,7 +65,10 @@ Perception, memory records and gossip, relationship graph, needs and emotion, HS
 
 **Exit:** NPCs keep schedules and react to and remember the player; two factions change territory autonomously; one faction changes behaviour in response to a world event; a generated mission is offered, completed and has consequences.
 
-## M5 — Story and content
+## M5 — Story and content (part 1 ✅, part 2 next)
+
+Part 1 delivered: city graph and Downtown; branching choices; Acts I–III (7 story missions); Saints and Halcyon arcs; four endings with a state-built epilogue. Part 2: Harbor, Old Town, Industrial and Outskirts; the Compact, Choir and Iron Chain arcs; side character arcs; the secret ending; the remaining species; vignettes.
+
 
 First: the multi-district city graph and Downtown (carried over from M3/M4), then the narrative.
 
@@ -84,7 +87,7 @@ Audio (SFX, ambience, procedural music mixing and leitmotif variation), animatio
 
 | Criterion | Milestone |
 |---|---|
-| Explore a functioning urban district | M1 ✅ |
+| Explore a functioning urban district | M1 ✅ (two districts since M5) |
 | ≥ 10 creatures encountered and captured; battles functional | M2 ✅ |
 | NPC schedules, reactions, memory | M4 ✅ |
 | ≥ 2 factions operate independently and change influence | M4 ✅ (GOAP) |

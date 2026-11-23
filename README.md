@@ -8,7 +8,7 @@ Built with TypeScript, Phaser 3, React, Zustand, Tailwind and Fastify.
 
 ## Status
 
-**Milestone 4, Traditional Game AI, is complete.** NPCs follow daily routines, remember and gossip about what you do, and react accordingly. Halcyon and the Gutter Saints plan operations you can see and disrupt. Weather and world events change the night, and a job board generates missions. On top of M3: Explore a procedurally laid-out neon Slums at night and play the opening mission *Last Run*. Bond with the Glitchling and catch 10 species of Wildlings in turn-based battles. Steal cars and drift through signal-controlled traffic. Outrun the Wardens, or get busted. Pick a side as the Gutter Saints and Halcyon fight over the blocks around you. The synthwave soundtrack is composed live by an algorithm. See [docs/ROADMAP.md](docs/ROADMAP.md) for what's next: M5 brings the city graph, Downtown and the story campaign.
+**Milestone 5 (part 1): the story is playable from start to finish.** Two districts (the Slums and Neon Downtown), three acts, branching choices about the Glitchling's fate, and four endings with an epilogue built from what you did. **Milestone 4, Traditional Game AI:** NPCs follow daily routines, remember and gossip about what you do, and react accordingly. Halcyon and the Gutter Saints plan operations you can see and disrupt. Weather and world events change the night, and a job board generates missions. On top of M3: Explore a procedurally laid-out neon Slums at night and play the opening mission *Last Run*. Bond with the Glitchling and catch 10 species of Wildlings in turn-based battles. Steal cars and drift through signal-controlled traffic. Outrun the Wardens, or get busted. Pick a side as the Gutter Saints and Halcyon fight over the blocks around you. The synthwave soundtrack is composed live by an algorithm. See [docs/ROADMAP.md](docs/ROADMAP.md) for what's next: M5 part 2 brings the remaining districts and faction arcs.
 
 ## Quick start
 
@@ -71,6 +71,6 @@ scripts/       tooling (no-AI guard)
 | [Roadmap](docs/ROADMAP.md) · [Risks](docs/RISKS.md) · [Decisions](docs/DECISIONS.md) | Planning and ADRs |
 | [World Generation](docs/WORLD_GEN.md) | Hybrid authored + procedural city (organic streets, vignettes) |
 | [Procedural Soundtrack](docs/AUDIO.md) | Algorithmic synthwave composer and Web Audio synths |
-| [M1](docs/reviews/M1.md) · [M2](docs/reviews/M2.md) · [M3](docs/reviews/M3.md) · [M4](docs/reviews/M4.md) reviews | Test results, fixed bugs, known issues |
+| [M1](docs/reviews/M1.md) · [M2](docs/reviews/M2.md) · [M3](docs/reviews/M3.md) · [M4](docs/reviews/M4.md) · [M5](docs/reviews/M5.md) reviews | Test results, fixed bugs, known issues |
 
 All characters, creatures, places, art and text are original.

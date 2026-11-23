@@ -262,3 +262,9 @@ Synth-wave and lo-fi beats per district. Each district has a different instrumen
 - The Saints and Halcyon plan operations you can see on the streets (and break up); they react to blackouts, recall drives and processions.
 - Weather and world events change the night: rain brings Tide Wildlings, blackouts kill the neon.
 - A daily job board and NPC requests generate missions from five templates; waypoints show where to go.
+
+## 17. Milestone 5 (part 1) as built
+
+- Two districts (The Slums and Neon Downtown), linked by the Lantern Parade bridge.
+- A complete story spine: Act I (Last Run, The Hum, Everyone Wants It), Act II (Tethered or Loyal Employee, Recovered Asset), Act III (The Quiet), four endings and a personalised epilogue.
+- 14 species, branching choices that change reputation, available missions and endings.

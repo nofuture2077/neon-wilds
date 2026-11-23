@@ -173,6 +173,8 @@ The old families behind the Lighting. Chairman **Corvin Ashgrave** is the centra
 
 ## 5. Main story
 
+> **Implemented (M5 part 1):** Act I in full; Act II with the Saints and Halcyon arcs (+ *Loyal Employee* for the sold path); Act III needs **two** fragments for now, and four of the five endings are implemented (The Hollow needs the Outskirts). Content lives in `packages/sim/src/content/missions.ts`.
+
 ### Act I — *The Package* (Slums)
 
 1. **Last Run.** A Co-op courier job: deliver a sealed capsule from the Harbor to the Halcyon kiosk. Aegis agents ambush the drop, the capsule cracks, and the **Glitchling** imprints on you.
