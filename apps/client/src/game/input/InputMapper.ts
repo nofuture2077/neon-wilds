@@ -50,7 +50,8 @@ export class InputMapper {
       space: K.SPACE,
       enter: K.ENTER,
       esc: K.ESC,
-    }) as Record<string, Phaser.Input.Keyboard.Key>;
+    }, false /* no key capture: focused DOM buttons (menus, battle) must receive Enter/Space/arrows */) as Record<string, Phaser.Input.Keyboard.Key>;
+    kb.clearCaptures();
 
     const onKeyDown = (ev: KeyboardEvent) => {
       if (ev.repeat) return;

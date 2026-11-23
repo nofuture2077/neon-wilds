@@ -114,6 +114,8 @@ interface GameStore {
   snapshotSource: (() => { snapshot: SimSnapshot; location: string } | null) | null;
   queries: GameQueries | null;
   musicVolume: number;
+  /** Battle text and dialogue pages advance on their own (decisions always wait). */
+  autoAdvance: boolean;
 
   goTo(screen: Screen): void;
   startSession(session: Session): void;
@@ -166,6 +168,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   snapshotSource: null,
   queries: null,
   musicVolume: 0.6,
+  autoAdvance: loadFlag('neon-wilds:auto-advance', true),
 
   goTo: (screen) => set({ screen }),
   startSession: (session) =>
@@ -327,4 +330,22 @@ function pump(set: (p: Partial<GameStore>) => void, get: () => GameStore): void 
   b = get().battle;
   if (!b) return;
   set({ battle: { ...b, queue, player, enemy, outcome, message } });
+}
+
+function loadFlag(key: string, fallback: boolean): boolean {
+  try {
+    const v = localStorage.getItem(key);
+    return v === null ? fallback : v === '1';
+  } catch {
+    return fallback;
+  }
+}
+
+export function setAutoAdvance(on: boolean): void {
+  useGameStore.setState({ autoAdvance: on });
+  try {
+    localStorage.setItem('neon-wilds:auto-advance', on ? '1' : '0');
+  } catch {
+    // not persisted
+  }
 }

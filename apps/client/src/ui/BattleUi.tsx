@@ -18,6 +18,17 @@ export function BattleUi() {
     return () => clearTimeout(t);
   }, [showMenu, battle?.menu]);
 
+  // Auto-advance: battle text plays itself; menus and decisions still wait for the player.
+  const autoAdvance = useGameStore((s) => s.autoAdvance);
+  const message = battle?.message ?? null;
+  const finished = !!battle && !battle.message && battle.queue.length === 0 && !!battle.outcome;
+  useEffect(() => {
+    if (!autoAdvance || (!message && !finished)) return;
+    const ms = message ? Math.min(2200, 650 + message.length * 16) : 900;
+    const t = setTimeout(() => useGameStore.getState().battleAdvance(), ms);
+    return () => clearTimeout(t);
+  }, [autoAdvance, message, finished, battle?.queue.length]);
+
   useEffect(() => {
     if (!battle) return;
     const onKey = (e: KeyboardEvent) => {

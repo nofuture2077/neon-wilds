@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { type PauseTab, useGameStore } from '../state/gameStore';
+import { type PauseTab, setAutoAdvance, useGameStore } from '../state/gameStore';
 import { type SlotInfo, listSaves, slotLabel, writeSave } from '../services/saves';
 import { SLOTS, type SlotId, formatPlayTime } from '../services/saveFormat';
 import { saveMusicVolume } from '../audio/useMusic';
@@ -305,6 +305,7 @@ function SaveTab() {
 
 function OptionsTab() {
   const volume = useGameStore((s) => s.musicVolume);
+  const autoAdvance = useGameStore((s) => s.autoAdvance);
   const set = (v: number) => {
     useGameStore.setState({ musicVolume: v });
     saveMusicVolume(v);
@@ -329,6 +330,13 @@ function OptionsTab() {
         <p className="mt-2 font-term text-lg text-slate-400">
           The soundtrack is composed live by a rule-based algorithm — it never plays the same night twice.
         </p>
+      </div>
+      <div>
+        <h3 className="mb-2 font-pixel text-xs text-neon-yellow">Text</h3>
+        <button data-nav className="pixel-button" onClick={() => setAutoAdvance(!autoAdvance)}>
+          Auto-advance battle text and dialogue: {autoAdvance ? 'ON' : 'OFF'}
+        </button>
+        <p className="mt-2 font-term text-lg text-slate-400">Decisions and menus always wait for you. Press E to skip ahead.</p>
       </div>
       <ControlsPanel />
     </div>

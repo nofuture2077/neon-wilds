@@ -223,6 +223,27 @@ await page.waitForTimeout(1500);
 await press('f');
 assert(await sim(() => window.__NEON_WILDS__.sim.player.vehicleId === null), 'got out of the car');
 
+// Keyboard-only battle: no mouse, auto-advancing text.
+await sim(() => {
+  const { sim } = window.__NEON_WILDS__;
+  for (let i = 0; i < 300; i++) sim.step({ moveX: 0, moveY: 0, run: false, interact: false });
+  const w = sim.wildlings.find((x) => !x.questTag);
+  w.calmUntilTick = 0;
+  sim.player.x = sim.player.prevX = w.x;
+  sim.player.y = sim.player.prevY = w.y;
+});
+await page.waitForTimeout(400);
+let keyboardTurns = 0;
+for (let round = 0; round < 10 && (await sim(() => !!window.__NEON_WILDS__.sim.battle)); round++) {
+  await page.waitForTimeout(2400);
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(400);
+  await page.keyboard.press('e');
+  keyboardTurns++;
+}
+await page.waitForTimeout(2500);
+assert(keyboardTurns > 0 && (await sim(() => !window.__NEON_WILDS__.sim.battle)), `won a battle with the keyboard alone (${keyboardTurns} turns)`);
+
 const fps = await page.evaluate(
   () =>
     new Promise((res) => {

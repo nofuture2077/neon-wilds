@@ -42,9 +42,16 @@ export function useGamepadNav(enabled = true): void {
     raf = requestAnimationFrame(tick);
 
     const onKey = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      const active = document.activeElement as HTMLElement | null;
+      const onNav = !!active?.matches('[data-nav]');
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') move(1);
       else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') move(-1);
-      else return;
+      else if ((e.key === 'e' || e.key === 'E') && onNav && active?.tagName !== 'INPUT') active!.click(); // E = confirm, like the game
+      else if (e.key === 'Enter' && !onNav) {
+        // Nothing focused yet: Enter focuses the first option instead of being lost.
+        (document.querySelector<HTMLElement>('[data-nav]:not([disabled])') ?? null)?.focus();
+      } else return;
       e.preventDefault();
     };
     window.addEventListener('keydown', onKey);

@@ -15,6 +15,14 @@ export function DialogueBox() {
     const t = setTimeout(() => firstChoice.current?.focus(), 180);
     return () => clearTimeout(t);
   }, [showChoices]);
+  const autoAdvance = useGameStore((s) => s.autoAdvance);
+  const pageText = dialogue && !showChoices ? (dialogue.pages[dialogue.page] ?? '') : null;
+  useEffect(() => {
+    if (!autoAdvance || pageText === null || inBattle) return;
+    // Long enough to read comfortably; press E to skip ahead.
+    const t = setTimeout(() => useGameStore.getState().advanceDialogue(), Math.min(6500, 1600 + pageText.length * 38));
+    return () => clearTimeout(t);
+  }, [autoAdvance, pageText, dialogue?.page, dialogue?.speaker, inBattle]);
   if (!dialogue || inBattle) return null;
   const last = dialogue.page >= dialogue.pages.length - 1;
   const sign = dialogue.source.kind === 'sign';
