@@ -432,8 +432,14 @@ export class Simulation implements MissionHost {
         this.startTrainerBattle(effect.npc);
         break;
       case 'spawn-quest-wildling': {
-        const tile = findSpawnTile({ layout: this.layout, rng: this.rng, player: this.player }, [Tile.Alley], 10, 30);
-        if (tile) spawnWildling(this.wildlings, this.spawnCtx(), effect.species, effect.level, tile, null, effect.tag);
+        // Quest Wildlings must always appear, or the mission would be stuck: widen the search step by step.
+        const ctx = { layout: this.layout, rng: this.rng, player: this.player };
+        const tile =
+          findSpawnTile(ctx, [Tile.Alley], 10, 30) ??
+          findSpawnTile(ctx, [Tile.Alley, Tile.Sidewalk, Tile.Plaza, Tile.Grass], 6, 40) ??
+          this.layout.pedestrianSpawns.find((t) => Math.hypot(t.tx - this.player.x, t.ty - this.player.y) > 6) ??
+          this.layout.pedestrianSpawns[0]!;
+        spawnWildling(this.wildlings, this.spawnCtx(), effect.species, effect.level, tile, null, effect.tag);
         break;
       }
       case 'set-flag':

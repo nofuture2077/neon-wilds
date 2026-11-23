@@ -31,7 +31,8 @@ describe('city graph', () => {
     for (const name of ['Halcyon Flagship Store', 'Lumen Spire', 'Wardens Central']) {
       expect(layout.buildings.some((b) => b.name === name)).toBe(true);
     }
-    expect(layout.exits).toEqual([{ to: 'slums', side: 'west', street: 'Lantern Parade' }]);
+    expect(layout.exits).toContainEqual({ to: 'slums', side: 'west', street: 'Lantern Parade' });
+    expect(layout.exits).toContainEqual({ to: 'harbor', side: 'east', street: 'Prism Row' });
   });
 
   it('the bridge is closed until Last Run is done', () => {

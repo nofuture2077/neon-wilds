@@ -46,3 +46,4 @@ export * from './world/director';
 export * from './missions/generator';
 export * from './content/downtown';
 export * from './missions/epilogue';
+export * from './content/harbor';

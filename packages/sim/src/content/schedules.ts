@@ -108,6 +108,30 @@ export const ROUTINES: Record<string, Routine> = {
     sociability: 0.3,
     blocks: [{ from: 0, to: 24, weights: { patrol: 4, eat: 0.4 } }],
   },
+  docker: {
+    workplace: 'office',
+    sociability: 1,
+    blocks: [
+      { from: 2, to: 10, weights: { sleep: 4 } },
+      { from: 10, to: 2, weights: { work: 3, eat: 1, socialize: 1.2 } },
+    ],
+  },
+  smuggler: {
+    workplace: 'none',
+    sociability: 1,
+    blocks: [
+      { from: 8, to: 16, weights: { sleep: 4 } },
+      { from: 16, to: 8, weights: { patrol: 2.5, socialize: 1.5, eat: 0.8 } },
+    ],
+  },
+  fishmonger: {
+    workplace: 'stall',
+    sociability: 1,
+    blocks: [
+      { from: 22, to: 4, weights: { sleep: 4 } },
+      { from: 4, to: 22, weights: { work: 3.5, eat: 0.8, socialize: 0.6 } },
+    ],
+  },
   citizen: {
     workplace: 'none',
     sociability: 0.5,

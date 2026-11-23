@@ -146,3 +146,18 @@ export function buildPuff(): PixelCanvas {
   ellipse(pc.ctx, 4, 4, 3.8, 3.8, 0xffffff, 0.8);
   return pc;
 }
+
+/** Shipping container seen from above (48x16), ribbed roof. */
+export function buildContainer(variant: number): PixelCanvas {
+  const pc = createCanvas(48, 16);
+  const c = pc.ctx;
+  const body = [0xb8333a, 0x2f6fb5, 0x3e8e5e, 0xd9b44a, 0x6b4a8a, 0xc0563a][variant % 6]!;
+  rect(c, 0, 0, 48, 16, 0x0c0c10);
+  rect(c, 1, 1, 46, 14, body);
+  for (let x = 3; x < 46; x += 3) rect(c, x, 1, 1, 14, shade(body, 0.75));
+  rect(c, 1, 1, 46, 1, shade(body, 1.3));
+  rect(c, 1, 14, 46, 1, shade(body, 0.55));
+  px(c, 44, 7, 0xd0d0d8);
+  px(c, 44, 8, 0xd0d0d8);
+  return pc;
+}

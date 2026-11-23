@@ -47,6 +47,20 @@ export const TRAINERS: Record<string, TrainerDefinition> = {
     ],
     defeated: ['...So the Glitchling can hear the Hush. And it sings back. Then the choice is yours, courier.'],
   },
+  'npc-dockwarden': {
+    npcId: 'npc-dockwarden',
+    name: 'Dock Warden Hask',
+    party: [
+      { species: 'brinekin', level: 15 },
+      { species: 'hydrantoad', level: 16 },
+      { species: 'gutterjaw', level: 17 },
+    ],
+    ai: 'skilled',
+    items: { 'med-spray': 1 },
+    reward: 420,
+    challenge: ['Container 7 is Halcyon property under maritime licence. You are trespassing.', 'Hask. Halcyon Shipping security. Leave now, or leave wet.'],
+    defeated: ['Take the manifest. They don’t pay me enough to drown for it.'],
+  },
   'npc-vik': {
     npcId: 'npc-vik',
     name: 'Vik Torrance',

@@ -362,14 +362,83 @@ export const MISSIONS: MissionDef[] = [
     rewards: [{ type: 'give-money', amount: 400 }],
   },
 
+  {
+    id: 'cargo',
+    title: 'Cargo',
+    summary: 'Captain Danso says Halcyon buys wild-caught Wildlings it claims to breed. Container 7 holds the proof.',
+    requires: ['everyone-wants-it'],
+    giver: 'npc-danso',
+    offer: [
+      'So you\u2019re the courier with the singing Wildling. Sit. I keep ledgers, {player}, and ledgers don\u2019t lie.',
+      'Halcyon buys wild Wildlings from my crews by the hundred — then sells them as "lab-bred". Container 7 tonight. Get me its manifest.',
+    ],
+    onStart: [{ type: 'spawn-npc', npc: 'npc-dockwarden', near: 'Container Yard Office' }],
+    objectives: [
+      { text: 'Get past the Halcyon dock warden at the Container Yard Office', kind: 'defeat', target: 'npc-dockwarden', onComplete: [{ type: 'despawn-npc', npc: 'npc-dockwarden' }] },
+      {
+        text: 'Search the Container Yard Office',
+        kind: 'inspect',
+        target: 'Container Yard Office',
+        onComplete: [
+          {
+            type: 'message',
+            speaker: 'Container 7 manifest',
+            pages: [
+              '"42 wild Fizzlet — origin: SLUMS. Relabel: HALCYON-BRED. Tether on arrival."',
+              'Clipped behind it: another page of the Lighting schematics, stamped V.C.T.',
+            ],
+          },
+          { type: 'give-item', item: 'hush-fragment', qty: 1 },
+        ],
+      },
+      {
+        text: 'Bring the manifest to Captain Danso',
+        kind: 'talk',
+        target: 'npc-danso',
+        pages: ['Read it to me. ...Forty-two. Relabelled. Tethered.', 'That manifest is worth a fortune — or a war. Your call, courier.'],
+        onComplete: [
+          {
+            type: 'choice',
+            speaker: 'Captain Oriel Danso',
+            pages: ['What do we do with it?'],
+            options: [
+              {
+                id: 'leverage',
+                label: 'Keep it as leverage on Halcyon.',
+                effects: [
+                  { type: 'reputation', faction: 'compact', delta: 15 },
+                  { type: 'give-money', amount: 600 },
+                  { type: 'set-flag', flag: 'compact-leverage' },
+                  { type: 'message', speaker: 'Captain Oriel Danso', pages: ['A wise investment. The Compact owes you, and the Compact pays its debts.'] },
+                ],
+              },
+              {
+                id: 'expose',
+                label: 'Leak it to the Vesper Gazette.',
+                effects: [
+                  { type: 'reputation', faction: 'compact', delta: -5 },
+                  { type: 'reputation', faction: 'halcyon', delta: -12 },
+                  { type: 'reputation', faction: 'saints', delta: 6 },
+                  { type: 'set-flag', flag: 'manifest-leaked' },
+                  { type: 'message', speaker: 'Captain Oriel Danso', pages: ['Bad for business. Good for the city, maybe. I\u2019ll pretend I didn\u2019t see you.'] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    rewards: [{ type: 'set-flag', flag: 'fragment-compact' }],
+  },
+
   // ----------------------------------------------------------------------------------------------
   // Act III — the Quiet.
   {
     id: 'the-quiet',
     title: 'The Quiet',
-    summary: 'Two fragments show the truth: the Lighting is a cage. Ashgrave waits at the Lumen Spire.',
+    summary: 'Three fragments show the truth: the Lighting is a cage. Ashgrave waits at the Lumen Spire.',
     requires: ['everyone-wants-it'],
-    requiresItems: { 'hush-fragment': 2 },
+    requiresItems: { 'hush-fragment': 3 },
     autoStart: true,
     onStart: [
       { type: 'spawn-npc', npc: 'npc-ashgrave', near: 'Lumen Spire' },

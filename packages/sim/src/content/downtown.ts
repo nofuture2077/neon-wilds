@@ -15,7 +15,10 @@ export const DOWNTOWN: DistrictDefinition = {
   parkBlock: { bx: 3, by: 0 },
   verticalStreets: ['Meridian Avenue', 'Varga Boulevard', 'Glass Street', 'Lumen Way', 'Harbor Approach'],
   horizontalStreets: ['Skyline Drive', 'Prism Row', 'Lantern Parade', 'Founders Street'],
-  exits: [{ to: 'slums', side: 'west', street: 'Lantern Parade' }],
+  exits: [
+    { to: 'slums', side: 'west', street: 'Lantern Parade' },
+    { to: 'harbor', side: 'east', street: 'Prism Row' },
+  ],
   namedBuildings: [
     {
       name: 'Halcyon Flagship Store',

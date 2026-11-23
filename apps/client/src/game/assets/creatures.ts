@@ -245,6 +245,40 @@ const DRAW: Record<string, Draw> = {
     g.p(14, 7.8 + b, 0x00e5ff);
     g.r(14.2, 10 + b, 1.4, 0.5, 0x9aa0ad);
   },
+  gutterjaw(g, f) {
+    const b = f ? 0.5 : 0;
+    g.eo(2.5, 10 + b, 1.8, 2.6, 0x3a5a3a);
+    g.eo(8, 10 + b, 6, 2.6, 0x4a7a5a);
+    g.e(8.5, 11.2 + b, 4.5, 1.1, 0x9ac88a);
+    g.r(4, 8 + b, 7, 0.6, 0xb36bff);
+    g.eo(13, 9.5 + b, 2.4, 2.2, 0x4a7a5a);
+    g.r(13, 10.6 + b, 2.6, 0.8, 0x1a2a1a);
+    g.p(14, 10.4 + b, SHINE);
+    g.p(15, 10.4 + b, SHINE);
+    eye(g, 13.4, 8.6 + b, 0xffd23f);
+  },
+  brinekin(g, f) {
+    const b = f ? 0.3 : 0;
+    legs(g, [4, 6, 10, 12], 12.4, 0xc0563a, f, 2);
+    g.eo(8, 9.5, 4.2, 3.6, 0xc9c4d6);
+    g.r(5, 7.5, 6, 1, 0xd9b44a);
+    g.r(5, 10.5, 6, 0.8, 0x9aa0ad);
+    g.eo(11.5, 12 + b, 2.4, 1.6, 0xe07a5f);
+    g.eo(13.5, 10.6 + b, 1.5, 1.2, 0xe07a5f);
+    eye(g, 12.2, 10.8 + b);
+    g.p(13, 9.6 + b, 0xe07a5f);
+  },
+  dockhulk(g, f) {
+    const b = f ? 0.3 : 0;
+    legs(g, [2.5, 4.5, 11, 13], 12.6, 0xa0402a, f, 2.4);
+    g.eo(8, 9, 6, 4.4, 0x2f6fb5);
+    for (let x = 3.5; x < 13; x += 1.5) g.r(x, 5.4, 0.6, 7, 0x24548a);
+    g.r(3, 5, 10, 0.8, 0x6f9fd5);
+    g.eo(13.2, 12.4 + b, 2.6, 1.8, 0xc0563a);
+    g.eo(2.8, 12.6 - b, 2.2, 1.5, 0xc0563a);
+    eye(g, 10.5, 11.6, 0xffd23f);
+    eye(g, 6.5, 11.6, 0xffd23f);
+  },
   glitchling(g, f) {
     const hover = f ? -0.6 : 0;
     const glitch = f ? 1 : -1;

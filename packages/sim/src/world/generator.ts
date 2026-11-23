@@ -18,7 +18,7 @@ interface BlockRect {
   y: number;
   w: number;
   h: number;
-  kind: 'lots' | 'park' | 'square';
+  kind: 'lots' | 'park' | 'square' | 'docks';
 }
 
 /**
@@ -60,7 +60,9 @@ export function generateDistrict(def: DistrictDefinition, seed: number): Distric
   const spawnBx = Math.min(1, blocksX - 1);
   const spawnBy = Math.min(1, blocksY - 1);
   const squareBlock = { bx: (def.parkBlock.bx + 2) % blocksX, by: (def.parkBlock.by + 1) % blocksY };
+  const dockRow = def.waterfront ? blocksY - 1 : -1;
   const fixed = (bx: number, by: number) =>
+    by === dockRow ||
     (bx === def.parkBlock.bx && by === def.parkBlock.by) ||
     (bx === spawnBx && by === spawnBy) ||
     (bx === squareBlock.bx && by === squareBlock.by);
@@ -84,7 +86,14 @@ export function generateDistrict(def: DistrictDefinition, seed: number): Distric
   for (let by = 0; by < blocksY; by++) {
     for (let bx = 0; bx < blocksX; bx++) {
       const key = `${bx}-${by}`;
-      const kind = bx === def.parkBlock.bx && by === def.parkBlock.by ? 'park' : bx === squareBlock.bx && by === squareBlock.by ? 'square' : 'lots';
+      const kind =
+        by === dockRow
+          ? 'docks'
+          : bx === def.parkBlock.bx && by === def.parkBlock.by
+            ? 'park'
+            : bx === squareBlock.bx && by === squareBlock.by
+              ? 'square'
+              : 'lots';
       const v = removedV.find((r) => r.by === by && (r.i === bx || r.i === bx + 1));
       const h = removedH.find((r) => r.bx === bx && (r.j === by || r.j === by + 1));
       if (v) {
@@ -122,6 +131,10 @@ export function generateDistrict(def: DistrictDefinition, seed: number): Distric
     const iy = b.y + 2;
     const iw = b.w - 4;
     const ih = b.h - 4;
+    if (b.kind === 'docks') {
+      buildDocks(map, rng, b.x, b.y, b.w, addProp);
+      continue;
+    }
     if (b.kind === 'park') buildPark(map, rng, ix, iy, iw, ih, addProp);
     else if (b.kind === 'square') buildSquare(map, rng, ix, iy, iw, ih, addProp);
     else buildLots(map, rng, ix, iy, iw, ih, buildings, addProp, b.key);
@@ -129,6 +142,18 @@ export function generateDistrict(def: DistrictDefinition, seed: number): Distric
   }
 
   assignBuildingIdentities(buildings, def, rng);
+
+  // Waterfront: everything south of the quays is sea, crossed only by piers.
+  if (dockRow >= 0) {
+    const seaY = ys[dockRow]! + 6;
+    for (let y = seaY; y < height; y++) {
+      for (let x = 0; x < width; x++) if (map.get(x, y) !== Tile.Plaza || y >= height - 1) map.set(x, y, Tile.Water);
+    }
+    for (let k = props.length - 1; k >= 0; k--) {
+      const p = props[k]!;
+      if (p.y + p.h > seaY && p.kind !== 'container') props.splice(k, 1);
+    }
+  }
 
   // 4. Crosswalks between neighbouring blocks next to each intersection, only where both ends are sidewalk.
   for (let i = 1; i < blocksX; i++) {
@@ -211,6 +236,18 @@ function inBand(v: number, count: number, bandStart: (i: number) => number, road
     if (v >= s && v < s + roadW) return true;
   }
   return false;
+}
+
+/** Quays along the waterfront: container stacks on the dock apron, piers out over the water. */
+function buildDocks(map: TileMap, rng: Rng, x: number, y: number, w: number, addProp: AddProp): void {
+  map.fillRect(x, y, w, 2, Tile.Sidewalk);
+  map.fillRect(x, y + 2, w, 4, Tile.Plaza);
+  // Piers: plaza strips reaching south into what becomes the sea.
+  for (let px = x + 2; px < x + w - 2; px += 7) map.fillRect(px, y + 6, 2, 9, Tile.Plaza);
+  // Container stacks on the apron, leaving a walkway on the quay edge.
+  for (let cx = x + 1; cx < x + w - 3; cx += 4) {
+    if (rng.chance(0.65)) addProp({ kind: 'container', x: cx, y: y + 3, w: 3, h: 1, solid: true, variant: rng.int(0, 5), facing: 'east' });
+  }
 }
 
 /** An open market square: plaza paving, a ring of benches and stalls, lamps. */

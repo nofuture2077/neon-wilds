@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_INPUT, Rng, Simulation, createWildling, type SimEvent } from '../src';
+import { NO_INPUT, Rng, SKILLS, Simulation, createWildling, effectiveness, getSpecies, healFully, type SimEvent } from '../src';
 
 const APPEARANCE = { skin: 1, hair: 2, top: 3, bottom: 4 };
 
@@ -31,6 +31,11 @@ class Player {
   }
 
   talk(npcId: string) {
+    // Battles can start from a conversation: arrive healed, strongest Wildling first.
+    const party = this.sim.progression.party;
+    for (const w of party) healFully(w, true);
+    const ace = party.findIndex((w) => w.uid === 'ace');
+    if (ace > 0) party.unshift(...party.splice(ace, 1));
     const npc = this.sim.npcs.find((n) => n.id === npcId);
     if (!npc) throw new Error(`no npc ${npcId} in ${this.sim.districtId}`);
     npc.indoors = null;
@@ -59,17 +64,37 @@ class Player {
   }
 
   winBattle() {
+    // Story-flow test, not a balance test: patch everyone up like a clinic visit would.
+    for (const w of this.sim.progression.party) healFully(w, true);
     for (let i = 0; i < 80 && this.sim.battle; i++) {
       const b = this.sim.battle;
       const action =
         b.phase === 'force-switch'
           ? { kind: 'switch' as const, partyIndex: this.sim.progression.party.findIndex((w) => w.hp > 0) }
-          : { kind: 'skill' as const, index: 0 };
+          : { kind: 'skill' as const, index: this.bestSkill() };
       this.sim.enqueue({ type: 'battle.action', action });
       this.step(1);
     }
     expect(this.sim.battle).toBeNull();
     this.closeDialogue();
+  }
+
+  /** Pick the damaging skill with the best power × type effectiveness against the current foe. */
+  bestSkill(): number {
+    const b = this.sim.battle!;
+    const me = this.sim.progression.party[b.player.active]!;
+    const foe = getSpecies(b.enemy.party[b.enemy.active]!.speciesId).types;
+    let best = 0;
+    let bestScore = -1;
+    me.skills.forEach((id, i) => {
+      const sk = SKILLS[id];
+      const score = sk && sk.category !== 'status' ? sk.power * effectiveness(sk.type, foe) * (sk.recoil ? 0.8 : 1) : 0;
+      if (score > bestScore) {
+        bestScore = score;
+        best = i;
+      }
+    });
+    return best;
   }
 
   resolveQuestWildling(tag: string) {
@@ -118,6 +143,22 @@ function playActOne(pl: Player, decision: 'saints' | 'sell') {
   expect(pl.status('everyone-wants-it')).toBe('completed');
 }
 
+function playCargo(pl: Player, choice: 'leverage' | 'expose') {
+  const sim = pl.sim;
+  if (sim.districtId !== 'downtown') sim.travelTo('downtown', 'Lantern Parade');
+  sim.travelTo('harbor', 'Prism Row');
+  pl.step(2);
+  expect(sim.districtId).toBe('harbor');
+  pl.talk('npc-danso');
+  expect(pl.status('cargo')).toBe('active');
+  pl.talk('npc-dockwarden');
+  pl.winBattle();
+  pl.inspect('Container Yard Office');
+  pl.talk('npc-danso');
+  pl.choose(choice);
+  expect(pl.status('cargo')).toBe('completed');
+}
+
 describe('main story', () => {
   it('Saints path: Act I → both Act II arcs → Ashgrave → The Chorus', () => {
     const sim = Simulation.create({ seed: 77, playerName: 'Nova', appearance: APPEARANCE, startMinutes: 20 * 60 });
@@ -140,6 +181,11 @@ describe('main story', () => {
     pl.talk('npc-wren');
     pl.choose('ally');
     expect(sim.progression.inventory['hush-fragment']).toBe(2);
+
+    // Compact arc, Harbor.
+    playCargo(pl, 'expose');
+    expect(sim.progression.inventory['hush-fragment']).toBe(3);
+    sim.travelTo('downtown', 'Prism Row');
 
     // Finale.
     pl.step(2);
@@ -175,16 +221,20 @@ describe('main story', () => {
     pl.step(2);
     pl.talk('npc-dez');
     expect(sim.progression.inventory['hush-fragment']).toBe(2);
-
     sim.travelTo('downtown', 'Lantern Parade');
+    playCargo(pl, 'leverage');
+    expect(sim.progression.inventory['hush-fragment']).toBe(3);
+
+    pl.step(2);
+    sim.travelTo('downtown', 'Prism Row');
     pl.step(2);
     pl.talk('npc-ashgrave');
     pl.winBattle();
     pl.talk('npc-ashgrave');
     const ids = sim.pendingChoice?.options.map((o) => o.id) ?? [];
     expect(ids).not.toContain('chorus');
-    expect(ids).toContain('vargas-city');
-    pl.choose('vargas-city');
-    expect(pl.log.some((e) => e.type === 'game.ending' && e.ending === 'vargas-city')).toBe(true);
+    expect(ids).toContain('the-quiet');
+    pl.choose('the-quiet');
+    expect(pl.log.some((e) => e.type === 'game.ending' && e.ending === 'the-quiet')).toBe(true);
   }, 30000);
 });

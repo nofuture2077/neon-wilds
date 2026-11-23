@@ -372,6 +372,22 @@ export function driveAi(v: VehicleState, all: readonly VehicleState[], ctx: Vehi
 
   if (ai.route.length === 0) {
     const next = ctx.roads.nextIntersection(v.x, v.y, ai.dir);
+    if (!next || next.distance > 3) {
+      // Dead end (waterfront, map edge): turn around into the opposite lane.
+      const d = DIR_VEC[ai.dir];
+      const ahead = ctx.layout.map.get(Math.floor(v.x + d.x * 2.2), Math.floor(v.y + d.y * 2.2));
+      if (!isDrivable(ahead) || ctx.layout.map.isSolid(Math.floor(v.x + d.x * 2.2), Math.floor(v.y + d.y * 2.2))) {
+        const back = OPPOSITE[ai.dir];
+        const band = ai.dir === 'N' || ai.dir === 'S' ? ctx.roads.vbandAt(v.x) : ctx.roads.hbandAt(v.y);
+        if (band) {
+          const lane = laneCoord(band, back);
+          const tx = ai.dir === 'N' || ai.dir === 'S' ? lane : v.x - d.x * 1.5;
+          const ty = ai.dir === 'N' || ai.dir === 'S' ? v.y - d.y * 1.5 : lane;
+          ai.route = [{ x: v.x + (tx - v.x) * 0.5 + d.x * 0.4, y: v.y + (ty - v.y) * 0.5 + d.y * 0.4 }, { x: tx, y: ty }];
+          ai.nextDir = back;
+        }
+      }
+    }
     if (next) {
       if (next.distance < 0.2) {
         ai.nextDir = pursuing ? chooseExitToward(next.node.exits, ai.dir, v, ctx.pursuit!) : chooseExit(next.node.exits, ai.dir, ctx.rng);

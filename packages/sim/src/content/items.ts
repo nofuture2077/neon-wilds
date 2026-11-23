@@ -6,6 +6,7 @@ export const ITEMS: Record<string, ItemDef> = Object.fromEntries(
       { id: 'tin-snare', name: 'Tin Snare', category: 'snare', price: 60, snare: { multiplier: 1 }, description: 'A capture can soldered from scrap. Gets the job done.' },
       { id: 'coil-snare', name: 'Coil Snare', category: 'snare', price: 150, snare: { multiplier: 1.5, bonusVs: ['spark', 'alloy'] }, description: 'Copper-wound snare. Extra effective on Spark and Alloy Wildlings.' },
       { id: 'lull-snare', name: 'Lull Snare', category: 'snare', price: 150, snare: { multiplier: 1, sleepingBonus: 3 }, description: 'Hums a lullaby. Much better against weakened or disoriented targets.' },
+      { id: 'black-market-snare', name: 'Black-Market Snare', category: 'snare', price: 300, snare: { multiplier: 2.5 }, description: 'Military-grade, serial number filed off. Wardens would very much like to know where you got it.' },
       { id: 'patch-kit', name: 'Patch Kit', category: 'medicine', price: 50, heal: 25, description: 'Bandages and antiseptic. Restores 25 HP.' },
       { id: 'med-spray', name: 'Med Spray', category: 'medicine', price: 140, heal: 70, description: 'Saint Ottilie’s own mix. Restores 70 HP.' },
       { id: 'cleanse-tab', name: 'Cleanse Tab', category: 'medicine', price: 80, cures: true, description: 'Cures any status condition.' },
@@ -22,4 +23,5 @@ export const SHOPS: Record<string, { name: string; items: string[] }> = {
   'glow-noodle': { name: 'Glow Noodle', items: ['patch-kit', 'med-spray'] },
   'halcyon-store': { name: 'Halcyon Flagship Store', items: ['coil-snare', 'lull-snare', 'med-spray', 'cleanse-tab'] },
   'sky-noodle': { name: 'Sky Noodle Bar', items: ['med-spray', 'patch-kit'] },
+  'night-market': { name: 'Night Market', items: ['black-market-snare', 'coil-snare', 'med-spray', 'cleanse-tab'] },
 };

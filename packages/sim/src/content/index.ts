@@ -1,5 +1,6 @@
 import type { DistrictDefinition } from '../world/district';
 import { DOWNTOWN, DOWNTOWN_ARCHETYPES, DOWNTOWN_NPCS } from './downtown';
+import { HARBOR, HARBOR_ARCHETYPES, HARBOR_NPCS } from './harbor';
 import { SLUMS, SLUMS_ARCHETYPES, SLUMS_NPCS } from './slums';
 import type { NpcArchetype, NpcDefinition } from './types';
 
@@ -13,6 +14,7 @@ export interface DistrictContent {
 export const DISTRICTS: Record<string, DistrictContent> = {
   slums: { district: SLUMS, archetypes: SLUMS_ARCHETYPES, npcs: SLUMS_NPCS },
   downtown: { district: DOWNTOWN, archetypes: DOWNTOWN_ARCHETYPES, npcs: DOWNTOWN_NPCS },
+  harbor: { district: HARBOR, archetypes: HARBOR_ARCHETYPES, npcs: HARBOR_NPCS },
 };
 
 /** Every NPC archetype across all districts (NPCs keep their archetype when the player travels). */

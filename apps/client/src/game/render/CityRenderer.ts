@@ -49,7 +49,7 @@ export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting
     const east = exit.side === 'east';
     const x = (east ? layout.map.width - 2.5 : 2.5) * T;
     const y = (band.from + 2.5) * T;
-    const label = exit.to === 'downtown' ? 'NEON DOWNTOWN' : 'THE SLUMS';
+    const label = ({ downtown: 'NEON DOWNTOWN', slums: 'THE SLUMS', harbor: 'HARBOR DISTRICT' } as Record<string, string>)[exit.to] ?? exit.to.toUpperCase();
     scene.add
       .text(x, y - 3 * T, `${east ? '' : '\u25c0 '}${label}${east ? ' \u25b6' : ''}`, {
         fontFamily: 'Press Start 2P, monospace',
@@ -107,6 +107,10 @@ function renderProp(scene: Phaser.Scene, p: Prop, lighting: Lighting): void {
     }
     case 'bench':
       scene.add.image(cx, cy, TEXTURES.bench).setRotation(p.facing === 'north' || p.facing === 'south' ? Math.PI / 2 : 0).setDepth(Depth.groundProps);
+      break;
+    case 'container':
+      scene.add.image(cx + 3, cy + 4, TEXTURES.container(p.variant)).setTint(0x000000).setAlpha(0.4).setDepth(Depth.shadows);
+      scene.add.image(cx, cy, TEXTURES.container(p.variant)).setDepth(Depth.groundProps + 1);
       break;
     case 'dumpster':
       scene.add.image(cx, cy, TEXTURES.dumpster).setDepth(Depth.groundProps);

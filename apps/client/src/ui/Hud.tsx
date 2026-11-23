@@ -20,7 +20,7 @@ export function Hud() {
             {hud.turf && (
               <span className={hud.turf === 'halcyon' ? 'text-neon-cyan' : 'text-slate-300'}>
                 {' · '}
-                {hud.turf === 'halcyon' ? 'Halcyon zone' : hud.turf === 'saints' ? 'Saints turf' : hud.turf}
+                {({ halcyon: 'Halcyon zone', saints: 'Saints turf', compact: 'Compact docks', choir: 'Choir ground', 'iron-chain': 'Iron Chain yard' } as Record<string, string>)[hud.turf] ?? hud.turf}
               </span>
             )}
           </span>

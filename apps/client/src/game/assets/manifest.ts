@@ -3,6 +3,7 @@ import type { PixelCanvas } from './canvas';
 import {
   buildBench,
   buildCar,
+  buildContainer,
   buildCruiser,
   buildPuff,
   buildSignal,
@@ -43,6 +44,7 @@ export const TEXTURES = {
   vehicle: (classId: string, variant: number) =>
     classId === 'cruiser' ? 'veh-cruiser' : classId === 'van' ? `veh-van-${variant % 6}` : `veh-${classId}-${variant % CAR_COLORS.length}`,
   signal: 'prop-signal',
+  container: (variant: number) => `prop-container-${variant % 6}`,
   puff: 'fx-puff',
   snare: 'fx-snare',
   creature: creatureKey,
@@ -59,6 +61,7 @@ export const MANIFEST: Record<string, AssetSource> = {
   [TEXTURES.focus]: { kind: 'procedural', build: buildFocusMarker },
   [TEXTURES.snare]: { kind: 'procedural', build: buildSnare },
   [TEXTURES.signal]: { kind: 'procedural', build: buildSignal },
+  ...Object.fromEntries([0, 1, 2, 3, 4, 5].map((v) => [`prop-container-${v}`, { kind: 'procedural', build: () => buildContainer(v) } satisfies AssetSource])),
   [TEXTURES.puff]: { kind: 'procedural', build: buildPuff },
   ['veh-cruiser']: { kind: 'procedural', build: buildCruiser },
   ...Object.fromEntries(

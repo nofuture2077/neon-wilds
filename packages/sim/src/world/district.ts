@@ -36,7 +36,7 @@ export interface Building {
   entrance: { tx: number; ty: number };
 }
 
-export type PropKind = 'parked-car' | 'street-lamp' | 'bench' | 'dumpster';
+export type PropKind = 'parked-car' | 'street-lamp' | 'bench' | 'dumpster' | 'container';
 
 export interface Prop {
   id: string;
@@ -77,7 +77,9 @@ export interface DistrictDefinition {
   /** Chance to merge neighbouring blocks into superblocks (0 = strict grid). */
   mergeChance?: number;
   /** Visual style hint for the renderer. */
-  style?: 'slums' | 'downtown';
+  style?: 'slums' | 'downtown' | 'harbor';
+  /** The southern block row becomes quays, piers and open water. */
+  waterfront?: boolean;
   /** Road connections to other districts at the map edge. */
   exits?: DistrictExit[];
 }
@@ -95,13 +97,13 @@ export interface CityBlock {
   y: number;
   w: number;
   h: number;
-  kind: 'lots' | 'park' | 'square';
+  kind: 'lots' | 'park' | 'square' | 'docks';
 }
 
 export interface DistrictLayout {
   id: string;
   name: string;
-  style: 'slums' | 'downtown';
+  style: 'slums' | 'downtown' | 'harbor';
   exits: DistrictExit[];
   map: TileMap;
   blocks: CityBlock[];
