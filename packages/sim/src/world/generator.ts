@@ -11,55 +11,103 @@ import type {
 import { TileMap } from './tilemap';
 import { Tile } from './tiles';
 
+/** A city block after merging: a rectangle of non-road ground. */
+interface BlockRect {
+  key: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  kind: 'lots' | 'park' | 'square';
+}
+
 /**
  * Deterministically builds a district from a data definition and a seed.
  *
- * Layout model (GTA-style grid):
- *   road band | block | road band | block | ... | road band
- * Each block has a 2-tile sidewalk ring. Building blocks contain two rows of
- * lots facing the sidewalks, separated by a service alley. One block is a park.
- * Crosswalks connect block corners so pedestrians never need to walk on roads.
+ * Street generation v2 ("organic grid", WORLD_GEN.md §3):
+ * - column widths and row heights vary per seed, so no two blocks line up the same way;
+ * - some interior road segments are removed, merging neighbouring blocks into
+ *   superblocks with T-junctions and L-bends. Removed segments form a matching in
+ *   the block-adjacency graph, which provably keeps the road network connected;
+ * - deep superblocks get inner courtyards; one block becomes a park, one a market square.
+ * Each block has a 2-tile sidewalk ring; crosswalks join block corners across roads.
  */
 export function generateDistrict(def: DistrictDefinition, seed: number): DistrictLayout {
   const rng = new Rng(deriveSeed(seed, `district:${def.id}`));
   const { blocksX, blocksY, blockW, blockH, roadW } = def;
-  const width = roadW + blocksX * (blockW + roadW);
-  const height = roadW + blocksY * (blockH + roadW);
+  const ws = Array.from({ length: blocksX }, () => Math.max(14, blockW + rng.int(-4, 4)));
+  const hs = Array.from({ length: blocksY }, () => Math.max(13, blockH + rng.int(-3, 3)));
+  const xs: number[] = [];
+  const ys: number[] = [];
+  let acc = roadW;
+  for (const w of ws) {
+    xs.push(acc);
+    acc += w + roadW;
+  }
+  const width = acc;
+  acc = roadW;
+  for (const h of hs) {
+    ys.push(acc);
+    acc += h + roadW;
+  }
+  const height = acc;
   const map = new TileMap(width, height);
-
-  const bandX = (i: number) => i * (blockW + roadW);
-  const bandY = (j: number) => j * (blockH + roadW);
-  const blockX = (bx: number) => roadW + bx * (blockW + roadW);
-  const blockY = (by: number) => roadW + by * (blockH + roadW);
-  const inVBand = (x: number) => x % (blockW + roadW) < roadW;
-  const inHBand = (y: number) => y % (blockH + roadW) < roadW;
+  const bandX = (i: number) => (i === 0 ? 0 : xs[i - 1]! + ws[i - 1]!);
+  const bandY = (j: number) => (j === 0 ? 0 : ys[j - 1]! + hs[j - 1]!);
   const mid = Math.floor(roadW / 2);
+
+  // Decide merges: each block merges at most once (a matching), never the park, square or spawn block.
+  const spawnBx = Math.min(1, blocksX - 1);
+  const spawnBy = Math.min(1, blocksY - 1);
+  const squareBlock = { bx: (def.parkBlock.bx + 2) % blocksX, by: (def.parkBlock.by + 1) % blocksY };
+  const fixed = (bx: number, by: number) =>
+    (bx === def.parkBlock.bx && by === def.parkBlock.by) ||
+    (bx === spawnBx && by === spawnBy) ||
+    (bx === squareBlock.bx && by === squareBlock.by);
+  const merged = new Set<string>();
+  const removedV: Array<{ i: number; by: number }> = []; // vertical road i between blocks (i-1, by) and (i, by)
+  const removedH: Array<{ j: number; bx: number }> = []; // horizontal road j between blocks (bx, j-1) and (bx, j)
+  const candidates: Array<{ a: [number, number]; b: [number, number]; vertical: boolean }> = [];
+  for (let by = 0; by < blocksY; by++) for (let bx = 0; bx + 1 < blocksX; bx++) candidates.push({ a: [bx, by], b: [bx + 1, by], vertical: true });
+  for (let by = 0; by + 1 < blocksY; by++) for (let bx = 0; bx < blocksX; bx++) candidates.push({ a: [bx, by], b: [bx, by + 1], vertical: false });
+  for (const c of candidates) {
+    const ka = `${c.a[0]}-${c.a[1]}`;
+    const kb = `${c.b[0]}-${c.b[1]}`;
+    if (merged.has(ka) || merged.has(kb) || fixed(...c.a) || fixed(...c.b) || !rng.chance(0.22)) continue;
+    merged.add(ka);
+    merged.add(kb);
+    if (c.vertical) removedV.push({ i: c.b[0], by: c.a[1] });
+    else removedH.push({ j: c.b[1], bx: c.a[0] });
+  }
+
+  const blocks: BlockRect[] = [];
+  for (let by = 0; by < blocksY; by++) {
+    for (let bx = 0; bx < blocksX; bx++) {
+      const key = `${bx}-${by}`;
+      const kind = bx === def.parkBlock.bx && by === def.parkBlock.by ? 'park' : bx === squareBlock.bx && by === squareBlock.by ? 'square' : 'lots';
+      const v = removedV.find((r) => r.by === by && (r.i === bx || r.i === bx + 1));
+      const h = removedH.find((r) => r.bx === bx && (r.j === by || r.j === by + 1));
+      if (v) {
+        if (v.i !== bx + 1) continue; // the left block of a merged pair creates the rectangle
+        blocks.push({ key, x: xs[bx]!, y: ys[by]!, w: ws[bx]! + roadW + ws[bx + 1]!, h: hs[by]!, kind });
+      } else if (h) {
+        if (h.j !== by + 1) continue;
+        blocks.push({ key, x: xs[bx]!, y: ys[by]!, w: ws[bx]!, h: hs[by]! + roadW + hs[by + 1]!, kind });
+      } else {
+        blocks.push({ key, x: xs[bx]!, y: ys[by]!, w: ws[bx]!, h: hs[by]!, kind });
+      }
+    }
+  }
 
   // 1. Roads with centre lines (intersections stay plain asphalt).
   map.fillRect(0, 0, width, height, Tile.Road);
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const v = inVBand(x);
-      const h = inHBand(y);
-      if (v && !h && x % (blockW + roadW) === mid) map.set(x, y, Tile.RoadLineV);
-      if (h && !v && y % (blockH + roadW) === mid) map.set(x, y, Tile.RoadLineH);
-    }
+  for (let i = 0; i <= blocksX; i++) {
+    const x = bandX(i) + mid;
+    for (let y = 0; y < height; y++) if (!inBand(y, blocksY, bandY, roadW)) map.set(x, y, Tile.RoadLineV);
   }
-
-  // 2. Crosswalks between neighbouring blocks, adjacent to each intersection.
-  for (let i = 1; i < blocksX; i++) {
-    for (let by = 0; by < blocksY; by++) {
-      for (const y of [blockY(by), blockY(by) + blockH - 1]) {
-        for (let x = bandX(i); x < bandX(i) + roadW; x++) map.set(x, y, Tile.CrosswalkH);
-      }
-    }
-  }
-  for (let j = 1; j < blocksY; j++) {
-    for (let bx = 0; bx < blocksX; bx++) {
-      for (const x of [blockX(bx), blockX(bx) + blockW - 1]) {
-        for (let y = bandY(j); y < bandY(j) + roadW; y++) map.set(x, y, Tile.CrosswalkV);
-      }
-    }
+  for (let j = 0; j <= blocksY; j++) {
+    const y = bandY(j) + mid;
+    for (let x = 0; x < width; x++) if (!inBand(x, blocksX, bandX, roadW)) map.set(x, y, Tile.RoadLineH);
   }
 
   // 3. Blocks.
@@ -68,25 +116,54 @@ export function generateDistrict(def: DistrictDefinition, seed: number): Distric
   let propSeq = 0;
   const addProp = (p: Omit<Prop, 'id'>) => props.push({ ...p, id: `prop-${propSeq++}` });
 
-  for (let by = 0; by < blocksY; by++) {
-    for (let bx = 0; bx < blocksX; bx++) {
-      const x0 = blockX(bx);
-      const y0 = blockY(by);
-      map.fillRect(x0, y0, blockW, blockH, Tile.Sidewalk);
-      const ix = x0 + 2;
-      const iy = y0 + 2;
-      const iw = blockW - 4;
-      const ih = blockH - 4;
-      if (bx === def.parkBlock.bx && by === def.parkBlock.by) {
-        buildPark(map, rng, ix, iy, iw, ih, addProp);
-      } else {
-        buildLots(map, rng, ix, iy, iw, ih, buildings, addProp, `${bx}-${by}`);
-      }
-      placeStreetFurniture(map, rng, x0, y0, blockW, blockH, addProp);
-    }
+  for (const b of blocks) {
+    map.fillRect(b.x, b.y, b.w, b.h, Tile.Sidewalk);
+    const ix = b.x + 2;
+    const iy = b.y + 2;
+    const iw = b.w - 4;
+    const ih = b.h - 4;
+    if (b.kind === 'park') buildPark(map, rng, ix, iy, iw, ih, addProp);
+    else if (b.kind === 'square') buildSquare(map, rng, ix, iy, iw, ih, addProp);
+    else buildLots(map, rng, ix, iy, iw, ih, buildings, addProp, b.key);
+    placeStreetFurniture(map, rng, b.x, b.y, b.w, b.h, addProp);
   }
 
   assignBuildingIdentities(buildings, def, rng);
+
+  // 4. Crosswalks between neighbouring blocks next to each intersection, only where both ends are sidewalk.
+  for (let i = 1; i < blocksX; i++) {
+    for (let by = 0; by < blocksY; by++) {
+      if (removedV.some((r) => r.i === i && r.by === by)) continue;
+      for (const y of [ys[by]!, ys[by]! + hs[by]! - 1]) {
+        if (map.get(bandX(i) - 1, y) !== Tile.Sidewalk || map.get(bandX(i) + roadW, y) !== Tile.Sidewalk) continue;
+        for (let x = bandX(i); x < bandX(i) + roadW; x++) map.set(x, y, Tile.CrosswalkH);
+      }
+    }
+  }
+  for (let j = 1; j < blocksY; j++) {
+    for (let bx = 0; bx < blocksX; bx++) {
+      if (removedH.some((r) => r.j === j && r.bx === bx)) continue;
+      for (const x of [xs[bx]!, xs[bx]! + ws[bx]! - 1]) {
+        if (map.get(x, bandY(j) - 1) !== Tile.Sidewalk || map.get(x, bandY(j) + roadW) !== Tile.Sidewalk) continue;
+        for (let y = bandY(j); y < bandY(j) + roadW; y++) map.set(x, y, Tile.CrosswalkV);
+      }
+    }
+  }
+
+
+  // Parked cars must never block a crosswalk.
+  for (let k = props.length - 1; k >= 0; k--) {
+    const p = props[k]!;
+    if (p.kind !== 'parked-car') continue;
+    let onCrosswalk = false;
+    for (let ty = p.y; ty < p.y + p.h; ty++) {
+      for (let tx = p.x; tx < p.x + p.w; tx++) {
+        const t = map.get(tx, ty);
+        if (t === Tile.CrosswalkH || t === Tile.CrosswalkV) onCrosswalk = true;
+      }
+    }
+    if (onCrosswalk) props.splice(k, 1);
+  }
 
   map.rebuildCollision();
   for (const p of props) {
@@ -112,11 +189,9 @@ export function generateDistrict(def: DistrictDefinition, seed: number): Distric
     });
   }
 
-  const spawnBx = Math.min(1, blocksX - 1);
-  const spawnBy = Math.min(1, blocksY - 1);
   const playerSpawn = {
-    x: blockX(spawnBx) + Math.floor(blockW / 2) + 0.5,
-    y: blockY(spawnBy) + 0.5,
+    x: xs[spawnBx]! + Math.floor(ws[spawnBx]! / 2) + 0.5,
+    y: ys[spawnBy]! + 0.5,
   };
 
   const pedestrianSpawns: { tx: number; ty: number }[] = [];
@@ -127,6 +202,28 @@ export function generateDistrict(def: DistrictDefinition, seed: number): Distric
   }
 
   return { id: def.id, name: def.name, map, buildings, props, streets, playerSpawn, pedestrianSpawns };
+}
+
+function inBand(v: number, count: number, bandStart: (i: number) => number, roadW: number): boolean {
+  for (let i = 0; i <= count; i++) {
+    const s = bandStart(i);
+    if (v >= s && v < s + roadW) return true;
+  }
+  return false;
+}
+
+/** An open market square: plaza paving, a ring of benches and stalls, lamps. */
+function buildSquare(map: TileMap, rng: Rng, ix: number, iy: number, iw: number, ih: number, addProp: AddProp): void {
+  map.fillRect(ix, iy, iw, ih, Tile.Plaza);
+  const cx = ix + Math.floor(iw / 2);
+  const cy = iy + Math.floor(ih / 2);
+  if (iw >= 6 && ih >= 6) map.fillRect(cx - 1, cy - 1, 2, 2, Tile.Water); // fountain
+  for (let x = ix + 1; x < ix + iw - 1; x += 3) {
+    if (rng.chance(0.6)) addProp({ kind: 'bench', x, y: iy + 1, w: 1, h: 1, solid: false, variant: 1, facing: 'south' });
+    if (rng.chance(0.6)) addProp({ kind: 'bench', x, y: iy + ih - 2, w: 1, h: 1, solid: false, variant: 1, facing: 'north' });
+  }
+  addProp({ kind: 'street-lamp', x: cx - 3, y: cy, w: 1, h: 1, solid: false, variant: 1, facing: 'west' });
+  addProp({ kind: 'street-lamp', x: cx + 2, y: cy, w: 1, h: 1, solid: false, variant: 1, facing: 'east' });
 }
 
 type AddProp = (p: Omit<Prop, 'id'>) => void;
@@ -142,10 +239,24 @@ function buildLots(
   addProp: AddProp,
   blockKey: string,
 ): void {
-  const northH = Math.floor((ih - 2) / 2);
-  const southH = ih - 2 - northH;
+  // Rows of at most 5 tiles deep; deep superblocks get a courtyard between the alley and the south row.
+  const northH = Math.min(5, Math.floor((ih - 2) / 2));
+  const southH = Math.min(5, ih - 2 - northH);
   const alleyY = iy + northH;
+  const courtyard = ih - northH - 2 - southH;
   map.fillRect(ix, alleyY, iw, 2, Tile.Alley);
+  if (courtyard > 0) {
+    map.fillRect(ix, alleyY + 2, iw, courtyard, Tile.Plaza);
+    for (let x = ix + 2; x < ix + iw - 2; x += 5) {
+      if (rng.chance(0.5)) addProp({ kind: 'bench', x, y: alleyY + 2 + Math.floor(courtyard / 2), w: 1, h: 1, solid: false, variant: 1, facing: 'south' });
+    }
+    if (courtyard >= 13) {
+      // Deep superblock: a second ring of buildings around its own inner court, plus a walkway row.
+      buildLots(map, rng, ix, alleyY + 2, iw, courtyard - 1, out, addProp, `${blockKey}c`);
+    } else if (courtyard >= 5 && iw >= 8) {
+      buildPark(map, rng, ix + 1, alleyY + 3, iw - 2, courtyard - 2, addProp, false);
+    }
+  }
 
   const fillRow = (rowY: number, rowH: number, facing: Facing) => {
     const end = ix + iw;
@@ -184,7 +295,7 @@ function buildLots(
     }
   };
   fillRow(iy, northH, 'north');
-  fillRow(alleyY + 2, southH, 'south');
+  fillRow(iy + ih - southH, southH, 'south');
 
   // Dumpsters only on the alley's upper row, so the lower row always stays open.
   for (let x = ix + 1; x < ix + iw - 1; x++) {
@@ -195,7 +306,7 @@ function buildLots(
   }
 }
 
-function buildPark(map: TileMap, rng: Rng, ix: number, iy: number, iw: number, ih: number, addProp: AddProp): void {
+function buildPark(map: TileMap, rng: Rng, ix: number, iy: number, iw: number, ih: number, addProp: AddProp, pond = true): void {
   map.fillRect(ix, iy, iw, ih, Tile.Grass);
   const pathX = ix + Math.floor(iw / 2) - 1;
   const pathY = iy + Math.floor(ih / 2) - 1;
@@ -206,7 +317,7 @@ function buildPark(map: TileMap, rng: Rng, ix: number, iy: number, iw: number, i
   const qx = pathX + 3;
   const qw = ix + iw - 1 - qx;
   const qh = pathY - 1 - (iy + 1);
-  if (qw >= 3 && qh >= 2) map.fillRect(qx, iy + 1, qw, qh, Tile.Water);
+  if (pond && qw >= 3 && qh >= 2) map.fillRect(qx, iy + 1, qw, qh, Tile.Water);
 
   // Trees on a sparse lattice: no two trees are ever adjacent, so they cannot enclose a tile.
   for (let ty = iy + 1; ty < iy + ih - 1; ty += 3) {

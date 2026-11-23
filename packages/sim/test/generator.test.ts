@@ -81,3 +81,51 @@ describe('generateDistrict', () => {
     expect(a.props).toEqual(b.props);
   });
 });
+
+describe('street generation v2 (organic grid)', () => {
+  const drivable = (t: number) => t === Tile.Road || t === Tile.RoadLineH || t === Tile.RoadLineV || t === Tile.CrosswalkH || t === Tile.CrosswalkV;
+
+  it('keeps every road tile in one connected network', () => {
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const { map } = generateDistrict(SLUMS, seed);
+      let start = -1;
+      let total = 0;
+      for (let i = 0; i < map.tiles.length; i++) {
+        if (drivable(map.tiles[i]!)) {
+          total++;
+          if (start < 0) start = i;
+        }
+      }
+      const seen = new Uint8Array(map.tiles.length);
+      const stack = [start];
+      seen[start] = 1;
+      let count = 0;
+      while (stack.length) {
+        const i = stack.pop()!;
+        count++;
+        const x = i % map.width;
+        const y = Math.floor(i / map.width);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (!map.inBounds(nx, ny)) continue;
+          const ni = ny * map.width + nx;
+          if (!seen[ni] && drivable(map.tiles[ni]!)) {
+            seen[ni] = 1;
+            stack.push(ni);
+          }
+        }
+      }
+      expect(count, `seed ${seed}`).toBe(total);
+    }
+  });
+
+  it('varies layouts between seeds (different sizes and merged superblocks)', () => {
+    const sizes = new Set<string>();
+    for (const seed of [11, 12, 13, 14, 15]) {
+      const l = generateDistrict(SLUMS, seed);
+      sizes.add(`${l.map.width}x${l.map.height}`);
+    }
+    expect(sizes.size).toBeGreaterThan(1);
+  });
+});
