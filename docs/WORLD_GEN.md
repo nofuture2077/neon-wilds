@@ -1,6 +1,6 @@
 # NEON WILDS — Hybrid World Generation ("Authored Bones, Procedural Flesh")
 
-> Owners: World Designer and Technical Architect · Goal added after Milestone 1 · Target: M3 (city graph, organic streets) → M5 (all districts) → M7 (tuning)
+> Owners: World Designer and Technical Architect · Goal added after Milestone 1 · Status: **v2 organic grid shipped in M3** (varied blocks, superblocks, courtyards, squares, state dressing for territory). Next: city graph and Downtown (M4), free-angle grammars (M5), tuning (M7)
 >
 > **Goal:** a Vesper City that feels **handmade, unique, non-repetitive, organic (not a square grid) and alive**. It combines preplanned, authored structure with deterministic procedural content. Everything is conventional, seeded procedural generation: no generative AI.
 

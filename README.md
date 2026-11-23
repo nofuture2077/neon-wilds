@@ -8,7 +8,7 @@ Built with TypeScript, Phaser 3, React, Zustand, Tailwind and Fastify.
 
 ## Status
 
-**Milestone 2, Creature Gameplay, is complete.** Explore the neon Slums at night, play the opening mission *Last Run*, bond with the mysterious Glitchling, and catch 10 species of Wildlings. They roam the streets with their own personalities. Fight turn-based battles against wild Wildlings and trainers, then save and continue later. See [docs/ROADMAP.md](docs/ROADMAP.md) for what's next (vehicles, police, factions, procedural streets and a procedural synthwave soundtrack in M3).
+**Milestone 3, Open-World Sandbox, is complete.** Explore a procedurally laid-out neon Slums at night and play the opening mission *Last Run*. Bond with the Glitchling and catch 10 species of Wildlings in turn-based battles. Steal cars and drift through signal-controlled traffic. Outrun the Wardens, or get busted. Pick a side as the Gutter Saints and Halcyon fight over the blocks around you. The synthwave soundtrack is composed live by an algorithm. See [docs/ROADMAP.md](docs/ROADMAP.md) for what's next: M4 brings schedules, memory and GOAP faction AI, plus Downtown.
 
 ## Quick start
 
@@ -39,6 +39,8 @@ Requires Node ≥ 22.
 | Move | WASD / arrows | Left stick / d-pad |
 | Run | Shift | B / RT |
 | Talk / interact / advance | E / Space / Enter | A |
+| Enter / exit vehicle | F | Y |
+| Drive (accelerate / brake / steer), handbrake | W / S / A D, Shift | Stick, B / RT |
 | Pause menu (party, bag, index, journal, save) | Esc | Start |
 | Menus | Arrows + Enter, Esc to go back | D-pad + A, B to go back |
 
@@ -67,6 +69,6 @@ scripts/       tooling (no-AI guard)
 | [Roadmap](docs/ROADMAP.md) · [Risks](docs/RISKS.md) · [Decisions](docs/DECISIONS.md) | Planning and ADRs |
 | [World Generation](docs/WORLD_GEN.md) | Hybrid authored + procedural city (organic streets, vignettes) |
 | [Procedural Soundtrack](docs/AUDIO.md) | Algorithmic synthwave composer and Web Audio synths |
-| [M1 Review](docs/reviews/M1.md) · [M2 Review](docs/reviews/M2.md) | Test results, fixed bugs, known issues |
+| [M1](docs/reviews/M1.md) · [M2](docs/reviews/M2.md) · [M3](docs/reviews/M3.md) reviews | Test results, fixed bugs, known issues |
 
 All characters, creatures, places, art and text are original.

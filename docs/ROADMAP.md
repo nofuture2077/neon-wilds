@@ -6,8 +6,8 @@
 |---|---|---|---|
 | 1 | Playable foundation | **Done** | A playable character exploring a living Slums district |
 | 2 | Creature gameplay | **Done** | Complete creature collection loop, plus local saves |
-| 3 | Open-world sandbox | Next | Vehicles, traffic, police and wanted levels, factions, economy |
-| 4 | Traditional game AI | Planned | Living world: HSM and utility NPCs, memory, relationships, Wildling BTs, faction GOAP, simulation LOD |
+| 3 | Open-world sandbox | **Done** | Vehicles, traffic, police and wanted levels, factions, economy |
+| 4 | Traditional game AI | Next | Living world: HSM and utility NPCs, memory, relationships, Wildling BTs, faction GOAP, simulation LOD |
 | 5 | Story and content | Planned | Playable campaign: Acts I–III, faction arcs, procedural missions, endings |
 | 6 | Backend and persistence | Planned | Accounts, cloud saves, sync, leaderboards |
 | 7 | Polish | Planned | Audio, animation, performance, UX, balancing, regression suite |
@@ -43,13 +43,20 @@
 - **Hybrid world generation**: authored bones plus procedural flesh, with organic non-grid streets, unique buildings, vignettes and state-driven dressing. See [WORLD_GEN.md](WORLD_GEN.md). Starts in M3.
 - **Procedural synthwave soundtrack**: an algorithmic composer and Web Audio synthesiser, reactive to district, time, danger and battles. See [AUDIO.md](AUDIO.md). v1 in M3.
 
-## M3 — Open-world sandbox
+## M3 — Open-world sandbox ✅ ([review](reviews/M3.md))
+
+Delivered: street generation v2 (organic grid), vehicles and traffic with signals, Wardens (witnesses, wanted levels, pursuit, arrests, resprays), factions with reputation and territory, a dynamic economy with a black market, and procedural synthwave music v1. Downtown and the multi-district city graph move to M4.
+
+Original plan:
 
 Multi-district city graph (Slums + Downtown + Industrial edges); spatial hash and simulation LOD L1/L2; route graph; vehicles (bicycle model, collisions, damage, entering and stealing); lane-graph traffic with intersections; pedestrian crowd density per district and time; witness pipeline; wanted levels 1–3 with Warden units; faction reputation; shops and price indices; black market; Gutter Saints and Halcyon presence in the world. **World gen 2.0** (vector street networks with organic grammars for Slums v2 and Downtown, lot subdivision, building grammar v1). **Music v1** (procedural synthwave, Slums night and battle moods).
 
 **Exit:** steal a car, crash it, escape a 2-star pursuit; buy and sell with district price differences; reputation changes from actions; 200 entities in the district at 60 FPS.
 
 ## M4 — Traditional game AI
+
+Also carried over from M3: the multi-district city graph, Downtown (rotated grid plus a diagonal boulevard), pedestrian crowd density and car-ejection pedestrians, hierarchical road routing, and junction reservation.
+
 
 Perception, memory records and gossip, relationship graph, needs and emotion, HSM and utility activity selection, BT runtime, daily schedules per role, Wildling BT profiles and populations, faction strategic layer (utility goals + GOAP operations) for Saints and Halcyon (then the others), world director (weather, events), mission generator prototype, AI debug overlay, week-long headless soak test.
 
@@ -74,8 +81,8 @@ Audio (SFX, ambience, procedural music mixing and leitmotif variation), animatio
 | Explore a functioning urban district | M1 ✅ |
 | ≥ 10 creatures encountered and captured; battles functional | M2 ✅ |
 | NPC schedules, reactions, memory | M1 (reactions, short-term grudge) → M4 |
-| ≥ 2 factions operate independently and change influence | M4 |
-| Vehicles and traffic; police respond to crime | M3 |
+| ≥ 2 factions operate independently and change influence | M3 ✅ (rules) → M4 (GOAP) |
+| Vehicles and traffic; police respond to crime | M3 ✅ |
 | ≥ 5 playable missions; deterministic dynamic missions | M2 ✅ (3) → M4/M5 |
 | Save and reload | M2 ✅ (local) → M6 (cloud) |
 | Offline play without external services | M1 ✅ (by design) |

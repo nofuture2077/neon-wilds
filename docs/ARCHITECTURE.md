@@ -84,8 +84,13 @@ The world uses typed entity records (`PlayerState`, `NpcState`, later `WildlingS
 
 ```
 commands → [battle active? stop] → clock → player movement → NPC brains → Wildling spawns (2 Hz) →
-Wildling behaviour → contacts/shoves → wild encounters → focus → interaction → ambient barks
+Wildling behaviour → vehicles (player / AI / police) → law → contacts/shoves → vehicle contacts →
+wild encounters → focus → interaction → ambient barks          (+ hourly: faction strategy, market)
 ```
+
+Modules added in M3: `world/roads.ts` (lane model, junctions, signals), `world/vehicles.ts` (classes, physics, traffic AI, pursuit), `law/law.ts` (witnesses, heat, police, arrests), `factions/territory.ts` (influence, strategy tick, prices, black market). Client: `audio/` (composer, synth rack, scheduler, music director).
+
+M3 inserts: player driving → AI traffic and police → vehicle contacts → law (witness reports, heat, police units, officers, arrests), and runs the faction strategy and market recovery on every in-game hour.
 
 Battles, missions and progression live in the same package: `battle/` (engine, formulas, AI), `missions/` (runtime + effect DSL), `progression.ts`, and `views.ts` (read-only UI projections such as `battleView` and `progressView`).
 

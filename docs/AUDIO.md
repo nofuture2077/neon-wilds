@@ -1,6 +1,6 @@
 # NEON WILDS — Procedural Synthwave Soundtrack
 
-> Owner: Art Director (audio) · Goal added after Milestone 1 · v1 in M3, full system in M7
+> Owner: Art Director (audio) · Goal added after Milestone 1 · **v1 shipped in M3** (`apps/client/src/audio/`), full system in M7
 >
 > **The soundtrack is generated live by an algorithmic composer and synthesiser built on the Web Audio API.** It is rule-based, seeded and deterministic, like the rest of the game's procedural systems. **No generative AI or ML models are involved**, and no audio samples are required.
 

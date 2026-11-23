@@ -19,5 +19,6 @@
 | R13 | **Accidental AI dependency** (a contributor adds an LLM SDK) | 2 | 5 | `scripts/check-no-ai.mjs` in CI; rule in the README | Mitigated |
 | R14 | **Software-rendered or low-end GPUs** | 2 | 3 | Canvas fallback (`Phaser.AUTO`); lighting works without shaders; measured 60 FPS under SwiftShader at 1280×800 | Mitigated |
 | R15 | **Docker image not yet built in CI history** | 2 | 2 | CI docker job; the local daemon was unavailable during M1 | Open |
-| R16 | **Procedural world feels generic or breaks story placements** | 3 | 4 | Authored anchors and overrides, validators (connectivity, interest curve, uniqueness budget), bake-and-pin tooling (WORLD_GEN.md) | Planned (M3) |
-| R17 | **Procedural music sounds aimless or tiring; Web Audio CPU cost** | 3 | 3 | Authored leitmotifs and phrase forms, anti-repetition, intensity setting, lookahead scheduler, < 3% CPU budget (AUDIO.md) | Planned (M3) |
+| R16 | **Procedural world feels generic or breaks story placements** | 3 | 4 | Authored anchors and overrides, validators (connectivity, interest curve, uniqueness budget), bake-and-pin tooling (WORLD_GEN.md) | In progress (v2 organic grid shipped; free-angle streets M4/M5) |
+| R17 | **Procedural music sounds aimless or tiring; Web Audio CPU cost** | 3 | 3 | Authored leitmotifs and phrase forms, anti-repetition, intensity setting, lookahead scheduler, < 3% CPU budget (AUDIO.md) | v1 shipped; needs listening tests |
+| R18 | **Traffic/police edge cases** (gridlock, routing loops around superblocks) | 3 | 2 | Junction reservation and hierarchical routing in M4; honk/stuck telemetry | Open |

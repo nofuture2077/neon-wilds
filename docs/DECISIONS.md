@@ -40,3 +40,15 @@ Missions declare objectives (`inspect`, `talk`, `defeat`, `resolve-tag`) and eff
 
 ### ADR-013 — The overworld freezes during turn-based battles
 `Simulation.step` only processes commands while a battle is active. This avoids unfair world events mid-battle and keeps battles replayable. World time pauses during battles.
+
+### ADR-014 — Organic grid via a matching of merged blocks
+Street generation v2 removes interior road segments only as a *matching* in the block-adjacency graph (each block merges at most once). Removing a matching of dual edges cannot create a cycle of removed edges, so the primal road graph stays connected. This is tested across seeds. Free-angle streets remain the M4/M5 goal (WORLD_GEN.md).
+
+### ADR-015 — Vehicles are simulated in `@neon-wilds/sim`
+Same reasons as ADR-002: determinism, saves and headless tests. Bodies use two circles for vehicle/vehicle and vehicle/actor contacts and sampled OBB points against tiles; the player car has a lateral-slip model for drifting. Phaser only renders.
+
+### ADR-016 — Crimes need witnesses
+Wanted levels come from what the Wardens know: direct police sight, or civilian calls after a delay. This makes stealth, timing and faction ties (the Saints never call) meaningful, and replaces "global instant wanted level" designs.
+
+### ADR-017 — Procedural music: pure composer + Web Audio rack
+The composer is a pure, seeded function (mood, bar) → note events, unit-tested in Node. The engine only schedules and synthesises. No samples and no AI; leitmotifs are handwritten.

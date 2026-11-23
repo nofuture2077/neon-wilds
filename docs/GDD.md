@@ -248,3 +248,10 @@ Synth-wave and lo-fi beats per district. Each district has a different instrumen
 - Turn-based battles with tactical AI tiers, capture with three Snare types, party and storage, Index, bag, shops, clinic, injuries, blackout.
 - Three missions: *Last Run*, *Binbandit Chase*, *Vik's Challenge*.
 - Local saves (3 slots plus autosave) with corruption recovery.
+
+## 15. Milestone 3 as built
+
+- Organic street layout per seed; traffic with signals; stealable and carjackable cars with drift handling and damage.
+- Wardens with witnesses, 1–5 stars, pursuit, arrests, boxing-in and resprays.
+- Reputation with five factions plus the Wardens; Saints and Halcyon fight over blocks every hour; prices and the black market react.
+- A live procedural synthwave soundtrack that changes with the night, battles and chases.
