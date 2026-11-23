@@ -3,6 +3,7 @@ import type { BattleAction, BattleState } from './battle/types';
 import type { TilePos } from './core/vec';
 import type { Effect } from './missions/types';
 import type { ProgressionState } from './progression';
+import type { LawState } from './law/law';
 import type { VehicleState } from './world/vehicles';
 import type { WildlingEntity } from './world/wildlings';
 
@@ -80,7 +81,7 @@ export type Focus =
   | { kind: 'npc'; id: string; label: string }
   | { kind: 'building'; id: string; label: string };
 
-export const SNAPSHOT_VERSION = 3;
+export const SNAPSHOT_VERSION = 4;
 
 /** Everything needed to resume a simulation. The district layout is regenerated from seed + districtId. */
 export interface SimSnapshot {
@@ -101,4 +102,5 @@ export interface SimSnapshot {
   nextEntityId: number;
   /** Null means "regenerate parked cars from the layout" (used when migrating older saves). */
   vehicles: VehicleState[] | null;
+  law: LawState;
 }

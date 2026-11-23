@@ -33,6 +33,8 @@ export interface HudState {
   promptKey: string;
   speed: number | null;
   vehicleHealth: number | null;
+  stars: number;
+  seen: boolean;
 }
 
 export interface Toast {
@@ -109,7 +111,7 @@ interface GameStore {
   battleChooseItem(itemId: string | null): void;
 }
 
-const EMPTY_HUD: HudState = { district: '', location: '', clock: '', isNight: false, prompt: null, promptKey: 'E', speed: null, vehicleHealth: null };
+const EMPTY_HUD: HudState = { district: '', location: '', clock: '', isNight: false, prompt: null, promptKey: 'E', speed: null, vehicleHealth: null, stars: 0, seen: false };
 let toastSeq = 1;
 
 function shown(view: BattleView, side: 'player' | 'enemy', index = view.activeIndex): ShownCreature {
@@ -162,7 +164,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       prev.prompt === hud.prompt &&
       prev.promptKey === hud.promptKey &&
       prev.speed === hud.speed &&
-      prev.vehicleHealth === hud.vehicleHealth
+      prev.vehicleHealth === hud.vehicleHealth &&
+      prev.stars === hud.stars &&
+      prev.seen === hud.seen
     ) {
       return;
     }

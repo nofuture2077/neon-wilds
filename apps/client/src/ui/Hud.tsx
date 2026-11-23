@@ -26,6 +26,12 @@ export function Hud() {
         )}
       </div>
       <div className="absolute right-4 top-4 flex flex-col items-end gap-2">
+        {hud.stars > 0 && (
+          <div className={`panel px-3 py-1 font-pixel text-lg tracking-widest ${hud.seen ? 'blink text-neon-pink' : 'text-neon-yellow'}`}>
+            {'★'.repeat(hud.stars)}
+            <span className="text-slate-600">{'★'.repeat(5 - hud.stars)}</span>
+          </div>
+        )}
         <div className="panel flex items-center gap-3 px-4 py-3">
           <span className="font-term text-xl text-slate-300">{playerName}</span>
           <span className="font-pixel text-xs text-neon-yellow">{progress?.money ?? 0}₵</span>

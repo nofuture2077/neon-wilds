@@ -72,6 +72,10 @@ export interface VehicleContext {
   tick: number;
   /** Obstacles AI drivers yield to: pedestrians, the player on foot, Wildlings. */
   obstacles: { x: number; y: number }[];
+  /** Where pursuing police cars are heading (the player's last known position), if anywhere. */
+  pursuit: { x: number; y: number } | null;
+  /** The car the player is driving; pursuing police ram it instead of braking for it. */
+  playerVehicleId: string | null;
   nextId(): string;
 }
 
@@ -322,12 +326,12 @@ function onRoadLane(ctx: VehicleContext, x: number, y: number): boolean {
 }
 
 /** Distance to the nearest thing ahead that this AI car must not hit, or Infinity. */
-function clearanceAhead(v: VehicleState, all: readonly VehicleState[], ctx: VehicleContext): number {
+function clearanceAhead(v: VehicleState, all: readonly VehicleState[], ctx: VehicleContext, ramPlayer = false): number {
   const f = forward(v);
   const c = vehicleClass(v);
   let best = Infinity;
   for (const o of all) {
-    if (o === v) continue;
+    if (o === v || (ramPlayer && o.id === ctx.playerVehicleId)) continue;
     const rx = o.x - v.x;
     const ry = o.y - v.y;
     if (Math.abs(rx) > 5 || Math.abs(ry) > 5) continue;
@@ -356,24 +360,29 @@ export function driveAi(v: VehicleState, all: readonly VehicleState[], ctx: Vehi
     coast(v, ctx);
     return;
   }
-  const cruise = v.driver === 'police' ? c.maxSpeed : Math.min(c.maxSpeed, 4.6);
+  const pursuing = v.driver === 'police' && ctx.pursuit !== null;
+  if (pursuing && Math.hypot(ctx.pursuit!.x - v.x, ctx.pursuit!.y - v.y) < 12) {
+    chase(v, all, ctx, ctx.pursuit!);
+    return;
+  }
+  const cruise = pursuing ? c.maxSpeed : Math.min(c.maxSpeed, 4.6);
   let target = cruise;
 
   if (ai.route.length === 0) {
     const next = ctx.roads.nextIntersection(v.x, v.y, ai.dir);
     if (next) {
       if (next.distance < 0.2) {
-        ai.nextDir = chooseExit(next.node.exits, ai.dir, ctx.rng);
+        ai.nextDir = pursuing ? chooseExitToward(next.node.exits, ai.dir, v, ctx.pursuit!) : chooseExit(next.node.exits, ai.dir, ctx.rng);
         ai.route = ctx.roads.turnPath(next.node, ai.dir, ai.nextDir);
       } else {
-        if (!ctx.roads.isGreen(next.node, ai.dir, ctx.tick) && v.driver !== 'police') {
+        if (!ctx.roads.isGreen(next.node, ai.dir, ctx.tick) && !pursuing) {
           target = Math.min(target, Math.max(0, (next.distance - 0.3) * 1.6));
         }
         target = Math.min(target, 2.6 + next.distance * 0.8);
       }
     }
   } else {
-    target = Math.min(target, v.driver === 'police' ? 5 : 2.6);
+    target = Math.min(target, pursuing ? 5 : 2.6);
   }
 
   const clear = clearanceAhead(v, all, ctx);
@@ -435,6 +444,53 @@ export function coast(v: VehicleState, ctx: VehicleContext): void {
   v.vy *= decay;
   v.speed *= decay;
   integrate(v, ctx, 0);
+}
+
+/** Off-lane pursuit: steer straight at the target, ramming the player's car. */
+function chase(v: VehicleState, all: readonly VehicleState[], ctx: VehicleContext, target: { x: number; y: number }): void {
+  const c = vehicleClass(v);
+  const dx = target.x - v.x;
+  const dy = target.y - v.y;
+  const d = Math.hypot(dx, dy);
+  let want = Math.min(c.maxSpeed, 1.5 + d * 1.1);
+  if (!ctx.playerVehicleId && d < 3) want = 0; // stop next to a suspect on foot; an officer gets out
+  const clear = clearanceAhead(v, all, ctx, true);
+  if (clear < 1.5) want = Math.min(want, Math.max(0, clear * 2));
+  const accel = want > v.speed ? c.accel : c.brake;
+  v.braking = want < v.speed - 0.3;
+  v.speed += Math.max(-accel * DT, Math.min(accel * DT, want - v.speed));
+  v.speed = Math.max(0, v.speed);
+  let delta = Math.atan2(dy, dx) - v.heading;
+  while (delta > Math.PI) delta -= Math.PI * 2;
+  while (delta < -Math.PI) delta += Math.PI * 2;
+  const maxTurn = c.turnRate * 1.5 * DT;
+  const turn = Math.max(-maxTurn, Math.min(maxTurn, delta)) / DT;
+  v.vx = Math.cos(v.heading) * v.speed;
+  v.vy = Math.sin(v.heading) * v.speed;
+  const impact = integrate(v, ctx, v.speed > 0.05 ? turn : 0);
+  if (impact > 2.5) damageVehicle(v, (impact - 2.5) * 3, ctx);
+  if (v.ai) {
+    // Re-align lane state with the nearest road axis for when the chase ends.
+    v.ai.route = [];
+    v.ai.dir = Math.abs(Math.cos(v.heading)) > Math.abs(Math.sin(v.heading)) ? (Math.cos(v.heading) > 0 ? 'E' : 'W') : Math.sin(v.heading) > 0 ? 'S' : 'N';
+  }
+}
+
+/** Greedy route choice: take the exit that points most toward the target. */
+function chooseExitToward(exits: Record<Dir, boolean>, dir: Dir, v: VehicleState, target: { x: number; y: number }): Dir {
+  const tx = target.x - v.x;
+  const ty = target.y - v.y;
+  let best: Dir = OPPOSITE[dir];
+  let bestScore = -Infinity;
+  for (const d of [dir, RIGHT_OF[dir], LEFT_OF[dir]] as Dir[]) {
+    if (!exits[d]) continue;
+    const score = DIR_VEC[d].x * tx + DIR_VEC[d].y * ty;
+    if (score > bestScore) {
+      bestScore = score;
+      best = d;
+    }
+  }
+  return best;
 }
 
 function chooseExit(exits: Record<Dir, boolean>, dir: Dir, rng: Rng): Dir {

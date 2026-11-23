@@ -32,6 +32,9 @@ export type SimEvent =
   | { type: 'vehicle.honk'; vehicleId: string }
   | { type: 'vehicle.wrecked'; vehicleId: string }
   | { type: 'vehicle.exploded'; vehicleId: string; x: number; y: number }
+  | { type: 'wanted.changed'; stars: number }
+  | { type: 'busted'; lostMoney: number }
+  | { type: 'respray'; vehicleId: string; cost: number }
   | { type: 'crime'; kind: CrimeKind; x: number; y: number; severity: number; witnessed: boolean };
 
 export type CrimeKind = 'vehicle-theft' | 'carjacking' | 'hit-pedestrian' | 'assault' | 'assault-officer' | 'property-damage';

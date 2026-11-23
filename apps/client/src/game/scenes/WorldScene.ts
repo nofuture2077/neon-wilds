@@ -48,6 +48,7 @@ export class WorldScene extends Phaser.Scene {
   private focusMarker!: Phaser.GameObjects.Image;
   private player!: ActorView;
   private readonly npcViews = new Map<string, ActorView>();
+  private readonly officerViews = new Map<string, ActorView>();
   private accumulator = 0;
   private pendingInteract = false;
   private hudElapsed = HUD_INTERVAL_MS;
@@ -183,6 +184,7 @@ export class WorldScene extends Phaser.Scene {
     const darkness = darknessAt(this.sim.minutes);
     this.vehicleViews.sync(this.sim.vehicles, alpha, deltaSeconds * 1000, darkness, this.time.now);
     this.signals.update(this.sim.tick);
+    this.syncOfficers(alpha, deltaSeconds);
 
     // Camera: look ahead of a moving car and zoom out with speed (GTA 2 style).
     const cam = this.cameras.main;
@@ -208,7 +210,8 @@ export class WorldScene extends Phaser.Scene {
     this.lighting.update(darkness, this.time.now);
     this.barks.update((id) => {
       const view = id === 'player' ? this.player : this.npcViews.get(id);
-      return view ? { x: view.sprite.x, y: view.sprite.y } : this.vehicleViews.positionOf(id);
+      const v = view ?? this.officerViews.get(id);
+      return v ? { x: v.sprite.x, y: v.sprite.y } : this.vehicleViews.positionOf(id);
     });
 
     const focus = this.sim.focus;
@@ -257,6 +260,21 @@ export class WorldScene extends Phaser.Scene {
         this.cameras.main.flash(180, 255, 160, 60);
         break;
       }
+      case 'wanted.changed':
+        if (event.stars > 0) {
+          store.pushToast(`Wanted: ${'\u2605'.repeat(event.stars)}`, 'warning');
+          this.cameras.main.flash(120, 60, 90, 255);
+        }
+        break;
+      case 'busted':
+        store.pushToast(`BUSTED! Fined ${event.lostMoney}\u20b5.`, 'warning');
+        break;
+      case 'respray':
+        store.pushToast(`Fresh paint. The Wardens lost you (-${event.cost}\u20b5).`, 'reward');
+        break;
+      case 'crime':
+        if (event.witnessed && event.severity >= 1) this.barks.show('player', '!', 'alarm');
+        break;
       case 'vehicle.wrecked':
         if (event.vehicleId === this.sim.player.vehicleId) store.pushToast('The car is wrecked — get clear!', 'warning');
         break;
@@ -302,6 +320,24 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  private syncOfficers(alpha: number, deltaSeconds: number): void {
+    const alive = new Set<string>();
+    for (const o of this.sim.law.officers) {
+      alive.add(o.id);
+      let view = this.officerViews.get(o.id);
+      if (!view) {
+        view = new ActorView(this, this.characterTexture({ skin: 0xc68642, hair: 0x111111, top: 0x1f3b7a, bottom: 0x14203f }));
+        this.officerViews.set(o.id, view);
+      }
+      view.sync(o, alpha, deltaSeconds);
+    }
+    for (const [id, view] of this.officerViews) {
+      if (alive.has(id)) continue;
+      view.destroy();
+      this.officerViews.delete(id);
+    }
+  }
+
   private pushHud(): void {
     const sim = this.sim;
     const m = Math.floor(sim.minutes);
@@ -333,6 +369,8 @@ export class WorldScene extends Phaser.Scene {
       promptKey,
       speed: driving ? Math.round(Math.abs(driving.speed) * 12) : null,
       vehicleHealth: driving ? Math.round((driving.hp / vehicleClass(driving).hp) * 100) : null,
+      stars: sim.law.stars,
+      seen: sim.law.seen,
     });
   }
 

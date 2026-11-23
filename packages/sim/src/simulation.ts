@@ -53,6 +53,7 @@ import { generateDistrict } from './world/generator';
 import { describeLocation } from './world/location';
 import { Pathfinder } from './world/pathfinding';
 import { RoadNetwork } from './world/roads';
+import { type LawContext, type LawState, clearWanted, newLawState, onCrime, pursuitTarget, updateLaw } from './law/law';
 import {
   type VehicleContext,
   type VehicleState,
@@ -119,6 +120,7 @@ export class Simulation implements MissionHost {
   readonly progression: ProgressionState;
   readonly vehicles: VehicleState[];
   readonly roads: RoadNetwork;
+  readonly law: LawState;
   private _battle: BattleState | null;
 
   private constructor(private readonly seed: number, districtId: string, snapshot: SimSnapshot | null, config: NewGameConfig | null) {
@@ -152,6 +154,7 @@ export class Simulation implements MissionHost {
       this.encounterCooldownUntilTick = snapshot.encounterCooldownUntilTick;
       this.nextEntityId = snapshot.nextEntityId;
       this.vehicles = snapshot.vehicles ? cloneData(snapshot.vehicles) : parkedVehiclesFromLayout(this.layout);
+      this.law = cloneData(snapshot.law);
     } else if (config) {
       this.rng = new Rng(deriveSeed(seed, 'simulation'));
       this._tick = 0;
@@ -182,6 +185,7 @@ export class Simulation implements MissionHost {
       this.encounterCooldownUntilTick = 0;
       this.nextEntityId = 1;
       this.vehicles = parkedVehiclesFromLayout(this.layout);
+      this.law = newLawState();
       checkAutoStart(this);
     } else {
       throw new Error('Simulation requires a snapshot or a config');
@@ -273,6 +277,7 @@ export class Simulation implements MissionHost {
     updateWildlings(this.wildlings, wctx);
 
     this.updateVehicles(vctx);
+    updateLaw(this.law, this.lawContext());
     this.resolveContacts(ctx);
     this.resolveVehicleActorContacts(ctx);
     const driving = this.playerVehicle;
@@ -304,6 +309,7 @@ export class Simulation implements MissionHost {
       encounterCooldownUntilTick: this.encounterCooldownUntilTick,
       nextEntityId: this.nextEntityId,
       vehicles: cloneData(this.vehicles),
+      law: cloneData(this.law),
     };
   }
 
@@ -619,6 +625,7 @@ export class Simulation implements MissionHost {
       this.player.y = this.player.prevY = clinic.entrance.ty + 0.5;
     }
     this.player.vx = this.player.vy = 0;
+    clearWanted(this.law, { events: this.events, vehicles: this.vehicles });
     this.emit({ type: 'blackout', lostMoney: lost });
     this.emit({
       type: 'message',
@@ -753,8 +760,59 @@ export class Simulation implements MissionHost {
       events: this.events,
       tick: this._tick,
       obstacles,
+      pursuit: pursuitTarget(this.law),
+      playerVehicleId: p.vehicleId,
       nextId: () => `car-${this.nextEntityId++}`,
     };
+  }
+
+  private lawContext(): LawContext {
+    return {
+      layout: this.layout,
+      roads: this.roads,
+      rng: this.rng,
+      events: this.events,
+      tick: this._tick,
+      player: this.player,
+      playerVehicle: this.playerVehicle,
+      npcs: this.npcs,
+      vehicles: this.vehicles,
+      pathfinder: this.creaturePathfinder,
+      archetypeOf: (npc) => this.archetype(npc.archetypeId),
+      nextId: () => `car-${this.nextEntityId++}`,
+      bust: () => this.bust(),
+      charge: (amount) => {
+        if (this.progression.money < amount) return false;
+        this.progression.money -= amount;
+        this._progressVersion++;
+        return true;
+      },
+    };
+  }
+
+  /** Arrested: fined, released at the Warden substation, wanted level cleared. */
+  private bust(): void {
+    const v = this.playerVehicle;
+    if (v) {
+      v.driver = 'none';
+      this.player.vehicleId = null;
+    }
+    const lost = Math.floor(this.progression.money * 0.2);
+    this.progression.money -= lost;
+    this._progressVersion++;
+    const station = this.layout.buildings.find((b) => b.name === 'Warden Substation 14');
+    if (station) {
+      this.player.x = this.player.prevX = station.entrance.tx + 0.5;
+      this.player.y = this.player.prevY = station.entrance.ty + 0.5;
+    }
+    this.player.vx = this.player.vy = 0;
+    clearWanted(this.law, { events: this.events, vehicles: this.vehicles });
+    this.emit({ type: 'busted', lostMoney: lost });
+    this.emit({
+      type: 'message',
+      speaker: 'Sergeant Pell',
+      pages: [`Name? ${this.player.name}. Uh-huh. That'll be ${lost}₵ in "processing fees". Don't let me see you again tonight.`],
+    });
   }
 
   get playerVehicle(): VehicleState | null {
@@ -885,7 +943,7 @@ export class Simulation implements MissionHost {
 
   /** Record a crime. Witnesses and the wanted level are handled by the law system. */
   reportCrime(kind: import('./core/events').CrimeKind, x: number, y: number, severity: number): void {
-    this.emit({ type: 'crime', kind, x, y, severity, witnessed: false });
+    onCrime(this.law, this.lawContext(), kind, x, y, severity);
   }
 
   private advanceClock(): void {
@@ -950,7 +1008,10 @@ export class Simulation implements MissionHost {
       const res = moveAndCollide(this.layout.map, npc.x, npc.y, NPC_HALF_EXTENT, nx * push, ny * push);
       npc.x = res.x;
       npc.y = res.y;
-      if (shove) onShoved(npc, this.npcs, ctx);
+      if (shove) {
+        onShoved(npc, this.npcs, ctx);
+        this.reportCrime('assault', npc.x, npc.y, 0.5);
+      }
     }
   }
 

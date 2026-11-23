@@ -34,3 +34,4 @@ export * from './content/missions';
 export * from './content/trainers';
 export * from './world/roads';
 export * from './world/vehicles';
+export * from './law/law';

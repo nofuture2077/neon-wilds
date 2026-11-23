@@ -1,3 +1,4 @@
+import { newLawState } from './law/law';
 import { newProgression } from './progression';
 import { SNAPSHOT_VERSION, type SimSnapshot } from './state';
 
@@ -28,6 +29,8 @@ const STEPS: Record<number, (s: AnySnapshot) => AnySnapshot> = {
     player: { ...(s.player as Record<string, unknown>), vehicleId: null },
     vehicles: null,
   }),
+  // v3 → v4: police and wanted levels.
+  3: (s) => ({ ...s, version: 4, law: newLawState() }),
 };
 
 export function migrateSnapshot(raw: unknown): SimSnapshot {
