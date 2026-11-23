@@ -57,6 +57,8 @@ import { generateDistrict } from './world/generator';
 import { describeLocation } from './world/location';
 import { Pathfinder } from './world/pathfinding';
 import { RoadNetwork } from './world/roads';
+import { type FactionAgent, factionTick, newFactionAgents, noteTerritoryChange } from './factions/strategy';
+import { type WorldState, eventActive, newWorldState, worldHour } from './world/director';
 import { type LawContext, type LawState, clearWanted, newLawState, onCrime, pursuitTarget, updateLaw } from './law/law';
 import { ARCHETYPE_FACTION, repTier } from './content/factions';
 import {
@@ -64,7 +66,6 @@ import {
   type TerritoryState,
   adjustInfluence,
   blockOf,
-  factionHour,
   newTerritory,
   priceOf,
   recoverDemand,
@@ -140,6 +141,9 @@ export class Simulation implements MissionHost {
   readonly territory: TerritoryState;
   readonly market: MarketState;
   private _day: number;
+  readonly factionAgents: FactionAgent[];
+  private lastControllers: Record<string, string | null>;
+  readonly world: WorldState;
   private _battle: BattleState | null;
 
   private constructor(private readonly seed: number, districtId: string, snapshot: SimSnapshot | null, config: NewGameConfig | null) {
@@ -177,6 +181,9 @@ export class Simulation implements MissionHost {
       this.territory = snapshot.territory ? cloneData(snapshot.territory) : newTerritory(this.layout);
       this.market = cloneData(snapshot.market);
       this._day = snapshot.day;
+      this.factionAgents = snapshot.factions ? cloneData(snapshot.factions.agents) : newFactionAgents();
+      this.lastControllers = snapshot.factions ? { ...snapshot.factions.lastControllers } : { ...this.territory.controllers };
+      this.world = cloneData(snapshot.world);
     } else if (config) {
       this.rng = new Rng(deriveSeed(seed, 'simulation'));
       this._tick = 0;
@@ -211,6 +218,9 @@ export class Simulation implements MissionHost {
       this.territory = newTerritory(this.layout);
       this.market = { demand: {} };
       this._day = 0;
+      this.factionAgents = newFactionAgents();
+      this.lastControllers = { ...this.territory.controllers };
+      this.world = newWorldState();
       checkAutoStart(this);
     } else {
       throw new Error('Simulation requires a snapshot or a config');
@@ -355,6 +365,8 @@ export class Simulation implements MissionHost {
       day: this._day,
       territory: cloneData(this.territory),
       market: cloneData(this.market),
+      factions: { agents: cloneData(this.factionAgents), lastControllers: { ...this.lastControllers } },
+      world: cloneData(this.world),
     };
   }
 
@@ -798,7 +810,10 @@ export class Simulation implements MissionHost {
       isWalking: (npc) => npc.mode === 'walking',
       patrolTile: (npc) => {
         const faction = ARCHETYPE_FACTION[npc.archetypeId];
-        const blocks = this.layout.blocks.filter((b) => faction && this.territory.controllers[b.id] === faction);
+        const own = npc.agent?.patrolBlock;
+        const blocks = own
+          ? this.layout.blocks.filter((b) => b.id === own)
+          : this.layout.blocks.filter((b) => faction && this.territory.controllers[b.id] === faction);
         if (!blocks.length) return null;
         const b = this.rng.pick(blocks);
         for (let k = 0; k < 6; k++) {
@@ -861,11 +876,13 @@ export class Simulation implements MissionHost {
     for (let i = this.npcs.length - 1; i >= 0; i--) {
       const n = this.npcs[i]!;
       if (!n.transient) continue;
-      if (!n.present || (Math.hypot(n.x - p.x, n.y - p.y) > 42 && n.mode !== 'talking')) this.npcs.splice(i, 1);
+      const crew = n.id.startsWith('crew-') && n.agent?.patrolBlock;
+      if (!n.present || (!crew && Math.hypot(n.x - p.x, n.y - p.y) > 42 && n.mode !== 'talking')) this.npcs.splice(i, 1);
     }
     const h = this.hour;
-    const desired = h >= 23 || h < 5 ? 5 : h < 9 ? 14 : h < 17 ? 18 : 24;
-    const count = this.npcs.filter((n) => n.transient).length;
+    const base = h >= 23 || h < 5 ? 5 : h < 9 ? 14 : h < 17 ? 18 : 24;
+    const desired = Math.round(base * (eventActive(this.world, 'night-market') ? 1.8 : 1) * (this.world.weather === 'storm' ? 0.4 : this.world.weather === 'rain' ? 0.7 : 1));
+    const count = this.npcs.filter((n) => n.transient && !n.id.startsWith('crew-')).length;
     if (count >= desired) return;
     const spawns = this.layout.pedestrianSpawns;
     for (let k = 0; k < 6; k++) {
@@ -984,6 +1001,8 @@ export class Simulation implements MissionHost {
       timeOfDay: timeOfDay(this._minutes),
       player: this.player,
       playerCanBattle: this.progression.party.some(isHealthy),
+      weather: this.world.weather,
+      blackout: eventActive(this.world, 'blackout'),
       pathBudget: { remaining: Math.max(2, pathBudget.remaining) },
     };
   }
@@ -1025,6 +1044,7 @@ export class Simulation implements MissionHost {
       obstacles,
       pursuit: pursuitTarget(this.law),
       playerVehicleId: p.vehicleId,
+      signalsOff: eventActive(this.world, 'blackout'),
       nextId: () => `car-${this.nextEntityId++}`,
     };
   }
@@ -1223,10 +1243,81 @@ export class Simulation implements MissionHost {
     const after = this.hour;
     if (after !== before) {
       this.events.push({ type: 'clock.hour', hour: after });
-      factionHour(this.territory, this.layout, this.progression.reputation, this.events);
+      this.strategyHour();
       for (const npc of this.npcs) decayMemories(npc.memory);
       recoverDemand(this.market);
       this._progressVersion++;
+    }
+  }
+
+  get absHour(): number {
+    return this._day * 24 + this.hour;
+  }
+
+  /** Hourly world simulation: weather and events, then each faction plans and acts. */
+  private strategyHour(): void {
+    worldHour(this.world, this.absHour, this.rng, this.events);
+    const world = {
+      blackout: eventActive(this.world, 'blackout'),
+      recallDrive: eventActive(this.world, 'recall-drive'),
+      procession: eventActive(this.world, 'saints-procession'),
+      hour: this.hour,
+      absHour: this.absHour,
+    };
+    for (const f of this.factionAgents) {
+      factionTick(f, {
+        layout: this.layout,
+        territory: this.territory,
+        reputation: this.progression.reputation,
+        events: this.events,
+        world,
+        spawnCrew: (faction, blockId, count) => this.spawnCrew(faction, blockId, count),
+        crewDisrupted: (ids) =>
+          ids.some((id) => this.npcs.find((n) => n.id === id)?.memory.some((m) => (m.kind === 'shoved' || m.kind === 'hit-by-car') && !m.secondhand)),
+        dismissCrew: (ids) => this.dismissCrew(ids),
+      });
+    }
+    // Factions notice blocks that changed hands since last hour (including the player's doing).
+    for (const [blockId, controller] of Object.entries(this.territory.controllers)) {
+      const prev = this.lastControllers[blockId] ?? null;
+      if (prev !== controller) noteTerritoryChange(this.factionAgents, prev, this.absHour);
+    }
+    this.lastControllers = { ...this.territory.controllers };
+  }
+
+  private spawnCrew(faction: 'saints' | 'halcyon', blockId: string, count: number): string[] {
+    const block = this.layout.blocks.find((b) => b.id === blockId);
+    if (!block) return [];
+    const ids: string[] = [];
+    for (let i = 0; i < count; i++) {
+      let tile: { tx: number; ty: number } | null = null;
+      for (let k = 0; k < 12 && !tile; k++) {
+        const tx = block.x + this.rng.int(0, block.w - 1);
+        const ty = this.rng.chance(0.5) ? block.y : block.y + block.h - 1;
+        if (this.layout.map.isPedestrianWalkable(tx, ty)) tile = { tx, ty };
+      }
+      if (!tile) continue;
+      const npc = this.spawnCitizen(tile.tx + 0.5, tile.ty + 0.5, false);
+      npc.id = `crew-${npc.id}`;
+      npc.archetypeId = faction === 'halcyon' ? 'aegis-agent' : 'gutter-saint';
+      npc.name = faction === 'halcyon' ? 'Halcyon Outreach Agent' : 'Saints Runner';
+      npc.appearance = faction === 'halcyon' ? { ...npc.appearance, top: 0xe8ecf4, bottom: 0x2b2f3a } : { ...npc.appearance, top: 0x9b2335, bottom: 0x2b2b3a };
+      npc.agent = { ...npc.agent!, patrolBlock: blockId, activity: null };
+      ids.push(npc.id);
+    }
+    return ids;
+  }
+
+  private dismissCrew(ids: string[]): void {
+    for (const id of ids) {
+      const npc = this.npcs.find((n) => n.id === id);
+      if (!npc) continue;
+      if (Math.hypot(npc.x - this.player.x, npc.y - this.player.y) > 16) npc.present = false;
+      else if (npc.agent) {
+        npc.agent.patrolBlock = null;
+        npc.archetypeId = 'citizen'; // walks off home and disappears
+        npc.agent.activity = null;
+      }
     }
   }
 

@@ -30,6 +30,7 @@ import { Lighting, darknessAt } from '../render/lighting';
 import { WildlingViews } from '../render/WildlingViews';
 import { SignalViews, VehicleViews } from '../render/VehicleViews';
 import { TerritoryViews } from '../render/TerritoryViews';
+import { WeatherViews } from '../render/WeatherViews';
 
 /** Max simulation catch-up per frame (prevents a spiral of death after a tab stall). */
 const MAX_FRAME_SECONDS = 0.25;
@@ -49,6 +50,7 @@ export class WorldScene extends Phaser.Scene {
   private vehicleViews!: VehicleViews;
   private signals!: SignalViews;
   private territoryViews!: TerritoryViews;
+  private weatherViews!: WeatherViews;
   private cameraTarget!: Phaser.GameObjects.Zone;
   private baseZoom = 3;
   private pendingAction = false;
@@ -92,6 +94,7 @@ export class WorldScene extends Phaser.Scene {
     this.vehicleViews = new VehicleViews(this);
     this.signals = new SignalViews(this, this.sim.roads);
     this.territoryViews = new TerritoryViews(this, this.sim.layout);
+    this.weatherViews = new WeatherViews(this);
     this.focusMarker = this.add.image(0, 0, TEXTURES.focus).setDepth(Depth.focus).setVisible(false);
     this.barks = new BarkLayer(this, textRes);
     this.controls = new InputMapper(this);
@@ -197,7 +200,7 @@ export class WorldScene extends Phaser.Scene {
     this.player.setVisible(!driving);
     const darkness = darknessAt(this.sim.minutes);
     this.vehicleViews.sync(this.sim.vehicles, alpha, deltaSeconds * 1000, darkness, this.time.now);
-    this.signals.update(this.sim.tick);
+    this.signals.update(this.sim.tick, this.sim.world.event?.id === 'blackout');
     this.territoryViews.update(this.sim.territory.controllers, darkness);
     this.syncOfficers(alpha, deltaSeconds);
 
@@ -234,7 +237,10 @@ export class WorldScene extends Phaser.Scene {
     if (this.debugText) this.renderDebug();
     this.wildlingViews.sync(this.sim.wildlings, alpha, deltaSeconds, this.time.now);
 
-    this.lighting.update(darkness, this.time.now);
+    const weather = this.sim.world.weather;
+    const gloom = weather === 'storm' ? 0.18 : weather === 'rain' ? 0.1 : weather === 'drizzle' ? 0.04 : 0;
+    this.lighting.update(darkness, this.time.now, gloom, this.sim.world.event?.id === 'blackout');
+    this.weatherViews.update(weather, deltaSeconds * 1000, this.time.now);
     this.barks.update((id) => {
       const view = id === 'player' ? this.player : this.npcViews.get(id);
       const v = view ?? this.officerViews.get(id);
@@ -298,6 +304,33 @@ export class WorldScene extends Phaser.Scene {
         const where = b ? describeLocation(this.sim.layout, b.x + b.w / 2, b.y + b.h / 2) : 'the Slums';
         const name = event.controller === 'halcyon' ? 'Halcyon' : event.controller === 'saints' ? 'The Gutter Saints' : null;
         store.pushToast(name ? `${name} took control near ${where}.` : `The blocks near ${where} are contested.`, 'mission');
+        break;
+      }
+      case 'world.event':
+        if (event.status === 'started') {
+          store.pushToast(`${event.title}!`, 'mission');
+          if (!this.sim.playerVehicle && !store.battle) store.openDialogue({ source: { kind: 'message' }, speaker: event.title, pages: [event.text] });
+        } else store.pushToast(`${event.title} is over.`, 'info');
+        break;
+      case 'weather.changed':
+        store.pushToast(event.weather === 'clear' ? 'The rain stops.' : event.weather === 'drizzle' ? 'A drizzle starts.' : event.weather === 'rain' ? 'Rain pours down.' : 'A storm rolls in over the harbour.', 'info');
+        break;
+      case 'faction.operation': {
+        if (event.status === 'completed' || !event.blockId) break;
+        const b = this.sim.layout.blocks.find((x) => x.id === event.blockId);
+        const where = b ? describeLocation(this.sim.layout, b.x + b.w / 2, b.y + b.h / 2) : 'the Slums';
+        const who = event.faction === 'halcyon' ? 'Halcyon' : 'The Saints';
+        const what: Record<string, string> = {
+          scout: 'scouting',
+          outreach: 'putting up posters',
+          raid: 'raiding',
+          rally: 'rallying',
+          'strip-posters': 'tearing down Halcyon posters',
+        };
+        store.pushToast(
+          event.status === 'disrupted' ? `You broke up ${who}'s crew near ${where}.` : `${who} ${what[event.action] ?? event.action} near ${where}.`,
+          event.status === 'disrupted' ? 'reward' : 'mission',
+        );
         break;
       }
       case 'reputation.changed':
@@ -457,6 +490,8 @@ export class WorldScene extends Phaser.Scene {
       stars: sim.law.stars,
       seen: sim.law.seen,
       turf: sim.controllerAtPlayer(),
+      weather: sim.world.weather,
+      worldEvent: sim.world.event ? sim.world.event.id : null,
     });
   }
 

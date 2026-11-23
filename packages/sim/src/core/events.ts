@@ -35,6 +35,9 @@ export type SimEvent =
   | { type: 'wanted.changed'; stars: number }
   | { type: 'territory.changed'; blockId: string; controller: string | null; previous: string | null }
   | { type: 'reputation.changed'; faction: string; delta: number; value: number }
+  | { type: 'faction.operation'; faction: string; action: string; blockId: string | null; status: 'started' | 'completed' | 'disrupted' }
+  | { type: 'weather.changed'; weather: 'clear' | 'drizzle' | 'rain' | 'storm' }
+  | { type: 'world.event'; id: string; status: 'started' | 'ended'; title: string; text: string }
   | { type: 'busted'; lostMoney: number }
   | { type: 'respray'; vehicleId: string; cost: number }
   | { type: 'crime'; kind: CrimeKind; x: number; y: number; severity: number; witnessed: boolean };

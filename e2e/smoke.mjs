@@ -142,22 +142,31 @@ await sim(() => {
   b.enemy.party[0].status = { kind: 'dazed', turns: 99, stacks: 1 };
   sim.progression.inventory['tin-snare'] = 30;
 });
-for (let i = 0; i < 30; i++) {
+for (let i = 0; i < 60; i++) {
   const inBattle = await sim(() => !!window.__NEON_WILDS__.sim.battle);
   if (!inBattle) break;
   const snare = page.getByRole('button', { name: 'Snare' });
   if (await snare.isVisible().catch(() => false)) {
     await snare.click();
     await page.waitForTimeout(250);
-    await page.locator('.pixel-button').filter({ hasText: 'Snare' }).filter({ hasText: '×' }).first().click();
+    const option = page.locator('.pixel-button').filter({ hasText: 'Snare' }).filter({ hasText: '×' }).first();
+    if (await option.isVisible().catch(() => false)) await option.click();
   }
-  await page.waitForTimeout(250);
-  await press('e', 3);
+  await page.waitForTimeout(200);
+  await press('e', 2);
 }
+const captureState = await sim(() => {
+  const { sim } = window.__NEON_WILDS__;
+  return { battle: sim.battle && { phase: sim.battle.phase, enemy: sim.battle.enemy.party[0], kind: sim.battle.kind }, caught: sim.progression.index.caught, snares: sim.progression.inventory['tin-snare'] };
+});
 await step('07-capture');
 await dismissDialogues();
 await press('e', 4);
 const caught = await sim(() => window.__NEON_WILDS__.sim.progression.index.caught.length);
+if (caught < 2) {
+  await step('fail-capture');
+  console.error('capture diagnostics:', JSON.stringify(captureState));
+}
 assert(caught >= 2, `captured a wild Wildling (${caught} species caught)`);
 
 // Pause menu, save, quit, continue.

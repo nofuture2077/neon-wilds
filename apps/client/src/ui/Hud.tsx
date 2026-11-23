@@ -43,6 +43,8 @@ export function Hud() {
         <div className="panel flex items-center gap-3 px-4 py-3">
           <span className="font-term text-xl text-slate-300">{playerName}</span>
           <span className="font-pixel text-xs text-neon-yellow">{progress?.money ?? 0}₵</span>
+          {hud.weather !== 'clear' && <span className="font-pixel text-[9px] uppercase text-slate-400">{hud.weather}</span>}
+          {hud.worldEvent === 'blackout' && <span className="font-pixel text-[9px] text-neon-pink">BLACKOUT</span>}
           <span className={`font-pixel text-sm ${hud.isNight ? 'text-neon-cyan' : 'text-neon-yellow'}`}>{hud.clock}</span>
         </div>
         {progress && progress.party.length > 0 && (

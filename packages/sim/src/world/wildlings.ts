@@ -45,6 +45,9 @@ export interface WildlingContext {
   playerCanBattle: boolean;
   pathBudget: { remaining: number };
   nextId(): string;
+  /** Rain brings out Tide Wildlings; blackouts send Spark Wildlings into a frenzy. */
+  weather?: 'clear' | 'drizzle' | 'rain' | 'storm';
+  blackout?: boolean;
 }
 
 const HABITAT_TILES: Record<HabitatTile, TileKind[]> = {
@@ -76,12 +79,16 @@ export function manageSpawns(list: WildlingEntity[], ctx: WildlingContext): void
   const options = Object.values(SPECIES).flatMap((s) =>
     s.habitats
       .filter((h) => h.district === ctx.layout.id && h.time.includes(ctx.timeOfDay))
-      .map((h) => ({ species: s, habitat: h })),
+      .map((h) => {
+        const wet = ctx.weather === 'rain' || ctx.weather === 'storm';
+        const boost = (wet && s.types.includes('tide') ? 3 : 1) * (ctx.blackout && s.types.includes('spark') ? 3 : 1);
+        return { species: s, habitat: h, weight: h.weight * boost };
+      }),
   );
   if (options.length === 0) return;
-  const total = options.reduce((a, o) => a + o.habitat.weight, 0);
+  const total = options.reduce((a, o) => a + o.weight, 0);
   let r = ctx.rng.next() * total;
-  const pick = options.find((o) => (r -= o.habitat.weight) <= 0) ?? options[options.length - 1]!;
+  const pick = options.find((o) => (r -= o.weight) <= 0) ?? options[options.length - 1]!;
   const kinds = pick.habitat.tiles.flatMap((t) => HABITAT_TILES[t]);
   const tile = findSpawnTile(ctx, kinds, SPAWN_MIN_DIST, SPAWN_MAX_DIST);
   if (!tile) return;

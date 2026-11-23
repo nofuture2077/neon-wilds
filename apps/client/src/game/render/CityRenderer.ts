@@ -26,7 +26,7 @@ export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting
       .setDepth(Depth.buildingShadow);
     scene.add.image(b.x * T, b.y * T, key).setOrigin(0, 0).setDepth(Depth.buildings);
     for (const l of art.lights) {
-      lighting.add(b.x * T + l.x, b.y * T + l.y, l.color, l.scale, 0.75, l.day, l.flicker ? 0.08 : 0);
+      lighting.add(b.x * T + l.x, b.y * T + l.y, l.color, l.scale, 0.75, l.day, l.flicker ? 0.08 : 0, l.scale <= 0.3 ? 'window' : 'neon');
     }
   }
 
@@ -69,7 +69,7 @@ function renderProp(scene: Phaser.Scene, p: Prop, lighting: Lighting): void {
       const ly = cy + (off?.[1] ?? 0);
       scene.add.image(lx, ly, TEXTURES.lamp).setDepth(Depth.canopy);
       const tint = LAMP_TINTS[(p.x * 7 + p.y * 3) % LAMP_TINTS.length]!;
-      lighting.add(lx, ly, tint, 0.7, 0.38);
+      lighting.add(lx, ly, tint, 0.7, 0.38, 0, 0, 'lamp');
       break;
     }
     case 'bench':

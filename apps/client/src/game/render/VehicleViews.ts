@@ -147,8 +147,13 @@ export class SignalViews {
     }
   }
 
-  update(tick: number): void {
+  update(tick: number, dark = false): void {
     for (const h of this.heads) {
+      h.glow.setVisible(!dark);
+      if (dark) {
+        h.img.setTint(0x333333);
+        continue;
+      }
       const node = this.roads.intersections[h.node]!;
       const state = this.roads.signalState(node, h.dir, tick);
       const color = state === 'green' ? 0x4fffb0 : state === 'amber' ? 0xffb347 : 0xff3b3b;

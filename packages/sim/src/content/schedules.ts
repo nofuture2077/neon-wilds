@@ -72,6 +72,11 @@ export const ROUTINES: Record<string, Routine> = {
       { from: 10, to: 3, weights: { work: 2.5, wander: 1, socialize: 0.8, eat: 1 } },
     ],
   },
+  'aegis-agent': {
+    workplace: 'none',
+    sociability: 0.2,
+    blocks: [{ from: 0, to: 24, weights: { patrol: 4 } }],
+  },
   citizen: {
     workplace: 'none',
     sociability: 0.5,

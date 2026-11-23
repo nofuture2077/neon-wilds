@@ -210,27 +210,38 @@ export class BattleScene extends Phaser.Scene {
         const from = this.minePos();
         const to = this.foePos();
         this.snare?.destroy();
-        this.snare = this.add.image(from.x, from.y, TEXTURES.snare).setScale(3);
-        this.tweens.add({ targets: this.snare, x: to.x, duration: 420, ease: 'Linear' });
-        this.tweens.add({ targets: this.snare, y: to.y - 90, duration: 210, yoyo: true, ease: 'Quad.out' });
-        this.tweens.add({ targets: this.snare, angle: 720, duration: 420 });
+        // Animations capture their own snare: the log may advance (and destroy it) before they finish.
+        const snare = this.add.image(from.x, from.y, TEXTURES.snare).setScale(3);
+        this.snare = snare;
+        this.tweens.add({ targets: snare, x: to.x, duration: 420, ease: 'Linear' });
+        this.tweens.add({ targets: snare, y: to.y - 90, duration: 210, yoyo: true, ease: 'Quad.out' });
+        this.tweens.add({ targets: snare, angle: 720, duration: 420 });
         this.time.delayedCall(420, () => {
+          if (!snare.active || this.snare !== snare) return;
           this.pulse(this.foe, 0xff3fa4);
           this.tweens.add({ targets: this.foe, scale: 0, alpha: 0, duration: 220 });
-          this.tweens.add({ targets: this.snare, y: to.y + 40, duration: 260, ease: 'Bounce.out' });
+          this.tweens.add({ targets: snare, y: to.y + 40, duration: 260, ease: 'Bounce.out' });
         });
         break;
       }
-      case 'shake':
-        if (this.snare) this.tweens.add({ targets: this.snare, angle: { from: -25, to: 25 }, duration: 140, yoyo: true, delay: 200 });
+      case 'shake': {
+        const snare = this.snare;
+        if (snare?.active) {
+          this.tweens.add({ targets: snare, angle: { from: -25, to: 25 }, duration: 140, yoyo: true, delay: 200, onStart: () => undefined });
+        }
         break;
+      }
       case 'capture':
         if (e.success) {
           this.burst(this.snare?.x ?? this.foe.x, this.snare?.y ?? this.foe.y, 0xfff275);
         } else {
-          this.snare?.destroy();
+          if (this.snare) {
+            this.tweens.killTweensOf(this.snare);
+            this.snare.destroy();
+          }
           this.snare = null;
-          this.foe.setScale(this.scaleFactor).setAlpha(1);
+          this.tweens.killTweensOf(this.foe);
+          this.foe.setScale(this.scaleFactor).setAlpha(1).setPosition(this.foePos().x, this.foePos().y);
           this.burst(this.foe.x, this.foe.y, 0xff3fa4);
         }
         break;

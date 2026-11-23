@@ -17,7 +17,10 @@ export function darknessAt(minutes: number): number {
   return 1 - (1 - DAY) * smooth((h - 4.5) / 3.5); // 4:30 – 8:00 dawn
 }
 
+export type LightCategory = 'neon' | 'lamp' | 'window' | 'other';
+
 interface Light {
+  category: LightCategory;
   image: Phaser.GameObjects.Image;
   /** Alpha at full darkness. */
   strength: number;
@@ -50,20 +53,25 @@ export class Lighting {
     this.overlay.setPosition(-width, -height).setSize(width * 3, height * 3);
   }
 
-  add(x: number, y: number, color: number, scale: number, strength: number, dayStrength = 0, flicker = 0): void {
+  add(x: number, y: number, color: number, scale: number, strength: number, dayStrength = 0, flicker = 0, category: LightCategory = 'other'): void {
     const image = this.scene.add
       .image(x, y, TEXTURES.glow)
       .setTint(color)
       .setScale(scale)
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(Depth.glow);
-    this.lights.push({ image, strength, dayStrength, flicker, phase: (x * 13.7 + y * 7.3) % 100 });
+    this.lights.push({ category, image, strength, dayStrength, flicker, phase: (x * 13.7 + y * 7.3) % 100 });
   }
 
-  update(darkness: number, timeMs: number): void {
-    this.overlay.setAlpha(darkness * 0.42);
+  /** `gloom` darkens for weather; during a blackout the grid (neon, lamps, most windows) goes dark. */
+  update(darkness: number, timeMs: number, gloom = 0, blackout = false): void {
+    this.overlay.setAlpha(Math.min(0.75, darkness * 0.42 + gloom + (blackout ? 0.18 : 0)));
     const t = timeMs / 1000;
     for (const l of this.lights) {
+      if (blackout && (l.category === 'neon' || l.category === 'lamp' || (l.category === 'window' && l.phase % 3 > 0.6))) {
+        l.image.setAlpha(0);
+        continue;
+      }
       let a = l.dayStrength + (l.strength - l.dayStrength) * darkness;
       if (l.flicker > 0) {
         // Occasional stutter, like a failing neon transformer.

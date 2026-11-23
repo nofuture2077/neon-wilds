@@ -41,3 +41,5 @@ export * from './ai/bt';
 export * from './ai/memory';
 export * from './ai/routine';
 export * from './content/schedules';
+export * from './factions/strategy';
+export * from './world/director';

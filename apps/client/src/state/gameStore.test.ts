@@ -61,7 +61,7 @@ describe('gameStore dialogue', () => {
   });
 
   it('does not re-render when the HUD is unchanged', () => {
-    const hud = { district: 'The Slums', location: 'Cinder Row', clock: '18:30', isNight: false, prompt: null, promptKey: 'E', speed: null, vehicleHealth: null, stars: 0, seen: false, turf: null };
+    const hud = { district: 'The Slums', location: 'Cinder Row', clock: '18:30', isNight: false, prompt: null, promptKey: 'E', speed: null, vehicleHealth: null, stars: 0, seen: false, turf: null, weather: 'clear', worldEvent: null };
     useGameStore.getState().setHud(hud);
     const ref = useGameStore.getState().hud;
     useGameStore.getState().setHud({ ...hud });

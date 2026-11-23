@@ -7,6 +7,8 @@ import type { Effect } from './missions/types';
 import type { ProgressionState } from './progression';
 import type { MarketState, TerritoryState } from './factions/territory';
 import type { LawState } from './law/law';
+import type { FactionAgent } from './factions/strategy';
+import type { WorldState } from './world/director';
 import type { VehicleState } from './world/vehicles';
 import type { WildlingEntity } from './world/wildlings';
 
@@ -93,7 +95,7 @@ export type Focus =
   | { kind: 'npc'; id: string; label: string }
   | { kind: 'building'; id: string; label: string };
 
-export const SNAPSHOT_VERSION = 6;
+export const SNAPSHOT_VERSION = 7;
 
 /** Everything needed to resume a simulation. The district layout is regenerated from seed + districtId. */
 export interface SimSnapshot {
@@ -119,4 +121,6 @@ export interface SimSnapshot {
   /** Null means "initialise from the layout" (migrated saves). */
   territory: TerritoryState | null;
   market: MarketState;
+  factions: { agents: FactionAgent[]; lastControllers: Record<string, string | null> } | null;
+  world: WorldState;
 }

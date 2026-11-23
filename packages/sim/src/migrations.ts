@@ -1,4 +1,5 @@
 import { newLawState } from './law/law';
+import { newWorldState } from './world/director';
 import { newProgression } from './progression';
 import { SNAPSHOT_VERSION, type SimSnapshot } from './state';
 
@@ -49,6 +50,8 @@ const STEPS: Record<number, (s: AnySnapshot) => AnySnapshot> = {
     version: 6,
     npcs: (s.npcs as Record<string, unknown>[]).map((n) => ({ ...n, agent: null, indoors: null, transient: false, memory: [] })),
   }),
+  // v6 → v7: faction GOAP agents and the world director.
+  6: (s) => ({ ...s, version: 7, factions: null, world: newWorldState() }),
 };
 
 export function migrateSnapshot(raw: unknown): SimSnapshot {

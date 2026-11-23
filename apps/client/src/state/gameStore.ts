@@ -37,6 +37,8 @@ export interface HudState {
   seen: boolean;
   /** Faction controlling the player's block, if any. */
   turf: string | null;
+  weather: string;
+  worldEvent: string | null;
 }
 
 /** Read-only queries into the running simulation, provided by the game host. */
@@ -122,7 +124,7 @@ interface GameStore {
   battleChooseItem(itemId: string | null): void;
 }
 
-const EMPTY_HUD: HudState = { district: '', location: '', clock: '', isNight: false, prompt: null, promptKey: 'E', speed: null, vehicleHealth: null, stars: 0, seen: false, turf: null };
+const EMPTY_HUD: HudState = { district: '', location: '', clock: '', isNight: false, prompt: null, promptKey: 'E', speed: null, vehicleHealth: null, stars: 0, seen: false, turf: null, weather: 'clear', worldEvent: null };
 let toastSeq = 1;
 
 function shown(view: BattleView, side: 'player' | 'enemy', index = view.activeIndex): ShownCreature {
@@ -180,7 +182,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       prev.vehicleHealth === hud.vehicleHealth &&
       prev.stars === hud.stars &&
       prev.seen === hud.seen &&
-      prev.turf === hud.turf
+      prev.turf === hud.turf &&
+      prev.weather === hud.weather &&
+      prev.worldEvent === hud.worldEvent
     ) {
       return;
     }

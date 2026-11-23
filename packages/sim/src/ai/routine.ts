@@ -19,6 +19,8 @@ export interface AgentState {
   /** Top utility scores from the last decision (for the debug overlay). */
   scores: [string, number][];
   nextDecision: number;
+  /** Faction crews patrol this block for their operation. */
+  patrolBlock: string | null;
 }
 
 /** Hooks the routine needs from the NPC brain and the simulation. */
@@ -70,6 +72,7 @@ export function newAgent(homeId: string | null, workId: string | null, workSpot:
     bt: {},
     scores: [],
     nextDecision: 0,
+    patrolBlock: null,
   };
 }
 

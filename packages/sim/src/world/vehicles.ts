@@ -76,6 +76,8 @@ export interface VehicleContext {
   pursuit: { x: number; y: number } | null;
   /** The car the player is driving; pursuing police ram it instead of braking for it. */
   playerVehicleId: string | null;
+  /** Blackout: traffic signals are dead, junctions become a free-for-all. */
+  signalsOff?: boolean;
   nextId(): string;
 }
 
@@ -375,7 +377,7 @@ export function driveAi(v: VehicleState, all: readonly VehicleState[], ctx: Vehi
         ai.nextDir = pursuing ? chooseExitToward(next.node.exits, ai.dir, v, ctx.pursuit!) : chooseExit(next.node.exits, ai.dir, ctx.rng);
         ai.route = ctx.roads.turnPath(next.node, ai.dir, ai.nextDir);
       } else {
-        if (!ctx.roads.isGreen(next.node, ai.dir, ctx.tick) && !pursuing) {
+        if (!ctx.signalsOff && !ctx.roads.isGreen(next.node, ai.dir, ctx.tick) && !pursuing) {
           target = Math.min(target, Math.max(0, (next.distance - 0.3) * 1.6));
         }
         target = Math.min(target, 2.6 + next.distance * 0.8);
