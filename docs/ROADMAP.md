@@ -7,8 +7,8 @@
 | 1 | Playable foundation | **Done** | A playable character exploring a living Slums district |
 | 2 | Creature gameplay | **Done** | Complete creature collection loop, plus local saves |
 | 3 | Open-world sandbox | **Done** | Vehicles, traffic, police and wanted levels, factions, economy |
-| 4 | Traditional game AI | Next | Living world: HSM and utility NPCs, memory, relationships, Wildling BTs, faction GOAP, simulation LOD |
-| 5 | Story and content | Planned | Playable campaign: Acts I–III, faction arcs, procedural missions, endings |
+| 4 | Traditional game AI | **Done** | Living world: HSM and utility NPCs, memory, relationships, Wildling BTs, faction GOAP, simulation LOD |
+| 5 | Story and content | Next | Playable campaign: Acts I–III, faction arcs, procedural missions, endings |
 | 6 | Backend and persistence | Planned | Accounts, cloud saves, sync, leaderboards |
 | 7 | Polish | Planned | Audio, animation, performance, UX, balancing, regression suite |
 
@@ -53,7 +53,10 @@ Multi-district city graph (Slums + Downtown + Industrial edges); spatial hash an
 
 **Exit:** steal a car, crash it, escape a 2-star pursuit; buy and sell with district price differences; reputation changes from actions; 200 entities in the district at 60 FPS.
 
-## M4 — Traditional game AI
+## M4 — Traditional game AI ✅ ([review](reviews/M4.md))
+
+Delivered: BT runtime, daily routines with utility AI, memory, gossip and relationships, crowds and level-of-detail, faction GOAP with operations and crews, world director (weather and events), procedural missions with a job board, objective waypoints, and the AI debug overlay. The city graph, Downtown and the routing polish move to M5.
+
 
 Also carried over from M3: the multi-district city graph, Downtown (rotated grid plus a diagonal boulevard), pedestrian crowd density and car-ejection pedestrians, hierarchical road routing, and junction reservation.
 
@@ -63,6 +66,9 @@ Perception, memory records and gossip, relationship graph, needs and emotion, HS
 **Exit:** NPCs keep schedules and react to and remember the player; two factions change territory autonomously; one faction changes behaviour in response to a world event; a generated mission is offered, completed and has consequences.
 
 ## M5 — Story and content
+
+First: the multi-district city graph and Downtown (carried over from M3/M4), then the narrative.
+
 
 Acts I–III, five faction arcs, branching dialogue trees, procedural mission templates (≥ 12 categories), world events, Old Town / Harbor / Outskirts districts, the remaining 22 species, at least three endings plus the secret ending, and the epilogue builder.
 
@@ -80,10 +86,10 @@ Audio (SFX, ambience, procedural music mixing and leitmotif variation), animatio
 |---|---|
 | Explore a functioning urban district | M1 ✅ |
 | ≥ 10 creatures encountered and captured; battles functional | M2 ✅ |
-| NPC schedules, reactions, memory | M1 (reactions, short-term grudge) → M4 |
-| ≥ 2 factions operate independently and change influence | M3 ✅ (rules) → M4 (GOAP) |
+| NPC schedules, reactions, memory | M4 ✅ |
+| ≥ 2 factions operate independently and change influence | M4 ✅ (GOAP) |
 | Vehicles and traffic; police respond to crime | M3 ✅ |
-| ≥ 5 playable missions; deterministic dynamic missions | M2 ✅ (3) → M4/M5 |
+| ≥ 5 playable missions; deterministic dynamic missions | M4 ✅ (3 handcrafted + 5 templates) |
 | Save and reload | M2 ✅ (local) → M6 (cloud) |
 | Offline play without external services | M1 ✅ (by design) |
 | Zero generative AI / LLM runtime dependencies | ✅ enforced in CI |

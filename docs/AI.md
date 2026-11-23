@@ -1,6 +1,8 @@
 # NEON WILDS — Traditional Game AI Architecture
 
 > Owner: Game AI Engineer · **No generative AI, LLMs or external inference — ever.** Everything here is deterministic, conventional game AI running inside `@neon-wilds/sim`.
+>
+> **Implementation status (M4):** §2.1 perception (line of sight), §2.2 memory and gossip, §2.3 player relationships (derived), §2.4 needs, §2.5 utility routines, §2.6 BT runtime (`ai/bt.ts`, `ai/routine.ts`, `ai/memory.ts`); §3 police (M3, `law/law.ts`); §4 Wildling behaviour as a personality-driven selector (`world/wildlings.ts`); §5 battle AI (`battle/ai.ts`); §6 faction GOAP (`factions/strategy.ts`); §7 world director (`world/director.ts`); §8 mission generator (`missions/generator.ts`); §10 debug overlay (F3, partial). Not yet: NPC↔NPC relationship graph, emotion PAD model, week-long soak test.
 
 ## 1. Principles
 

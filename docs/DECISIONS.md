@@ -52,3 +52,15 @@ Wanted levels come from what the Wardens know: direct police sight, or civilian 
 
 ### ADR-017 — Procedural music: pure composer + Web Audio rack
 The composer is a pure, seeded function (mood, bar) → note events, unit-tested in Node. The engine only schedules and synthesises. No samples and no AI; leitmotifs are handwritten.
+
+### ADR-018 — Behaviour trees as data with path-keyed memory
+Trees are plain objects; running state is a `Record<string, number>` keyed by node path on the agent, so a half-finished activity survives save/load and stays deterministic.
+
+### ADR-019 — Relationships are derived from memories
+Trust, fear, affection and respect are computed from salience-weighted memory records (rumours count half), not stored separately. One source of truth; decay and gossip automatically change how NPCs feel.
+
+### ADR-020 — Factions plan with GOAP, act through operations
+Goals are chosen by utility; plans come from a depth-limited A* over boolean facts. Each step is an operation that lasts hours, spawns crews and moves influence, so strategy is visible and interruptible by the player.
+
+### ADR-021 — Generated missions are data in the save
+Generated `MissionDef`s live in progression (bounded: only offered or known missions are kept), so saves replay exactly and the runtime treats generated and handcrafted missions the same way.

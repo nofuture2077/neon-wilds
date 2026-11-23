@@ -8,7 +8,7 @@ Built with TypeScript, Phaser 3, React, Zustand, Tailwind and Fastify.
 
 ## Status
 
-**Milestone 3, Open-World Sandbox, is complete.** Explore a procedurally laid-out neon Slums at night and play the opening mission *Last Run*. Bond with the Glitchling and catch 10 species of Wildlings in turn-based battles. Steal cars and drift through signal-controlled traffic. Outrun the Wardens, or get busted. Pick a side as the Gutter Saints and Halcyon fight over the blocks around you. The synthwave soundtrack is composed live by an algorithm. See [docs/ROADMAP.md](docs/ROADMAP.md) for what's next: M4 brings schedules, memory and GOAP faction AI, plus Downtown.
+**Milestone 4, Traditional Game AI, is complete.** NPCs follow daily routines, remember and gossip about what you do, and react accordingly. Halcyon and the Gutter Saints plan operations you can see and disrupt. Weather and world events change the night, and a job board generates missions. On top of M3: Explore a procedurally laid-out neon Slums at night and play the opening mission *Last Run*. Bond with the Glitchling and catch 10 species of Wildlings in turn-based battles. Steal cars and drift through signal-controlled traffic. Outrun the Wardens, or get busted. Pick a side as the Gutter Saints and Halcyon fight over the blocks around you. The synthwave soundtrack is composed live by an algorithm. See [docs/ROADMAP.md](docs/ROADMAP.md) for what's next: M5 brings the city graph, Downtown and the story campaign.
 
 ## Quick start
 
@@ -17,7 +17,9 @@ npm install
 npm run dev            # http://localhost:5173
 ```
 
-Dev shortcut: `http://localhost:5173/?quickstart&seed=1337&time=22:30` skips the menus. Dev builds also expose `window.__NEON_WILDS__` for debugging.
+Dev shortcut: `http://localhost:5173/?quickstart&seed=1337&time=22:30` skips the menus. In dev builds, F3 toggles the AI debug overlay and `window.__NEON_WILDS__` exposes the simulation.
+
+**Where do I go?** The objective panel (top left) says what to do and which street it's near. A yellow marker bounces over the target, and an arrow at the screen edge points to it when it's off screen. The pause menu's Map tab shows every objective.
 
 | Command | What it does |
 |---|---|
@@ -69,6 +71,6 @@ scripts/       tooling (no-AI guard)
 | [Roadmap](docs/ROADMAP.md) · [Risks](docs/RISKS.md) · [Decisions](docs/DECISIONS.md) | Planning and ADRs |
 | [World Generation](docs/WORLD_GEN.md) | Hybrid authored + procedural city (organic streets, vignettes) |
 | [Procedural Soundtrack](docs/AUDIO.md) | Algorithmic synthwave composer and Web Audio synths |
-| [M1](docs/reviews/M1.md) · [M2](docs/reviews/M2.md) · [M3](docs/reviews/M3.md) reviews | Test results, fixed bugs, known issues |
+| [M1](docs/reviews/M1.md) · [M2](docs/reviews/M2.md) · [M3](docs/reviews/M3.md) · [M4](docs/reviews/M4.md) reviews | Test results, fixed bugs, known issues |
 
 All characters, creatures, places, art and text are original.

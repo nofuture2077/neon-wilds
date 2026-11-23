@@ -255,3 +255,10 @@ Synth-wave and lo-fi beats per district. Each district has a different instrumen
 - Wardens with witnesses, 1–5 stars, pursuit, arrests, boxing-in and resprays.
 - Reputation with five factions plus the Wardens; Saints and Halcyon fight over blocks every hour; prices and the black market react.
 - A live procedural synthwave soundtrack that changes with the night, battles and chases.
+
+## 16. Milestone 4 as built
+
+- NPCs live by the clock: they sleep, eat, work, patrol and chat; they remember what you did, gossip about it, and greet, glare at or flee from you accordingly.
+- The Saints and Halcyon plan operations you can see on the streets (and break up); they react to blackouts, recall drives and processions.
+- Weather and world events change the night: rain brings Tide Wildlings, blackouts kill the neon.
+- A daily job board and NPC requests generate missions from five templates; waypoints show where to go.
