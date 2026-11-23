@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { type PauseTab, useGameStore } from '../state/gameStore';
 import { type SlotInfo, listSaves, slotLabel, writeSave } from '../services/saves';
 import { SLOTS, type SlotId, formatPlayTime } from '../services/saveFormat';
+import { saveMusicVolume } from '../audio/useMusic';
 import { ControlsPanel } from './ControlsPanel';
 import { FactionsTab } from './FactionsTab';
 import { MapTab } from './MapTab';
@@ -16,7 +17,7 @@ const TABS: Array<[PauseTab, string]> = [
   ['journal', 'Journal'],
   ['factions', 'Factions'],
   ['save', 'Save'],
-  ['controls', 'Controls'],
+  ['options', 'Options'],
 ];
 
 export function PauseMenu() {
@@ -64,7 +65,7 @@ export function PauseMenu() {
           {tab === 'journal' && <JournalTab />}
           {tab === 'factions' && <FactionsTab />}
           {tab === 'save' && <SaveTab />}
-          {tab === 'controls' && <ControlsPanel />}
+          {tab === 'options' && <OptionsTab />}
         </div>
       </div>
     </div>
@@ -298,6 +299,38 @@ function SaveTab() {
       })}
       {status && <div className="font-term text-xl text-neon-yellow">{status}</div>}
       <p className="font-term text-lg text-slate-400">The game also autosaves every few minutes and after each mission.</p>
+    </div>
+  );
+}
+
+function OptionsTab() {
+  const volume = useGameStore((s) => s.musicVolume);
+  const set = (v: number) => {
+    useGameStore.setState({ musicVolume: v });
+    saveMusicVolume(v);
+  };
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h3 className="mb-2 font-pixel text-xs text-neon-yellow">Audio</h3>
+        <label className="flex items-center gap-4 font-term text-xl">
+          <span className="w-56">Music (procedural synthwave)</span>
+          <input
+            data-nav
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(volume * 100)}
+            onChange={(e) => set(Number(e.target.value) / 100)}
+            className="w-64 accent-[#00e5ff]"
+          />
+          <span className="w-12 text-right">{Math.round(volume * 100)}%</span>
+        </label>
+        <p className="mt-2 font-term text-lg text-slate-400">
+          The soundtrack is composed live by a rule-based algorithm — it never plays the same night twice.
+        </p>
+      </div>
+      <ControlsPanel />
     </div>
   );
 }

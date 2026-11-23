@@ -1,3 +1,4 @@
+import { useMusic } from './audio/useMusic';
 import { GameCanvas } from './game/GameCanvas';
 import { useGameStore } from './state/gameStore';
 import { CharacterCreation } from './ui/CharacterCreation';
@@ -12,6 +13,7 @@ export function App() {
   const screen = useGameStore((s) => s.screen);
   const session = useGameStore((s) => s.session);
   const sessionId = useGameStore((s) => s.sessionId);
+  useMusic();
 
   if (screen === 'menu') return <MainMenu />;
   if (screen === 'create') return <CharacterCreation />;

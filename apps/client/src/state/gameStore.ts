@@ -77,7 +77,7 @@ export interface BattleUiState {
   pendingItem: string | null;
 }
 
-export type PauseTab = 'party' | 'bag' | 'index' | 'map' | 'journal' | 'factions' | 'save' | 'controls';
+export type PauseTab = 'party' | 'bag' | 'index' | 'map' | 'journal' | 'factions' | 'save' | 'options';
 
 interface GameStore {
   screen: Screen;
@@ -98,6 +98,7 @@ interface GameStore {
   /** Set by the game host; returns a consistent snapshot for saving, or null if saving is not allowed now. */
   snapshotSource: (() => { snapshot: SimSnapshot; location: string } | null) | null;
   queries: GameQueries | null;
+  musicVolume: number;
 
   goTo(screen: Screen): void;
   startSession(session: Session): void;
@@ -146,6 +147,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   commandSink: null,
   snapshotSource: null,
   queries: null,
+  musicVolume: 0.6,
 
   goTo: (screen) => set({ screen }),
   startSession: (session) =>
