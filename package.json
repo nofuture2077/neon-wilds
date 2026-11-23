@@ -1,0 +1,31 @@
+{
+  "name": "neon-wilds",
+  "private": true,
+  "version": "0.1.0",
+  "description": "NEON WILDS \u2014 a top-down open-world creature RPG set in Vesper City.",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @neon-wilds/client",
+    "dev:server": "npm run dev -w @neon-wilds/server",
+    "build": "npm run build -w @neon-wilds/client && npm run build -w @neon-wilds/server",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run test && node scripts/check-no-ai.mjs",
+    "lint:no-ai": "node scripts/check-no-ai.mjs",
+    "e2e": "node e2e/smoke.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "playwright-core": "^1.65.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
+  }
+}

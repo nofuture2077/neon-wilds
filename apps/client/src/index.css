@@ -1,0 +1,90 @@
+@import 'tailwindcss';
+@import '@fontsource/vt323';
+@import '@fontsource/press-start-2p';
+
+@theme {
+  --font-pixel: 'Press Start 2P', monospace;
+  --font-term: 'VT323', monospace;
+  --color-night-950: #07070f;
+  --color-night-900: #0d0d1c;
+  --color-night-800: #16162b;
+  --color-night-700: #24243f;
+  --color-neon-cyan: #00e5ff;
+  --color-neon-pink: #ff3fa4;
+  --color-neon-yellow: #fff275;
+  --color-neon-green: #4fffb0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-night-950);
+  color: #e6e6f5;
+  font-family: var(--font-term);
+  -webkit-font-smoothing: none;
+}
+
+canvas {
+  image-rendering: pixelated;
+}
+
+.neon-title {
+  text-shadow:
+    0 0 4px currentColor,
+    0 0 12px currentColor,
+    0 0 28px currentColor;
+}
+
+.panel {
+  background: color-mix(in srgb, var(--color-night-900) 92%, transparent);
+  border: 2px solid var(--color-night-700);
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 1px #000,
+    0 8px 24px #000a;
+}
+
+.pixel-button {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 18px;
+  border: 2px solid var(--color-night-700);
+  background: var(--color-night-800);
+  color: #e6e6f5;
+  text-align: left;
+  outline: none;
+  transition:
+    color 80ms,
+    border-color 80ms;
+}
+.pixel-button:hover,
+.pixel-button:focus-visible {
+  color: var(--color-neon-cyan);
+  border-color: var(--color-neon-cyan);
+  box-shadow: 0 0 12px #00e5ff55;
+}
+.pixel-button:disabled {
+  opacity: 0.4;
+}
+
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, #0000 0 2px, #0003 2px 3px);
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+.blink {
+  animation: blink 1s steps(1) infinite;
+}
