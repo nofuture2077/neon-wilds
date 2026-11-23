@@ -73,7 +73,7 @@ export function generateDistrict(def: DistrictDefinition, seed: number): Distric
   for (const c of candidates) {
     const ka = `${c.a[0]}-${c.a[1]}`;
     const kb = `${c.b[0]}-${c.b[1]}`;
-    if (merged.has(ka) || merged.has(kb) || fixed(...c.a) || fixed(...c.b) || !rng.chance(0.22)) continue;
+    if (merged.has(ka) || merged.has(kb) || fixed(...c.a) || fixed(...c.b) || !rng.chance(def.mergeChance ?? 0.22)) continue;
     merged.add(ka);
     merged.add(kb);
     if (c.vertical) removedV.push({ i: c.b[0], by: c.a[1] });
@@ -202,7 +202,7 @@ export function generateDistrict(def: DistrictDefinition, seed: number): Distric
   }
 
   const cityBlocks = blocks.map((b) => ({ id: `block-${b.key}`, x: b.x, y: b.y, w: b.w, h: b.h, kind: b.kind }));
-  return { id: def.id, name: def.name, map, blocks: cityBlocks, buildings, props, streets, playerSpawn, pedestrianSpawns };
+  return { id: def.id, name: def.name, style: def.style ?? 'slums', exits: def.exits ?? [], map, blocks: cityBlocks, buildings, props, streets, playerSpawn, pedestrianSpawns };
 }
 
 function inBand(v: number, count: number, bandStart: (i: number) => number, roadW: number): boolean {

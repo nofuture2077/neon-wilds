@@ -34,5 +34,6 @@ export function repTier(rep: number): RepTier {
 export const ARCHETYPE_FACTION: Record<string, FactionId> = {
   'gutter-saint': 'saints',
   'aegis-agent': 'halcyon',
+  'aegis-guard': 'halcyon',
   'rival-trainer': 'iron-chain',
 };

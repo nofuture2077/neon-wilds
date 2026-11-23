@@ -96,7 +96,7 @@ export type Focus =
   | { kind: 'npc'; id: string; label: string }
   | { kind: 'building'; id: string; label: string };
 
-export const SNAPSHOT_VERSION = 8;
+export const SNAPSHOT_VERSION = 9;
 
 /** Everything needed to resume a simulation. The district layout is regenerated from seed + districtId. */
 export interface SimSnapshot {
@@ -124,4 +124,6 @@ export interface SimSnapshot {
   market: MarketState;
   factions: { agents: FactionAgent[]; lastControllers: Record<string, string | null> } | null;
   world: WorldState;
+  /** Parked state of the districts the player is not in. */
+  away: Record<string, { npcs: NpcState[]; wildlings: WildlingEntity[]; vehicles: VehicleState[]; territory: TerritoryState }>;
 }

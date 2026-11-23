@@ -7,6 +7,7 @@ import type { ElementType } from './creatures/types';
 import { computeStats, displayName, maxHp, xpForLevel } from './creatures/wildling';
 import { currentObjective, missionDef } from './missions/runtime';
 import { describeLocation } from './world/location';
+import { DISTRICTS, getDistrictContent } from './content';
 import type { Simulation } from './simulation';
 
 /**
@@ -211,12 +212,23 @@ export function objectiveMarkers(sim: Simulation): { x: number; y: number; label
   const layout = sim.layout;
   const markers: { x: number; y: number; label: string; where: string }[] = [];
   const push = (x: number, y: number, label: string) => markers.push({ x, y, label, where: describeLocation(layout, x, y) });
+  /** Target lives in another district: point at the road out. */
+  const elsewhere = (district: string, label: string) => {
+    const exit = sim.exitToward(district);
+    if (exit) markers.push({ x: exit.x, y: exit.y, label: `${label} (${getDistrictContent(district).district.name})`, where: `the road to ${getDistrictContent(district).district.name}` });
+  };
   for (const rt of sim.progression.missions) {
     const obj = currentObjective(rt, sim.progression);
     if (!obj) continue;
     if (obj.kind === 'inspect') {
       const b = layout.buildings.find((x) => x.name === obj.target);
       if (b) push(b.entrance.tx + 0.5, b.entrance.ty + 0.5, obj.text);
+      else {
+        const other = Object.keys(DISTRICTS).find((d) => d !== layout.id && sim.layoutOf(d).buildings.some((x) => x.name === obj.target));
+        if (other) elsewhere(other, obj.text);
+      }
+    } else if ((obj.kind === 'talk' || obj.kind === 'defeat') && sim.npcDistrict(obj.target) && sim.npcDistrict(obj.target) !== layout.id) {
+      elsewhere(sim.npcDistrict(obj.target)!, obj.text);
     } else if (obj.kind === 'talk' || obj.kind === 'defeat') {
       const n = sim.npcs.find((x) => x.id === obj.target && x.present);
       if (n) {

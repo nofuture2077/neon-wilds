@@ -26,7 +26,7 @@ import { TEXTURES, addCanvasTexture } from '../assets/manifest';
 import { InputMapper } from '../input/InputMapper';
 import { ActorView } from '../render/ActorView';
 import { BarkLayer } from '../render/BarkLayer';
-import { renderCity } from '../render/CityRenderer';
+import { type ExitGate, renderCity } from '../render/CityRenderer';
 import { Depth } from '../render/depth';
 import { Lighting, darknessAt } from '../render/lighting';
 import { WildlingViews } from '../render/WildlingViews';
@@ -73,19 +73,33 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create(session: Session): void {
+    // A district change restarts this scene with the running simulation (the city is rebuilt around it).
+    const live = this.registry.get('liveSim') as Simulation | undefined;
+    this.registry.remove('liveSim');
+    this.npcViews.clear();
+    this.officerViews.clear();
+    this.offerMarkers.clear();
+    this.objectiveMarker = null;
+    this.objective = null;
+    this.debugText = null;
+    this.accumulator = 0;
+    this.lastProgressVersion = -1;
     this.sim =
-      session.kind === 'load'
+      live ??
+      (session.kind === 'load'
         ? Simulation.fromSnapshot(session.snapshot)
         : Simulation.create({
             seed: session.setup.seed,
             playerName: session.setup.playerName,
             appearance: session.setup.appearance,
             ...(session.setup.startMinutes !== undefined ? { startMinutes: session.setup.startMinutes } : {}),
-          });
+          }));
+    if (live) this.cameras.main.fadeIn(400, 7, 7, 15);
     const layout = this.sim.layout;
 
     this.lighting = new Lighting(this);
-    renderCity(this, layout, this.lighting);
+    this.gates = [];
+    renderCity(this, layout, this.lighting, this.gates);
 
     this.player = new ActorView(this, this.characterTexture(this.sim.player.appearance));
     for (const npc of this.sim.npcs) {
@@ -207,6 +221,7 @@ export class WorldScene extends Phaser.Scene {
     this.signals.update(this.sim.tick, this.sim.world.event?.id === 'blackout');
     this.syncOfferMarkers();
     this.syncObjectiveMarker();
+    for (const g of this.gates) g.rect.setVisible(!this.sim.isUnlocked(g.to));
     this.territoryViews.update(this.sim.territory.controllers, darkness);
     this.syncOfficers(alpha, deltaSeconds);
 
@@ -297,6 +312,12 @@ export class WorldScene extends Phaser.Scene {
       case 'vehicle.exploded': {
         this.cameras.main.shake(300, 0.012);
         this.cameras.main.flash(180, 255, 160, 60);
+        break;
+      }
+      case 'district.entered': {
+        store.pushToast(`Entering ${event.name}`, 'mission');
+        this.registry.set('liveSim', this.sim);
+        this.time.delayedCall(0, () => this.scene.restart(this.scene.settings.data));
         break;
       }
       case 'wanted.changed':
@@ -406,6 +427,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private readonly offerMarkers = new Map<string, Phaser.GameObjects.Text>();
+  private gates: ExitGate[] = [];
   private objectiveMarker: Phaser.GameObjects.Container | null = null;
   private objective: { x: number; y: number; label: string; where: string } | null = null;
 

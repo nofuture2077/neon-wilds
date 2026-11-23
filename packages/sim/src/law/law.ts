@@ -194,7 +194,7 @@ export function updateLaw(law: LawState, ctx: LawContext): void {
 function managePolice(law: LawState, ctx: LawContext): void {
   const p = ctx.player;
   const cruisers = ctx.vehicles.filter((v) => v.driver === 'police' && v.wreckedTick === null);
-  const desired = law.stars === 0 ? 1 : [0, 2, 3, 5, 6, 7][law.stars]!;
+  const desired = law.stars === 0 ? (ctx.layout.id === 'downtown' ? 2 : 1) : [0, 2, 3, 5, 6, 7][law.stars]!;
   // Stand down distant extra units once the heat is off.
   if (law.stars === 0) {
     for (const v of cruisers.slice(1)) {

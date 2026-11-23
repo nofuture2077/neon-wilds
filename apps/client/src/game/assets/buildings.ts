@@ -31,18 +31,20 @@ export interface BuildingArt {
  * Everything is seeded from the building id, so the city looks identical
  * every session. Pure presentation: the simulation only knows the footprint.
  */
-export function buildBuilding(b: Building): BuildingArt {
+export function buildBuilding(b: Building, tall = false): BuildingArt {
   const w = b.w * T;
   const h = b.h * T;
   const pc = createCanvas(w, h);
   const c = pc.ctx;
-  const style = ROOF_STYLES[b.style % ROOF_STYLES.length]!;
+  const base = ROOF_STYLES[b.style % ROOF_STYLES.length]!;
+  // Downtown towers: cool glass-and-steel walls instead of patched brick.
+  const style = tall ? { ...base, wall: [0x2c3a52, 0x263248, 0x30405a, 0x2a2f45][b.style % 4]!, wallDark: 0x1a2133 } : base;
   const seed = hashSeed(b.id);
   const rnd = (i: number) => hashNoise(i, i * 7 + 3, seed);
   const lights: BuildingLight[] = [];
 
-  const storeys = 2 + Math.floor(rnd(1) * 3);
-  const wallH = Math.max(GROUND_H + FLOOR_H, Math.min(h - 26, GROUND_H + storeys * FLOOR_H));
+  const storeys = tall ? 4 + Math.floor(rnd(1) * 4) : 2 + Math.floor(rnd(1) * 3);
+  const wallH = Math.max(GROUND_H + FLOOR_H, Math.min(h - (tall ? 20 : 26), GROUND_H + storeys * FLOOR_H));
   const roofH = h - wallH;
   const accent = b.neon ?? NEON[Math.floor(rnd(2) * NEON.length)]!;
   const doorFront = b.door.facing === 'south';
@@ -55,7 +57,7 @@ export function buildBuilding(b: Building): BuildingArt {
     rect(c, 1, roofH - 1, w - 2, 1, shade(trim, 0.5));
     for (let lx = 8; lx < w; lx += 24) lights.push({ x: lx, y: roofH - 2, color: trim, scale: 0.35, day: 0.15, flicker: false });
   }
-  drawFacade(c, b, w, roofH, wallH, style, accent, doorFront, rnd, lights);
+  drawFacade(c, b, w, roofH, wallH, style, accent, doorFront, rnd, lights, tall);
 
   // Signage.
   if (b.neon !== null) {
@@ -93,7 +95,7 @@ export function buildBuilding(b: Building): BuildingArt {
   return { canvas: pc, lights };
 }
 
-type Style = (typeof ROOF_STYLES)[number];
+type Style = { base: number; edge: number; dark: number; wall: number; wallDark: number };
 
 function drawRoof(c: CanvasRenderingContext2D, w: number, roofH: number, style: Style, seed: number, rnd: (i: number) => number) {
   rect(c, 0, 0, w, roofH, style.base);
@@ -164,6 +166,7 @@ function drawFacade(
   doorFront: boolean,
   rnd: (i: number) => number,
   lights: BuildingLight[],
+  tall = false,
 ) {
   rect(c, 0, top, w, wallH, style.wall);
   // vertical shading at the edges for depth
@@ -174,13 +177,13 @@ function drawFacade(
 
   // upper floors with windows
   const groundTop = top + wallH - GROUND_H;
-  const windowColors = [0x7ff6ff, 0xff8fd0, 0xffc46b, 0xfff1d6, 0xc7a8ff];
+  const windowColors = tall ? [0x9fe8ff, 0xd8f4ff, 0x7ff6ff, 0xfff1d6] : [0x7ff6ff, 0xff8fd0, 0xffc46b, 0xfff1d6, 0xc7a8ff];
   let wi = 0;
   for (let fy = groundTop - FLOOR_H; fy >= top + 1; fy -= FLOOR_H) {
     rect(c, 2, fy + FLOOR_H - 1, w - 4, 1, style.wallDark);
     for (let wx = 4; wx + 4 <= w - 4; wx += 7) {
       wi++;
-      const lit = rnd(300 + wi) < 0.55;
+      const lit = rnd(300 + wi) < (tall ? 0.72 : 0.55);
       if (lit) {
         const col = windowColors[Math.floor(rnd(400 + wi) * windowColors.length)]!;
         rect(c, wx, fy + 2, 4, 6, shade(col, 0.75));

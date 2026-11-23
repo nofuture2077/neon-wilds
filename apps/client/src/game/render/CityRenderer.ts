@@ -14,11 +14,21 @@ const LAMP_TINTS = [0xffb070, 0xff6fc0, 0x6fe8ff, 0xffb070] as const;
  * ground tilemap, buildings, props, tree canopies and light sources.
  * Pure presentation — nothing here feeds back into the simulation.
  */
-export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting: Lighting): void {
+export interface ExitGate {
+  x: number;
+  y: number;
+  to: string;
+  rect: Phaser.GameObjects.Rectangle;
+}
+
+const roadWidth = (band: { from: number; to: number }) => band.to - band.from + 1;
+
+/** Builds the district's static visuals; returns the exit gates so the scene can open them. */
+export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting: Lighting, gates?: ExitGate[]): void {
   renderGround(scene, layout);
   for (const b of layout.buildings) {
     const key = `building-${b.id}`;
-    const art = buildBuilding(b);
+    const art = buildBuilding(b, layout.style === 'downtown');
     addCanvasTexture(scene, key, art.canvas);
     scene.add
       .rectangle(b.x * T + 6, b.y * T + 4, b.w * T, b.h * T, 0x000000, 0.45)
@@ -31,6 +41,29 @@ export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting
   }
 
   for (const p of layout.props) renderProp(scene, p, lighting);
+
+  // District exits: a sign over the road, and a checkpoint barrier while the road is closed.
+  for (const exit of layout.exits) {
+    const band = layout.streets.find((st) => st.axis === 'horizontal' && st.name === exit.street);
+    if (!band) continue;
+    const east = exit.side === 'east';
+    const x = (east ? layout.map.width - 2.5 : 2.5) * T;
+    const y = (band.from + 2.5) * T;
+    const label = exit.to === 'downtown' ? 'NEON DOWNTOWN' : 'THE SLUMS';
+    scene.add
+      .text(x, y - 3 * T, `${east ? '' : '\u25c0 '}${label}${east ? ' \u25b6' : ''}`, {
+        fontFamily: 'Press Start 2P, monospace',
+        fontSize: '6px',
+        color: '#7ff6ff',
+        backgroundColor: '#0b0b18',
+        padding: { x: 3, y: 2 },
+        resolution: 6,
+      })
+      .setOrigin(0.5)
+      .setDepth(Depth.canopy);
+    lighting.add(x, y - 3 * T, 0x00e5ff, 0.8, 0.6, 0.25, 0, 'neon');
+    if (gates) gates.push({ x, y, to: exit.to, rect: scene.add.rectangle(x, y, 6, roadWidth(band) * T, 0xff3b3b, 0.85).setDepth(Depth.actors + 1) });
+  }
 
   for (let ty = 0; ty < layout.map.height; ty++) {
     for (let tx = 0; tx < layout.map.width; tx++) {

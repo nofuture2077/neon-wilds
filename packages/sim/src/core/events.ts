@@ -22,6 +22,7 @@ export type SimEvent =
   | { type: 'mission.completed'; missionId: string; title: string }
   | { type: 'mission.failed'; missionId: string; title: string }
   | { type: 'board.opened' }
+  | { type: 'district.entered'; districtId: string; name: string }
   | { type: 'battle.started'; battleId: string; kind: 'wild' | 'trainer'; intro: string }
   | { type: 'battle.log'; battleId: string; entries: BattleLog[] }
   | { type: 'battle.ended'; battleId: string; outcome: 'win' | 'lose' | 'fled' | 'captured' }

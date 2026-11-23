@@ -58,6 +58,8 @@ const STEPS: Record<number, (s: AnySnapshot) => AnySnapshot> = {
     version: 8,
     progression: { ...(s.progression as Record<string, unknown>), generated: [], board: [], missionSeq: 1, boardDay: -1 },
   }),
+  // v8 → v9: multi-district city.
+  8: (s) => ({ ...s, version: 9, away: {} }),
 };
 
 export function migrateSnapshot(raw: unknown): SimSnapshot {

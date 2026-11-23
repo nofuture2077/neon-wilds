@@ -44,6 +44,15 @@ export function controllerOf(inf: Record<string, number>): string | null {
 }
 
 export function newTerritory(layout: DistrictLayout): TerritoryState {
+  if (layout.id === 'downtown') {
+    // Downtown is Halcyon's: their stewardship is near total.
+    const t: TerritoryState = { influence: {}, controllers: {} };
+    for (const b of layout.blocks) {
+      t.influence[b.id] = { saints: 5, halcyon: 92 };
+      t.controllers[b.id] = 'halcyon';
+    }
+    return t;
+  }
   const kiosk = layout.buildings.find((b) => b.name === 'Halcyon Outreach Kiosk');
   const kioskBlock = kiosk ? blockOf(layout, kiosk.x + kiosk.w / 2, kiosk.y + kiosk.h / 2) : null;
   const t: TerritoryState = { influence: {}, controllers: {} };

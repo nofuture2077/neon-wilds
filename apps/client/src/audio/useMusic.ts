@@ -23,10 +23,11 @@ export function saveMusicVolume(v: number): void {
 }
 
 /** Picks the musical mood from game state (the "music director"). */
-export function moodFor(s: { screen: string; battle: unknown; hud: { stars: number; isNight: boolean } }): MoodId {
+export function moodFor(s: { screen: string; battle: unknown; hud: { stars: number; isNight: boolean; district?: string } }): MoodId {
   if (s.screen !== 'game') return 'title';
   if (s.battle) return 'battle';
   if (s.hud.stars >= 1) return 'chase';
+  if (s.hud.district === 'Neon Downtown') return 'downtown';
   return s.hud.isNight ? 'slums-night' : 'slums-day';
 }
 

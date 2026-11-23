@@ -19,4 +19,6 @@ export const ITEMS: Record<string, ItemDef> = Object.fromEntries(
 export const SHOPS: Record<string, { name: string; items: string[] }> = {
   'paper-moon': { name: 'Paper Moon Pawn', items: ['tin-snare', 'coil-snare', 'lull-snare', 'patch-kit', 'cleanse-tab'] },
   'glow-noodle': { name: 'Glow Noodle', items: ['patch-kit', 'med-spray'] },
+  'halcyon-store': { name: 'Halcyon Flagship Store', items: ['coil-snare', 'lull-snare', 'med-spray', 'cleanse-tab'] },
+  'sky-noodle': { name: 'Sky Noodle Bar', items: ['med-spray', 'patch-kit'] },
 };

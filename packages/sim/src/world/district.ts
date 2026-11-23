@@ -74,6 +74,19 @@ export interface DistrictDefinition {
   horizontalStreets: string[];
   namedBuildings: BuildingTemplate[];
   residentialNames: string[];
+  /** Chance to merge neighbouring blocks into superblocks (0 = strict grid). */
+  mergeChance?: number;
+  /** Visual style hint for the renderer. */
+  style?: 'slums' | 'downtown';
+  /** Road connections to other districts at the map edge. */
+  exits?: DistrictExit[];
+}
+
+export interface DistrictExit {
+  to: string;
+  side: 'east' | 'west';
+  /** Horizontal street that continues into the other district. */
+  street: string;
 }
 
 export interface CityBlock {
@@ -88,6 +101,8 @@ export interface CityBlock {
 export interface DistrictLayout {
   id: string;
   name: string;
+  style: 'slums' | 'downtown';
+  exits: DistrictExit[];
   map: TileMap;
   blocks: CityBlock[];
   buildings: Building[];
