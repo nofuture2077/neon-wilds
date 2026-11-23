@@ -1,4 +1,4 @@
-import type { DistrictLayout } from './district';
+import { buildingContains, type DistrictLayout } from './district';
 
 /**
  * Human-readable location for the HUD: the building you're at, the street
@@ -7,7 +7,7 @@ import type { DistrictLayout } from './district';
 export function describeLocation(layout: DistrictLayout, x: number, y: number): string {
   const tx = Math.floor(x);
   const ty = Math.floor(y);
-  const building = layout.buildings.find((b) => tx >= b.x && tx < b.x + b.w && ty >= b.y && ty < b.y + b.h);
+  const building = layout.buildings.find((b) => buildingContains(b, tx + 0.5, ty + 0.5));
   if (building) return building.name;
   const { nodes, edges } = layout.graph;
   for (const n of nodes) {

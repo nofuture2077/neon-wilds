@@ -22,17 +22,29 @@ export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting
     const key = `building-${b.id}`;
     const art = buildBuilding(b, b.region === 'downtown' || b.landmark);
     addCanvasTexture(scene, key, art.canvas);
+    // Buildings turn with their street; rotated ones are filtered smoothly so the edges don't shimmer.
+    if (b.angle !== 0) scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
+    const cx = (b.x + b.w / 2) * T;
+    const cy = (b.y + b.h / 2) * T;
+    const cos = Math.cos(b.angle);
+    const sin = Math.sin(b.angle);
+    const at = (lx: number, ly: number) => {
+      const dx = lx - (b.w * T) / 2;
+      const dy = ly - (b.h * T) / 2;
+      return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+    };
     scene.add
-      .rectangle(b.x * T + 6, b.y * T + 4, b.w * T, b.h * T, 0x000000, 0.45)
-      .setOrigin(0, 0)
+      .rectangle(cx + 6, cy + 4, b.w * T, b.h * T, 0x000000, 0.45)
+      .setRotation(b.angle)
       .setDepth(Depth.buildingShadow);
-    scene.add.image(b.x * T, b.y * T, key).setOrigin(0, 0).setDepth(Depth.buildings);
+    scene.add.image(cx, cy, key).setRotation(b.angle).setDepth(Depth.buildings);
     for (const l of art.lights) {
-      lighting.add(b.x * T + l.x, b.y * T + l.y, l.color, l.scale, 0.75, l.day, l.flicker ? 0.08 : 0, l.scale <= 0.3 ? 'window' : 'neon');
+      const p = at(l.x, l.y);
+      lighting.add(p.x, p.y, l.color, l.scale, 0.75, l.day, l.flicker ? 0.08 : 0, l.scale <= 0.3 ? 'window' : 'neon');
     }
     if (b.landmark) {
       // Landmarks glow from afar: a big halo in the building's neon colour.
-      lighting.add((b.x + b.w / 2) * T, (b.y + b.h / 2) * T, b.neon ?? 0xff3fa4, 2.6, 0.35, 0.1, 0.03, 'neon');
+      lighting.add(cx, cy, b.neon ?? 0xff3fa4, 2.6, 0.35, 0.1, 0.03, 'neon');
     }
   }
 

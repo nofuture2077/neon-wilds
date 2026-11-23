@@ -92,7 +92,30 @@ export function buildBuilding(b: Building, tall = false): BuildingArt {
     lights.push({ x: bx + bw / 2, y: by + 6, color, scale: 0.8, day: 0.3, flicker: false });
   }
 
+  // Doors on the other sides: a lit awning on the roof edge above the entrance, so it reads from the street.
+  if (!doorFront) {
+    const { u, v } = doorLocal(b);
+    const color = b.neon ?? accent;
+    const f = b.door.facing;
+    const ax = f === 'north' ? Math.round(u * T) - 5 : f === 'east' ? w - 4 : 0;
+    const ay = f === 'north' ? 0 : Math.max(0, Math.min(roofH - 10, Math.round(v * T) - 5));
+    const aw = f === 'north' ? 10 : 4;
+    const ah = f === 'north' ? 4 : 10;
+    rect(c, ax, ay, aw, ah, shade(color, 0.55));
+    rect(c, f === 'west' ? ax : f === 'east' ? ax + aw - 1 : ax, f === 'north' ? ay : ay, f === 'north' ? aw : 1, f === 'north' ? 1 : ah, color);
+    lights.push({ x: ax + aw / 2, y: ay + ah / 2, color, scale: 0.4, day: 0.1, flicker: false });
+  }
+
   return { canvas: pc, lights };
+}
+
+/** The door tile's centre in the building's own (unrotated) frame, in tiles from its top-left corner. */
+function doorLocal(b: Building): { u: number; v: number } {
+  const dx = b.door.tx + 0.5 - (b.x + b.w / 2);
+  const dy = b.door.ty + 0.5 - (b.y + b.h / 2);
+  const c = Math.cos(b.angle);
+  const s = Math.sin(b.angle);
+  return { u: dx * c + dy * s + b.w / 2, v: -dx * s + dy * c + b.h / 2 };
 }
 
 type Style = { base: number; edge: number; dark: number; wall: number; wallDark: number };
@@ -209,7 +232,7 @@ function drawFacade(
   // ground floor
   rect(c, 2, groundTop, w - 4, GROUND_H, shade(style.wall, 0.8));
   rect(c, 0, top + wallH - 1, w, 1, 0x000000, 0.6);
-  const doorX = (b.door.tx - b.x) * T + 5;
+  const doorX = Math.max(2, Math.min(w - 8, Math.round(doorLocal(b).u * T) - 3));
   if (doorFront) {
     const storefront = b.kind !== 'residential' && b.kind !== 'warehouse';
     if (storefront) {

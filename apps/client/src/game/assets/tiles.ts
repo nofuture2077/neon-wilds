@@ -15,6 +15,8 @@ export const TILESET_COLUMNS = 32;
 export function visualTileIndex(map: TileMap, x: number, y: number): number {
   const kind = map.get(x, y);
   if (kind === Tile.Sidewalk || kind === Tile.Road || kind === Tile.RoadLineH || kind === Tile.RoadLineV || kind === Tile.CrosswalkH || kind === Tile.CrosswalkV) return SIDEWALK_VARIANT_BASE;
+  // Buildings are sprites turned to their street; underneath, yard paving hides the tile staircase at their corners.
+  if (kind === Tile.Building) return Tile.Plaza;
   return kind;
 }
 

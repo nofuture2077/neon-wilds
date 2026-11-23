@@ -404,9 +404,164 @@ export function generateCity(def: CityDefinition, seed: number): DistrictLayout 
     } else if (parkBlocks.has(bi) || (b.area < 900 && rng.chance(r.parkChance))) {
       fillPark(map, rng, tiles, W, addProp);
       b.kind = 'park';
-    } else {
-      fillLots(map, rng, tiles, W, H, r, buildings, addProp, b.id);
     }
+  });
+
+  // Buildings line the streets, rotated to match them (the art stays upright: rotations stay within ±45°,
+  // and the door side is picked in the building's own frame).
+  const covers = new Map<Building, number[]>();
+  const isLots = (i: number) => {
+    const id = blockId[i]!;
+    return id >= 0 && blocks[id]!.kind === 'lots';
+  };
+  const reduceAngle = (theta: number) => {
+    const r = theta - (Math.PI / 2) * Math.round(theta / (Math.PI / 2));
+    return Math.abs(r) < 0.06 ? 0 : r;
+  };
+  const facingToward = (angle: number, dx: number, dy: number): Facing => {
+    const du = dx * Math.cos(angle) + dy * Math.sin(angle);
+    const dv = -dx * Math.sin(angle) + dy * Math.cos(angle);
+    if (Math.abs(dv) >= Math.abs(du)) return dv > 0 ? 'south' : 'north';
+    return du > 0 ? 'east' : 'west';
+  };
+  const LOCAL_OUT: Record<Facing, [number, number]> = { south: [0, 1], north: [0, -1], east: [1, 0], west: [-1, 0] };
+  const tryPlace = (cx: number, cy: number, angle: number, w: number, h: number, facing: Facing, margin: number, onlyBlock: number | null): Building | null => {
+    const c = Math.cos(angle);
+    const sn = Math.sin(angle);
+    const ex = Math.abs(c) * (w / 2 + margin) + Math.abs(sn) * (h / 2 + margin) + 1;
+    const ey = Math.abs(sn) * (w / 2 + margin) + Math.abs(c) * (h / 2 + margin) + 1;
+    const cover: number[] = [];
+    let block = onlyBlock;
+    for (let y = Math.floor(cy - ey); y <= Math.ceil(cy + ey); y++) {
+      for (let x = Math.floor(cx - ex); x <= Math.ceil(cx + ex); x++) {
+        const dx = x + 0.5 - cx;
+        const dy = y + 0.5 - cy;
+        const u = Math.abs(dx * c + dy * sn);
+        const v = Math.abs(-dx * sn + dy * c);
+        const inside = u <= w / 2 && v <= h / 2;
+        const near = u <= w / 2 + margin && v <= h / 2 + margin;
+        if (!near) continue;
+        if (x < 0 || y < 0 || x >= W || y >= H) {
+          if (inside) return null;
+          continue;
+        }
+        const i = y * W + x;
+        if (inside) {
+          if (map.tiles[i] !== Tile.Void || !isLots(i)) return null;
+          if (block === null) block = blockId[i]!;
+          else if (blockId[i] !== block) return null;
+          cover.push(i);
+        } else if (map.tiles[i] === Tile.Building) return null;
+      }
+    }
+    if (block === null || cover.length < w * h * 0.7) return null;
+    // Door: the covered tile nearest the middle of the facing side; the entrance is one step outside.
+    const [lx, ly] = LOCAL_OUT[facing];
+    const ox = lx * c - ly * sn;
+    const oy = lx * sn + ly * c;
+    const half = facing === 'north' || facing === 'south' ? h / 2 : w / 2;
+    const fx = cx + ox * (half - 0.5);
+    const fy = cy + oy * (half - 0.5);
+    let door = cover[0]!;
+    let best = Infinity;
+    for (const i of cover) {
+      const d = Math.hypot((i % W) + 0.5 - fx, Math.floor(i / W) + 0.5 - fy);
+      if (d < best) {
+        best = d;
+        door = i;
+      }
+    }
+    const dtx = door % W;
+    const dty = Math.floor(door / W);
+    // Step outward along the dominant axis so door and entrance share an edge.
+    const [sx, sy] = Math.abs(ox) >= Math.abs(oy) ? [Math.sign(ox), 0] : [0, Math.sign(oy)];
+    const etx = dtx + sx;
+    const ety = dty + sy;
+    const et = map.get(etx, ety);
+    if (cover.includes(ety * W + etx) || (et !== Tile.Sidewalk && !(et === Tile.Void && blockId[ety * W + etx] === block))) return null;
+    for (const i of cover) map.tiles[i] = Tile.Building;
+    const blk = blocks[block]!;
+    const b: Building = {
+      id: `bld-${blk.id}-${buildings.length}`,
+      x: cx - w / 2,
+      y: cy - h / 2,
+      w,
+      h,
+      angle,
+      name: '',
+      kind: 'residential',
+      description: '',
+      neon: null,
+      service: null,
+      style: rng.int(0, 5),
+      door: { tx: dtx, ty: dty, facing },
+      entrance: { tx: etx, ty: ety },
+      region: blk.region,
+      landmark: false,
+    };
+    covers.set(b, cover);
+    buildings.push(b);
+    return b;
+  };
+
+  // Street fronts: walk both sides of every street and line it with buildings.
+  for (const e of graph.edges) {
+    for (const side of [-1, 1] as const) {
+      let s = rng.range(0, 2);
+      while (s < e.length - 2) {
+        const p0 = pointAtDistance(e.points, s)!;
+        const r = def.regions[regionAtXY(p0.x, p0.y)]!;
+        const baseLen = rng.int(r.buildingW[0], r.buildingW[1]);
+        const baseDepth = rng.int(r.buildingH[0], r.buildingH[1]);
+        let placed: Building | null = null;
+        let len = baseLen;
+        // Shrink until it fits (curves, corners and shallow blocks need smaller buildings).
+        for (let attempt = 0; attempt < 4 && !placed; attempt++) {
+          len = Math.max(3, Math.round(baseLen * (1 - attempt * 0.2)));
+          const depth = Math.max(3, Math.round(baseDepth * (1 - attempt * 0.2)));
+          const m = pointAtDistance(e.points, Math.min(e.length, s + len / 2));
+          if (!m) break;
+          const nx = -m.ty * side; // toward the block
+          const ny = m.tx * side;
+          const angle = reduceAngle(Math.atan2(m.ty, m.tx));
+          const alongU = Math.abs(m.tx * Math.cos(angle) + m.ty * Math.sin(angle)) > 0.7;
+          const [w, h] = alongU ? [len, depth] : [depth, len];
+          const off = SIDEWALK_OUTER + 0.55 + depth / 2;
+          placed = tryPlace(m.x + nx * off, m.y + ny * off, angle, w, h, facingToward(angle, -nx, -ny), 1, null);
+        }
+        s += placed ? len + rng.range(1.1, 2.5) : 1;
+      }
+    }
+  }
+
+  // Back lots: deep blocks get a second ring of buildings facing their courtyard, aligned with the block.
+  blocks.forEach((b, bi) => {
+    if (b.kind !== 'lots') return;
+    const tiles = blockTiles[bi]!;
+    const r = regionDef(b.region);
+    const free = tiles.filter((i) => map.tiles[i] === Tile.Void);
+    if (free.length > 120) {
+      const mid = free[Math.floor(free.length / 2)]!;
+      const edge = graph.edges[nearestEdge[mid]!] ?? graph.edges[0]!;
+      const ea = edge.points[0]!;
+      const eb = edge.points[edge.points.length - 1]!;
+      const angle = reduceAngle(Math.atan2(eb.y - ea.y, eb.x - ea.x));
+      const order = free.slice();
+      for (let k = order.length - 1; k > 0; k--) {
+        const j = rng.int(0, k);
+        [order[k], order[j]] = [order[j]!, order[k]!];
+      }
+      let budget = Math.floor(free.length / 70);
+      for (const i of order) {
+        if (budget <= 0) break;
+        if (map.tiles[i] !== Tile.Void) continue;
+        const w = rng.int(r.buildingW[0], r.buildingW[1]);
+        const h = rng.int(r.buildingH[0], r.buildingH[1]);
+        const facing = rng.pick(['north', 'south', 'east', 'west'] as const);
+        if (tryPlace((i % W) + 0.5, Math.floor(i / W) + 0.5, angle, w, h, facing, 2, bi)) budget--;
+      }
+    }
+    fillYards(map, rng, tiles, W, addProp);
   });
 
   // Street lamps along the outer sidewalk edge, every ~7 tiles of road.
@@ -447,7 +602,7 @@ export function generateCity(def: CityDefinition, seed: number): DistrictLayout 
   for (let k = buildings.length - 1; k >= 0; k--) {
     const b = buildings[k]!;
     if (reach[b.entrance.ty * W + b.entrance.tx] === 1) continue;
-    for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) map.tiles[y * W + x] = Tile.Lot;
+    for (const i of covers.get(b) ?? []) map.tiles[i] = Tile.Lot;
     buildings.splice(k, 1);
   }
 
@@ -505,144 +660,10 @@ const DIRS4 = [
   [0, -1],
 ] as const;
 
-function fillLots(
-  map: TileMap,
-  rng: Rng,
-  tiles: number[],
-  W: number,
-  H: number,
-  r: RegionDefinition,
-  out: Building[],
-  addProp: AddProp,
-  blockKey: string,
-): void {
-  const inBlock = new Set(tiles);
-  const taken = new Set<number>();
-  const free = (x: number, y: number) => {
-    const i = y * W + x;
-    return x >= 0 && y >= 0 && x < W && y < H && inBlock.has(i) && !taken.has(i);
-  };
-  // Frontage tiles: block tiles touching a sidewalk, with the direction toward it.
-  const frontage: Array<{ i: number; facing: Facing }> = [];
-  for (const i of tiles) {
-    const x = i % W;
-    const y = (i - x) / W;
-    if (map.get(x, y - 1) === Tile.Sidewalk) frontage.push({ i, facing: 'north' });
-    else if (map.get(x, y + 1) === Tile.Sidewalk) frontage.push({ i, facing: 'south' });
-    else if (map.get(x - 1, y) === Tile.Sidewalk) frontage.push({ i, facing: 'west' });
-    else if (map.get(x + 1, y) === Tile.Sidewalk) frontage.push({ i, facing: 'east' });
-  }
-  // Shuffle deterministically so buildings don't all start in one corner.
-  for (let k = frontage.length - 1; k > 0; k--) {
-    const j = rng.int(0, k);
-    [frontage[k], frontage[j]] = [frontage[j]!, frontage[k]!];
-  }
-  for (const f of frontage) {
-    if (taken.has(f.i)) continue;
-    const fx = f.i % W;
-    const fy = (f.i - fx) / W;
-    let placed = false;
-    for (let attempt = 0; attempt < 6 && !placed; attempt++) {
-      const shrink = attempt * 0.15;
-      const bw = Math.max(3, Math.round(rng.int(r.buildingW[0], r.buildingW[1]) * (1 - shrink)));
-      const bh = Math.max(3, Math.round(rng.int(r.buildingH[0], r.buildingH[1]) * (1 - shrink)));
-      // Rect so that its frontage edge contains (fx, fy) and it extends away from the street.
-      const along = rng.int(0, (f.facing === 'north' || f.facing === 'south' ? bw : bh) - 1);
-      let x0: number;
-      let y0: number;
-      if (f.facing === 'north') [x0, y0] = [fx - along, fy];
-      else if (f.facing === 'south') [x0, y0] = [fx - along, fy - bh + 1];
-      else if (f.facing === 'west') [x0, y0] = [fx, fy - along];
-      else [x0, y0] = [fx - bw + 1, fy - along];
-      // Keep a one-tile margin around buildings (alleys) except on the street side.
-      let ok = true;
-      for (let y = y0 - 1; y <= y0 + bh && ok; y++) {
-        for (let x = x0 - 1; x <= x0 + bw && ok; x++) {
-          const inside = x >= x0 && x < x0 + bw && y >= y0 && y < y0 + bh;
-          if (inside && !free(x, y)) ok = false;
-          if (!inside && taken.has(y * W + x)) ok = false;
-        }
-      }
-      if (!ok) continue;
-      for (let y = y0; y < y0 + bh; y++) for (let x = x0; x < x0 + bw; x++) {
-        taken.add(y * W + x);
-        map.set(x, y, Tile.Building);
-      }
-      const door = { tx: fx, ty: fy, facing: f.facing };
-      const off = { north: [0, -1], south: [0, 1], west: [-1, 0], east: [1, 0] }[f.facing];
-      out.push({
-        id: `bld-${blockKey}-${out.length}`,
-        x: x0,
-        y: y0,
-        w: bw,
-        h: bh,
-        name: '',
-        kind: 'residential',
-        description: '',
-        neon: null,
-        service: null,
-        style: rng.int(0, 5),
-        door,
-        entrance: { tx: fx + off![0]!, ty: fy + off![1]! },
-        region: r.id,
-        landmark: false,
-      });
-      placed = true;
-    }
-  }
-  // Back lots: deep blocks get a second ring of buildings facing the courtyard.
-  const interior = tiles.filter((i) => !taken.has(i));
-  if (interior.length > 120) {
-    const order = interior.slice();
-    for (let k = order.length - 1; k > 0; k--) {
-      const j = rng.int(0, k);
-      [order[k], order[j]] = [order[j]!, order[k]!];
-    }
-    let budget = Math.floor(interior.length / 70);
-    for (const i of order) {
-      if (budget <= 0) break;
-      const x0 = i % W;
-      const y0 = (i - x0) / W;
-      const bw = rng.int(r.buildingW[0], r.buildingW[1]);
-      const bh = rng.int(r.buildingH[0], r.buildingH[1]);
-      // Needs a free ring of two tiles: one for the margin, one so the yard stays walkable.
-      let ok = true;
-      for (let y = y0 - 2; y < y0 + bh + 2 && ok; y++) for (let x = x0 - 2; x < x0 + bw + 2 && ok; x++) if (!free(x, y)) ok = false;
-      if (!ok) continue;
-      const facing = rng.pick(['north', 'south', 'east', 'west'] as const);
-      const door =
-        facing === 'north' ? { tx: x0 + rng.int(0, bw - 1), ty: y0 } :
-        facing === 'south' ? { tx: x0 + rng.int(0, bw - 1), ty: y0 + bh - 1 } :
-        facing === 'west' ? { tx: x0, ty: y0 + rng.int(0, bh - 1) } :
-        { tx: x0 + bw - 1, ty: y0 + rng.int(0, bh - 1) };
-      const off = { north: [0, -1], south: [0, 1], west: [-1, 0], east: [1, 0] }[facing];
-      for (let y = y0; y < y0 + bh; y++) for (let x = x0; x < x0 + bw; x++) {
-        taken.add(y * W + x);
-        map.set(x, y, Tile.Building);
-      }
-      out.push({
-        id: `bld-${blockKey}-${out.length}`,
-        x: x0,
-        y: y0,
-        w: bw,
-        h: bh,
-        name: '',
-        kind: 'residential',
-        description: '',
-        neon: null,
-        service: null,
-        style: rng.int(0, 5),
-        door: { ...door, facing },
-        entrance: { tx: door.tx + off[0]!, ty: door.ty + off[1]! },
-        region: r.id,
-        landmark: false,
-      });
-      budget--;
-    }
-  }
-
+/** What's left of a lots block after the buildings: courtyards with benches, trees and parked cars, or alleys. */
+function fillYards(map: TileMap, rng: Rng, tiles: number[], W: number, addProp: AddProp): void {
   // Leftover interior: courtyards with benches and trees, or service alleys.
-  const left = tiles.filter((i) => !taken.has(i));
+  const left = tiles.filter((i) => map.tiles[i] === Tile.Void);
   const courtyard = left.length > 40;
   for (const i of left) {
     const x = i % W;

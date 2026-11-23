@@ -41,12 +41,15 @@ export class TerritoryViews {
       if (b.door.facing !== 'south' || (i++ % 2 !== 0 && b.neon === null)) continue;
       const block = blockOf(layout, b.x + b.w / 2, b.y + b.h / 2);
       if (!block) continue;
-      const x = (b.x + 0.6 + ((b.w - 1.2) * ((b.x * 7 + b.y * 3) % 10)) / 10) * T;
-      const y = (b.y + b.h) * T - 9;
+      // A spot on the facade (local frame), turned with the building.
+      const lx = (0.6 + ((b.w - 1.2) * (Math.floor(b.x * 7 + b.y * 3) % 10)) / 10 - b.w / 2) * T;
+      const ly = (b.h / 2) * T - 9;
+      const x = (b.x + b.w / 2) * T + lx * Math.cos(b.angle) - ly * Math.sin(b.angle);
+      const y = (b.y + b.h / 2) * T + lx * Math.sin(b.angle) + ly * Math.cos(b.angle);
       this.decals.push({
         blockId: block.id,
-        poster: scene.add.image(x, y, POSTER).setDepth(Depth.buildings + 1).setVisible(false),
-        halo: scene.add.image(x, y - 2, HALO).setDepth(Depth.buildings + 1).setVisible(false),
+        poster: scene.add.image(x, y, POSTER).setRotation(b.angle).setDepth(Depth.buildings + 1).setVisible(false),
+        halo: scene.add.image(x, y - 2, HALO).setRotation(b.angle).setDepth(Depth.buildings + 1).setVisible(false),
         glow: scene.add.image(x, y, 'fx-glow').setTint(0x00e5ff).setScale(0.25).setBlendMode(Phaser.BlendModes.ADD).setDepth(Depth.glow).setVisible(false),
       });
     }

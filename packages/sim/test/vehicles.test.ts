@@ -105,6 +105,13 @@ describe('player driving', () => {
   it('crashing hard damages the car', () => {
     const sim = newSim(22);
     const { car } = enterNearestParked(sim);
+    // Line up with a building front across the street and floor it.
+    const b = sim.layout.buildings.find((x) => x.w >= 5 && x.h >= 5)!;
+    const dx = b.entrance.tx - b.door.tx;
+    const dy = b.entrance.ty - b.door.ty;
+    car.x = car.prevX = sim.player.x = b.entrance.tx + 0.5 + dx * 6;
+    car.y = car.prevY = sim.player.y = b.entrance.ty + 0.5 + dy * 6;
+    car.heading = Math.atan2(-dy, -dx);
     const hp = car.hp;
     for (let i = 0; i < TICK_RATE * 12; i++) sim.step({ moveX: 0, moveY: -1, run: false, interact: false });
     sim.drainEvents();

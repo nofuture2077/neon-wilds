@@ -19,11 +19,17 @@ export interface BuildingTemplate {
 
 export interface Building {
   id: string;
-  /** Footprint in tiles. */
+  /**
+   * Footprint in tiles, before rotation: the rectangle (x, y, w, h) is turned by
+   * `angle` around its centre (x + w/2, y + h/2) so it lines up with its street.
+   * x and y may be fractional. The tile map marks covered tiles as Building.
+   */
   x: number;
   y: number;
   w: number;
   h: number;
+  /** Rotation in radians, within ±45° (the art stays upright; `door.facing` is in the building's frame). */
+  angle: number;
   name: string;
   kind: BuildingKind;
   description: string;
@@ -133,4 +139,17 @@ export interface DistrictLayout {
   streets: Street[];
   playerSpawn: { x: number; y: number };
   pedestrianSpawns: { tx: number; ty: number }[];
+}
+
+/** Whether a point (in tiles) lies inside a building's rotated footprint. */
+export function buildingContains(b: Building, px: number, py: number, pad = 0): boolean {
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  const c = Math.cos(b.angle);
+  const s = Math.sin(b.angle);
+  const dx = px - cx;
+  const dy = py - cy;
+  const u = dx * c + dy * s;
+  const v = -dx * s + dy * c;
+  return Math.abs(u) <= b.w / 2 + pad && Math.abs(v) <= b.h / 2 + pad;
 }
