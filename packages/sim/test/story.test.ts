@@ -118,7 +118,7 @@ function boost(sim: Simulation) {
   sim.applyEffect({ type: 'set-flag', flag: 'test' });
 }
 
-function playActOne(pl: Player, decision: 'saints' | 'sell') {
+function playActOne(pl: Player, decision: 'saints' | 'sell' | 'independent') {
   const sim = pl.sim;
   pl.step(2);
   pl.inspect('Vesper Courier Co-op');
@@ -236,5 +236,28 @@ describe('main story', () => {
     expect(ids).toContain('the-quiet');
     pl.choose('the-quiet');
     expect(pl.log.some((e) => e.type === 'game.ending' && e.ending === 'the-quiet')).toBe(true);
+  }, 30000);
+});
+
+describe('Iron Chain arc', () => {
+  it('climbs the pit ladder, beats Vik and earns a fragment', () => {
+    const sim = Simulation.create({ seed: 79, playerName: 'Nova', appearance: APPEARANCE, startMinutes: 20 * 60 });
+    const pl = new Player(sim);
+    playActOne(pl, 'independent');
+    sim.travelTo('industrial', 'Gutter Lane');
+    pl.step(2);
+    expect(sim.districtId).toBe('industrial');
+    pl.talk('npc-hale');
+    expect(pl.status('the-pit')).toBe('active');
+    for (const fighter of ['npc-pit1', 'npc-pit2', 'npc-vik2']) {
+      pl.talk(fighter);
+      pl.winBattle();
+      expect(sim.progression.defeatedTrainers).toContain(fighter);
+    }
+    pl.talk('npc-hale');
+    pl.choose('dignity');
+    expect(pl.status('the-pit')).toBe('completed');
+    expect(sim.progression.flags['pits-freed']).toBe(true);
+    expect(sim.progression.inventory['hush-fragment']).toBe(1);
   }, 30000);
 });

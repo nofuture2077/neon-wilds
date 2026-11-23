@@ -83,7 +83,10 @@ export const SLUMS: DistrictDefinition = {
         "Blue shutters, bolted. A Wildling Control notice is pasted over an older one: 'REPORT UNLICENSED CREATURES. REWARDS PAID.'",
     },
   ],
-  exits: [{ to: 'downtown', side: 'east', street: 'Lantern Parade' }],
+  exits: [
+    { to: 'downtown', side: 'east', street: 'Lantern Parade' },
+    { to: 'industrial', side: 'west', street: 'Gutter Lane' },
+  ],
   residentialNames: [
     'Coldwater Flats',
     'Tenement No. 9',

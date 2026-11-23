@@ -431,6 +431,67 @@ export const MISSIONS: MissionDef[] = [
     rewards: [{ type: 'set-flag', flag: 'fragment-compact' }],
   },
 
+  {
+    id: 'the-pit',
+    title: 'The Pit',
+    summary: 'Brannoc Hale says Halcyon is testing something in his pits. Fight your way to the final and see for yourself.',
+    requires: ['everyone-wants-it'],
+    giver: 'npc-hale',
+    offer: [
+      'Brannoc Hale. Iron Chain. I hear you fight with a Wildling that hums.',
+      'Something\u2019s wrong in my pits. Fighters that don\u2019t flinch, don\u2019t bleed, don\u2019t stop. Win the card and bring me the prize — I want to see it up close.',
+    ],
+    onStart: [
+      { type: 'spawn-npc', npc: 'npc-pit1', near: 'The Furnace Pits' },
+      { type: 'spawn-npc', npc: 'npc-pit2', near: 'The Furnace Pits' },
+      { type: 'spawn-npc', npc: 'npc-vik2', near: 'The Furnace Pits' },
+    ],
+    objectives: [
+      { text: 'First bout: beat Pit Fighter Grit at the Furnace Pits', kind: 'defeat', target: 'npc-pit1' },
+      { text: 'Semi-final: beat Pit Fighter Mags', kind: 'defeat', target: 'npc-pit2' },
+      { text: 'Final: beat Vik Torrance', kind: 'defeat', target: 'npc-vik2' },
+      {
+        text: 'Bring the prize purse to Brannoc Hale at the Union Hall',
+        kind: 'talk',
+        target: 'npc-hale',
+        pages: [
+          'The prize is a tethered Scrapjaw in a cage. The chip behind its ear is Halcyon\u2019s. And look — the sponsor\u2019s envelope.',
+          'Inside: a cheque from Halcyon Lab 7, and a page of old city schematics. They\u2019ve been paying my bookers to field their test subjects.',
+        ],
+        onComplete: [
+          { type: 'give-item', item: 'hush-fragment', qty: 1 },
+          {
+            type: 'choice',
+            speaker: 'Brannoc Hale',
+            pages: ['The Chain needs that sponsor money, courier. Or it needs its dignity. Which is it?'],
+            options: [
+              {
+                id: 'dignity',
+                label: 'Tear up Halcyon\u2019s contract. Free the fighters.',
+                effects: [
+                  { type: 'reputation', faction: 'iron-chain', delta: 15 },
+                  { type: 'reputation', faction: 'halcyon', delta: -10 },
+                  { type: 'set-flag', flag: 'pits-freed' },
+                  { type: 'message', speaker: 'Brannoc Hale', pages: ['Then the Chain stands with you. When you go up against whoever is behind this, call us.'] },
+                ],
+              },
+              {
+                id: 'money',
+                label: 'Keep the money. Just stop the tethered fights.',
+                effects: [
+                  { type: 'reputation', faction: 'iron-chain', delta: 6 },
+                  { type: 'give-money', amount: 700 },
+                  { type: 'message', speaker: 'Brannoc Hale', pages: ['Pragmatic. I can respect that. Here — your cut.'] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    rewards: [{ type: 'set-flag', flag: 'fragment-iron' }],
+  },
+
   // ----------------------------------------------------------------------------------------------
   // Act III — the Quiet.
   {
@@ -467,7 +528,7 @@ export const MISSIONS: MissionDef[] = [
               {
                 id: 'chorus',
                 label: 'Retune the grid with the Glitchling — let humans and Wildlings share the city.',
-                when: { notFlags: ['act1-sold'], anyOf: [{ flags: ['wren-turned'] }, { minRep: { saints: 30 } }] },
+                when: { notFlags: ['act1-sold'], anyOf: [{ flags: ['wren-turned'] }, { flags: ['pits-freed'] }, { minRep: { saints: 30 } }] },
                 effects: [{ type: 'ending', id: 'chorus' }],
               },
               { id: 'lights-out', label: 'Smash the controller. Lights out — let everything run free.', effects: [{ type: 'ending', id: 'lights-out' }] },

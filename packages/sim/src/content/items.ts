@@ -23,5 +23,6 @@ export const SHOPS: Record<string, { name: string; items: string[] }> = {
   'glow-noodle': { name: 'Glow Noodle', items: ['patch-kit', 'med-spray'] },
   'halcyon-store': { name: 'Halcyon Flagship Store', items: ['coil-snare', 'lull-snare', 'med-spray', 'cleanse-tab'] },
   'sky-noodle': { name: 'Sky Noodle Bar', items: ['med-spray', 'patch-kit'] },
+  scrapyard: { name: 'Scrapyard Exchange', items: ['tin-snare', 'coil-snare', 'patch-kit', 'cleanse-tab'] },
   'night-market': { name: 'Night Market', items: ['black-market-snare', 'coil-snare', 'med-spray', 'cleanse-tab'] },
 };

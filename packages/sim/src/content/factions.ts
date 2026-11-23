@@ -37,4 +37,5 @@ export const ARCHETYPE_FACTION: Record<string, FactionId> = {
   'aegis-guard': 'halcyon',
   'rival-trainer': 'iron-chain',
   smuggler: 'compact',
+  'chain-enforcer': 'iron-chain',
 };

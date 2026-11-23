@@ -44,6 +44,16 @@ export function controllerOf(inf: Record<string, number>): string | null {
 }
 
 export function newTerritory(layout: DistrictLayout): TerritoryState {
+  if (layout.id === 'industrial') {
+    const lab = layout.buildings.find((b) => b.name === 'Halcyon Lab 7');
+    const labBlock = lab ? blockOf(layout, lab.x + lab.w / 2, lab.y + lab.h / 2) : null;
+    const t: TerritoryState = { influence: {}, controllers: {} };
+    for (const b of layout.blocks) {
+      t.influence[b.id] = b.id === labBlock?.id ? { 'iron-chain': 25, halcyon: 80 } : { 'iron-chain': 82, halcyon: 12 };
+      t.controllers[b.id] = controllerOf(t.influence[b.id]!);
+    }
+    return t;
+  }
   if (layout.id === 'harbor') {
     // The Compact runs the docks; Halcyon holds a toehold around its shipping office.
     const office = layout.buildings.find((b) => b.name === 'Halcyon Shipping');

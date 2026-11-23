@@ -40,7 +40,7 @@ export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting
     }
   }
 
-  for (const p of layout.props) renderProp(scene, p, lighting);
+  for (const p of layout.props) renderProp(scene, p, lighting, layout.style);
 
   // District exits: a sign over the road, and a checkpoint barrier while the road is closed.
   for (const exit of layout.exits) {
@@ -49,7 +49,7 @@ export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting
     const east = exit.side === 'east';
     const x = (east ? layout.map.width - 2.5 : 2.5) * T;
     const y = (band.from + 2.5) * T;
-    const label = ({ downtown: 'NEON DOWNTOWN', slums: 'THE SLUMS', harbor: 'HARBOR DISTRICT' } as Record<string, string>)[exit.to] ?? exit.to.toUpperCase();
+    const label = ({ downtown: 'NEON DOWNTOWN', slums: 'THE SLUMS', harbor: 'HARBOR DISTRICT', industrial: 'INDUSTRIAL ZONE' } as Record<string, string>)[exit.to] ?? exit.to.toUpperCase();
     scene.add
       .text(x, y - 3 * T, `${east ? '' : '\u25c0 '}${label}${east ? ' \u25b6' : ''}`, {
         fontFamily: 'Press Start 2P, monospace',
@@ -88,7 +88,7 @@ function renderGround(scene: Phaser.Scene, layout: DistrictLayout): void {
   tilemap.createLayer(0, tileset, 0, 0)?.setDepth(Depth.ground);
 }
 
-function renderProp(scene: Phaser.Scene, p: Prop, lighting: Lighting): void {
+function renderProp(scene: Phaser.Scene, p: Prop, lighting: Lighting, style: string): void {
   const cx = (p.x + p.w / 2) * T;
   const cy = (p.y + p.h / 2) * T;
   switch (p.kind) {
@@ -101,7 +101,8 @@ function renderProp(scene: Phaser.Scene, p: Prop, lighting: Lighting): void {
       const lx = cx + (off?.[0] ?? 0);
       const ly = cy + (off?.[1] ?? 0);
       scene.add.image(lx, ly, TEXTURES.lamp).setDepth(Depth.canopy);
-      const tint = LAMP_TINTS[(p.x * 7 + p.y * 3) % LAMP_TINTS.length]!;
+      // Industrial streets burn sodium orange; elsewhere lamps mix warm white with neon tints.
+      const tint = style === 'industrial' ? 0xff9a30 : LAMP_TINTS[(p.x * 7 + p.y * 3) % LAMP_TINTS.length]!;
       lighting.add(lx, ly, tint, 0.7, 0.38, 0, 0, 'lamp');
       break;
     }

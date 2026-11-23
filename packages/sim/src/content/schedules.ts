@@ -132,6 +132,31 @@ export const ROUTINES: Record<string, Routine> = {
       { from: 4, to: 22, weights: { work: 3.5, eat: 0.8, socialize: 0.6 } },
     ],
   },
+  'factory-worker': {
+    workplace: 'office',
+    sociability: 1,
+    blocks: [
+      { from: 0, to: 8, weights: { sleep: 4 } },
+      { from: 8, to: 18, weights: { work: 4, eat: 0.8 } },
+      { from: 18, to: 24, weights: { socialize: 2, eat: 1.2, wander: 0.6 } },
+    ],
+  },
+  'chain-enforcer': {
+    workplace: 'none',
+    sociability: 1,
+    blocks: [
+      { from: 6, to: 14, weights: { sleep: 4 } },
+      { from: 14, to: 6, weights: { patrol: 3, socialize: 1.2, eat: 0.8 } },
+    ],
+  },
+  scrapper: {
+    workplace: 'workshop',
+    sociability: 0.7,
+    blocks: [
+      { from: 4, to: 12, weights: { sleep: 4 } },
+      { from: 12, to: 4, weights: { wander: 2, work: 1.5, eat: 0.8 } },
+    ],
+  },
   citizen: {
     workplace: 'none',
     sociability: 0.5,

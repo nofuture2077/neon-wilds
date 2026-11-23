@@ -1100,7 +1100,8 @@ export class Simulation implements MissionHost {
           const x = tx + dx;
           const y = ty + dy;
           const onEntrance = x === avoid.entrance.tx && y === avoid.entrance.ty;
-          if (!onEntrance && map.isPedestrianWalkable(x, y)) return { tx: x, ty: y };
+          const occupied = this.npcs?.some((n) => n.present && n.stationary && Math.floor(n.x) === x && Math.floor(n.y) === y);
+          if (!onEntrance && !occupied && map.isPedestrianWalkable(x, y)) return { tx: x, ty: y };
         }
       }
     }

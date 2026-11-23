@@ -279,6 +279,52 @@ const DRAW: Record<string, Draw> = {
     eye(g, 10.5, 11.6, 0xffd23f);
     eye(g, 6.5, 11.6, 0xffd23f);
   },
+  pyrolynx(g, f) {
+    const b = f ? 0.3 : 0;
+    g.r(1.5, 5, 1.2, 6, 0x8a3a1e);
+    g.eo(1.8, 3.8 - b, 1.9, 2.4, 0xff6b35);
+    g.e(1.8, 4 - b, 1, 1.4, 0xffd23f);
+    legs(g, [5, 7, 10, 12], 12.8, 0x5a2414, f, 2.4);
+    g.eo(8, 10.6 + b, 5.4, 2.6, 0xa0442a);
+    g.r(4, 9.4 + b, 7, 0.6, 0xffb347);
+    g.eo(13, 7.8 + b, 2.6, 2.3, 0xb04e30);
+    g.r(11.6, 4.6 + b, 1.1, 2, 0xb04e30);
+    g.r(13.8, 4.6 + b, 1.1, 2, 0xb04e30);
+    g.p(11.8, 4.4 + b, 0xff6b35);
+    g.p(14, 4.4 + b, 0xff6b35);
+    eye(g, 13.8, 7.6 + b, 0xffd23f);
+  },
+  slabbard(g, f) {
+    const b = f ? 0.25 : 0;
+    legs(g, [4.5, 11], 13.4, 0x5a5560, f, 1.4);
+    g.eo(13.6, 12 + b, 1.8, 1.5, 0x9a9aa8);
+    g.p(14.3, 11.4 + b, EYE);
+    g.eo(8, 10.5 + b, 6, 4, 0x8a8a96);
+    for (const x of [4, 6.5, 9, 11.5]) g.r(x, 7 + b, 0.7, 6.5, 0x5a5a68);
+    for (const x of [5, 8, 11]) g.r(x, 5.6 + b, 0.5, 1.6, 0xc0563a);
+    g.e(7, 8 + b, 2.5, 0.8, 0xb5b5c2);
+  },
+  smogling(g, f) {
+    const drift = f ? 0.6 : 0;
+    g.e(8, 15, 3, 0.5, 0x000000);
+    g.eo(6 + drift, 9, 3, 2.6, 0x4a4652);
+    g.eo(10 - drift, 8.4, 3.2, 2.8, 0x5a5662);
+    g.eo(8, 10.6, 3.6, 2.4, 0x3a3642);
+    g.e(9.4, 8.6, 0.9, 0.9, 0xb36bff);
+    g.e(7, 8.8, 0.8, 0.8, 0xb36bff);
+    g.p(9.2, 8.2, SHINE);
+    g.r(7.2, 11, 2.6, 0.5, 0x1a1820);
+  },
+  smogmaw(g, f) {
+    const drift = f ? 0.6 : 0;
+    g.eo(5 + drift, 8.5, 3.6, 3, 0x3a3642);
+    g.eo(11 - drift, 7.6, 3.8, 3.2, 0x4a4652);
+    g.eo(8, 10.6, 5, 3.2, 0x2a2632);
+    g.e(8, 11.6, 2.6, 1.4, 0xff6b35);
+    g.e(8, 11.8, 1.4, 0.7, 0xffd23f);
+    eye(g, 6, 8.4, 0xb36bff);
+    eye(g, 10.6, 8, 0xb36bff);
+  },
   glitchling(g, f) {
     const hover = f ? -0.6 : 0;
     const glitch = f ? 1 : -1;

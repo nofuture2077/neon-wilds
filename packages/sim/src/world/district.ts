@@ -77,7 +77,7 @@ export interface DistrictDefinition {
   /** Chance to merge neighbouring blocks into superblocks (0 = strict grid). */
   mergeChance?: number;
   /** Visual style hint for the renderer. */
-  style?: 'slums' | 'downtown' | 'harbor';
+  style?: 'slums' | 'downtown' | 'harbor' | 'industrial';
   /** The southern block row becomes quays, piers and open water. */
   waterfront?: boolean;
   /** Road connections to other districts at the map edge. */
@@ -103,7 +103,7 @@ export interface CityBlock {
 export interface DistrictLayout {
   id: string;
   name: string;
-  style: 'slums' | 'downtown' | 'harbor';
+  style: 'slums' | 'downtown' | 'harbor' | 'industrial';
   exits: DistrictExit[];
   map: TileMap;
   blocks: CityBlock[];
