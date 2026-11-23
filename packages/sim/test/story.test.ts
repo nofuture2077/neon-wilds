@@ -78,7 +78,7 @@ class Player {
     w.calmUntilTick = 0;
     this.sim.player.x = this.sim.player.prevX = w.x;
     this.sim.player.y = this.sim.player.prevY = w.y;
-    this.sim.encounterCooldownUntilTick = 0;
+    (this.sim as unknown as { encounterCooldownUntilTick: number }).encounterCooldownUntilTick = 0;
     this.step(1);
     this.winBattle();
   }
