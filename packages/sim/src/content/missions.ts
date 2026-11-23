@@ -111,7 +111,10 @@ export const MISSIONS: MissionDef[] = [
         kind: 'talk',
         target: 'npc-marisol',
         pages: ['My tin! Sticky, dented, and every coin still inside. You are a saint, {player}. Not a Gutter Saint. A real one.'],
-        onComplete: [{ type: 'take-item', item: 'coin-tin', qty: 1 }],
+        onComplete: [
+          { type: 'take-item', item: 'coin-tin', qty: 1 },
+          { type: 'remember', npc: 'npc-marisol', kind: 'helped', important: true },
+        ],
       },
     ],
     rewards: [

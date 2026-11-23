@@ -116,7 +116,7 @@ export function onCrime(law: LawState, ctx: LawContext, kind: CrimeKind, x: numb
   let witnessed = false;
   if (severity >= 1) {
     for (const npc of ctx.npcs) {
-      if (!npc.present || Math.hypot(npc.x - x, npc.y - y) > 9) continue;
+      if (!npc.present || npc.indoors || Math.hypot(npc.x - x, npc.y - y) > 9) continue;
       const a = ctx.archetypeOf(npc);
       if (a.id === 'gutter-saint') continue; // the Saints don't talk to Wardens
       const chance = a.temperament === 'timid' ? 0.9 : a.temperament === 'steady' ? 0.7 : 0.4;

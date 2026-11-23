@@ -9,7 +9,8 @@ export type Effect =
   | { type: 'start-trainer-battle'; npc: string }
   | { type: 'spawn-quest-wildling'; species: string; level: number; tag: string }
   | { type: 'set-flag'; flag: string }
-  | { type: 'reputation'; faction: string; delta: number };
+  | { type: 'reputation'; faction: string; delta: number }
+  | { type: 'remember'; npc: string; kind: 'helped' | 'saw-battle-win'; important: boolean };
 
 export type ObjectiveKind = 'inspect' | 'talk' | 'defeat' | 'resolve-tag';
 

@@ -1,4 +1,7 @@
-import { ambientBark, onShoved, updateNpc, type NpcContext } from './ai/npcBrain';
+import { ambientBark, onShoved, startFlee, updateNpc, walkTo, type NpcContext } from './ai/npcBrain';
+import { RUMOUR_TEXT, decayMemories, lineOfSight, relationship, remember, strongest, type MemoryKind } from './ai/memory';
+import { type RoutineHooks, newAgent } from './ai/routine';
+import { ROUTINES } from './content/schedules';
 import { isHealthy, resolveTurn, type BattleContext } from './battle/engine';
 import { type BattleState, ZERO_STAGES } from './battle/types';
 import {
@@ -212,6 +215,7 @@ export class Simulation implements MissionHost {
     } else {
       throw new Error('Simulation requires a snapshot or a config');
     }
+    this.assignAgents();
     this.updateFocus();
   }
 
@@ -293,7 +297,23 @@ export class Simulation implements MissionHost {
     else this.updatePlayer(input);
 
     const ctx = this.npcContext();
-    for (const npc of this.npcs) updateNpc(npc, ctx);
+    // Simulation LOD: far-away NPCs update every 6th tick with a larger time step.
+    const farCtx: NpcContext = { ...ctx, dt: DT * 6, minuteDelta: ctx.minuteDelta * 6 };
+    farCtx.hooks = this.routineHooks(() => farCtx);
+    for (let i = 0; i < this.npcs.length; i++) {
+      const npc = this.npcs[i]!;
+      const far = Math.hypot(npc.x - this.player.x, npc.y - this.player.y) > 45 && npc.mode !== 'talking';
+      if (!far) updateNpc(npc, ctx);
+      else if ((this._tick + i) % 6 === 0) {
+        farCtx.pathBudget = ctx.pathBudget;
+        updateNpc(npc, farCtx);
+      } else {
+        npc.prevX = npc.x;
+        npc.prevY = npc.y;
+      }
+    }
+    if (this._tick % 60 === 0) this.manageCrowd();
+    this.reactToPlayer(ctx);
     const wctx = this.wildlingContext(ctx.pathBudget);
     if (this._tick % 30 === 0) manageSpawns(this.wildlings, wctx);
     updateWildlings(this.wildlings, wctx);
@@ -395,6 +415,11 @@ export class Simulation implements MissionHost {
       case 'reputation':
         this.changeReputation(effect.faction, effect.delta);
         break;
+      case 'remember': {
+        const npc = this.npcs.find((n) => n.id === effect.npc);
+        if (npc) remember(npc.memory, { kind: effect.kind, salience: 1, important: effect.important, secondhand: false, at: this.now });
+        break;
+      }
     }
   }
 
@@ -626,6 +651,7 @@ export class Simulation implements MissionHost {
         if (battle.kind === 'trainer' && battle.trainerId) {
           p.money += battle.rewardMoney;
           if (!p.defeatedTrainers.includes(battle.trainerId)) p.defeatedTrainers.push(battle.trainerId);
+          this.witnessMemory(this.player.x, this.player.y, 'saw-battle-win', 0.6, 10);
           const npc = this.npcs.find((n) => n.id === battle.trainerId);
           const faction = npc ? ARCHETYPE_FACTION[npc.archetypeId] : undefined;
           if (faction === 'halcyon') {
@@ -730,8 +756,195 @@ export class Simulation implements MissionHost {
         nextBarkTick: TICK_RATE * this.rng.int(5, 30),
         present: (def.spawn ?? 'start') === 'start',
         stationary,
+        agent: null,
+        indoors: null,
+        transient: false,
+        memory: [],
       } satisfies NpcState;
     });
+  }
+
+  /** Give every non-scripted NPC a home, a workplace and a daily routine (deterministic per NPC). */
+  private assignAgents(): void {
+    const homes = this.layout.buildings.filter((b) => b.kind === 'residential');
+    const workshops = this.layout.buildings.filter((b) => b.kind === 'workshop');
+    const offices = this.layout.buildings.filter((b) => b.kind === 'office' || b.kind === 'warehouse' || b.kind === 'shop');
+    const square = this.layout.blocks.find((b) => b.kind === 'square');
+    this.npcs.forEach((npc, i) => {
+      if (npc.agent || npc.stationary || npc.transient) return;
+      const routine = ROUTINES[npc.archetypeId];
+      if (!routine) return;
+      const pick = <T,>(list: T[], salt: number): T | null => (list.length ? list[(i * 7 + salt) % list.length]! : null);
+      let workId: string | null = null;
+      let workSpot: { tx: number; ty: number } | null = null;
+      if (routine.workplace === 'workshop') workId = pick(workshops, 1)?.id ?? null;
+      if (routine.workplace === 'office') workId = pick(offices, 3)?.id ?? null;
+      if (routine.workplace === 'stall' && square) {
+        const tx = square.x + 3 + ((i * 5) % Math.max(1, square.w - 6));
+        workSpot = this.layout.map.isPedestrianWalkable(tx, square.y + 2) ? { tx, ty: square.y + 2 } : { tx: square.x + 1, ty: square.y + 1 };
+      }
+      npc.agent = newAgent(pick(homes, 0)?.id ?? null, workId, workSpot, i * 31 + 7);
+    });
+  }
+
+  get now(): number {
+    return this._day * 1440 + this._minutes;
+  }
+
+  private routineHooks(ctx: () => NpcContext): RoutineHooks {
+    const map = this.layout.map;
+    return {
+      walkTo: (npc, tx, ty) => walkTo(npc, tx, ty, ctx()),
+      isWalking: (npc) => npc.mode === 'walking',
+      patrolTile: (npc) => {
+        const faction = ARCHETYPE_FACTION[npc.archetypeId];
+        const blocks = this.layout.blocks.filter((b) => faction && this.territory.controllers[b.id] === faction);
+        if (!blocks.length) return null;
+        const b = this.rng.pick(blocks);
+        for (let k = 0; k < 6; k++) {
+          const tx = b.x + this.rng.int(0, b.w - 1);
+          const ty = this.rng.chance(0.5) ? b.y : b.y + b.h - 1;
+          if (map.isPedestrianWalkable(tx, ty)) return { tx, ty };
+        }
+        return null;
+      },
+      nearbyTile: (x, y, r) => {
+        for (let k = 0; k < 10; k++) {
+          const tx = Math.floor(x) + this.rng.int(-r, r);
+          const ty = Math.floor(y) + this.rng.int(-r, r);
+          if (map.isPedestrianWalkable(tx, ty)) return { tx, ty };
+        }
+        return null;
+      },
+      buildingEntrance: (id) => {
+        const b = this.layout.buildings.find((x) => x.id === id);
+        return b ? b.entrance : null;
+      },
+      foodPlace: (npc) => {
+        let best: { id: string; tx: number; ty: number } | null = null;
+        let bestD = Infinity;
+        for (const b of this.layout.buildings) {
+          if (b.name !== 'Glow Noodle' && b.name !== "Mother Rook's Kitchen") continue;
+          const d = Math.hypot(b.entrance.tx - npc.x, b.entrance.ty - npc.y);
+          if (d < bestD) {
+            bestD = d;
+            best = { id: b.id, tx: b.entrance.tx, ty: b.entrance.ty };
+          }
+        }
+        return best;
+      },
+      findFriend: (npc) => {
+        let best: NpcState | null = null;
+        let bestD = 25;
+        for (const o of this.npcs) {
+          if (o === npc || !o.present || o.indoors || !o.agent || o.transient) continue;
+          if (o.mode !== 'idle' && o.mode !== 'walking') continue;
+          if (o.agent.activity === 'sleep' || o.agent.activity === 'listen' || o.agent.activity === 'commute') continue;
+          const d = Math.hypot(o.x - npc.x, o.y - npc.y) * (o.archetypeId === npc.archetypeId ? 0.6 : 1);
+          if (d < bestD) {
+            bestD = d;
+            best = o;
+          }
+        }
+        return best;
+      },
+      npcById: (id) => this.npcs.find((n) => n.id === id) ?? null,
+      despawn: (npc) => {
+        npc.present = false;
+      },
+    };
+  }
+
+  /** Background crowd: unnamed pedestrians whose density follows the time of day. */
+  private manageCrowd(): void {
+    const p = this.player;
+    for (let i = this.npcs.length - 1; i >= 0; i--) {
+      const n = this.npcs[i]!;
+      if (!n.transient) continue;
+      if (!n.present || (Math.hypot(n.x - p.x, n.y - p.y) > 42 && n.mode !== 'talking')) this.npcs.splice(i, 1);
+    }
+    const h = this.hour;
+    const desired = h >= 23 || h < 5 ? 5 : h < 9 ? 14 : h < 17 ? 18 : 24;
+    const count = this.npcs.filter((n) => n.transient).length;
+    if (count >= desired) return;
+    const spawns = this.layout.pedestrianSpawns;
+    for (let k = 0; k < 6; k++) {
+      const t = this.rng.pick(spawns);
+      const d = Math.hypot(t.tx - p.x, t.ty - p.y);
+      if (d < 16 || d > 30) continue;
+      this.spawnCitizen(t.tx + 0.5, t.ty + 0.5, false);
+      return;
+    }
+  }
+
+  private spawnCitizen(x: number, y: number, fleeing: boolean): NpcState {
+    const SKIN = [0xffdbac, 0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0x5c3a1e];
+    const TOPS = [0x5c7a99, 0x8d6e63, 0x6b705c, 0x4a5568, 0x9b2335, 0xb5838d, 0x2a9d8f, 0xe07a5f, 0x3d405b];
+    const HAIR = [0x111111, 0x3a2412, 0x6b4a2a, 0xbbbbbb, 0x2b1a0e];
+    const homes = this.layout.buildings.filter((b) => b.kind === 'residential');
+    const npc: NpcState = {
+      id: `citizen-${this.nextEntityId++}`,
+      name: 'Passer-by',
+      archetypeId: 'citizen',
+      appearance: { skin: this.rng.pick(SKIN), hair: this.rng.pick(HAIR), top: this.rng.pick(TOPS), bottom: this.rng.pick([0x22333b, 0x2b2b3a, 0x3d405b, 0x1a202c]) },
+      x,
+      y,
+      prevX: x,
+      prevY: y,
+      heading: this.rng.range(-Math.PI, Math.PI),
+      speed: 0,
+      walkSpeed: this.rng.range(1.9, 2.8),
+      mode: 'idle',
+      timer: 0,
+      path: [],
+      pathIndex: 0,
+      stuckTime: 0,
+      grudgeUntilTick: 0,
+      shoveCooldownUntilTick: 0,
+      nextBarkTick: this._tick + TICK_RATE * this.rng.int(10, 40),
+      present: true,
+      stationary: false,
+      agent: newAgent(homes.length ? this.rng.pick(homes).id : null, null, null, this.rng.int(0, 99)),
+      indoors: null,
+      transient: true,
+      memory: [],
+    };
+    this.npcs.push(npc);
+    if (fleeing) startFlee(npc, this.player.x, this.player.y, this.npcContext());
+    return npc;
+  }
+
+  /** NPCs react to the player according to what they remember (AI.md §2.2–2.4). */
+  private reactToPlayer(ctx: NpcContext): void {
+    if (this._tick % 20 !== 0 || this.player.vehicleId) return;
+    const p = this.player;
+    for (const npc of this.npcs) {
+      if (!npc.present || npc.indoors || !npc.agent || npc.memory.length === 0) continue;
+      if (npc.mode !== 'idle' && npc.mode !== 'walking') continue;
+      const d = Math.hypot(npc.x - p.x, npc.y - p.y);
+      if (d > 5 || this._tick < npc.nextBarkTick || !lineOfSight(this.layout.map, npc.x, npc.y, p.x, p.y)) continue;
+      const rel = relationship(npc.memory);
+      const temperament = this.archetype(npc.archetypeId).temperament;
+      if (rel.fear > 0.45 && temperament === 'timid') {
+        ctx.events.push({ type: 'bark', actorId: npc.id, text: this.rng.pick(['Stay away from me!', 'Not you again!', "Please, I don't want trouble."]), emote: 'alarm' });
+        startFlee(npc, p.x, p.y, ctx);
+      } else if (rel.affection < -0.35) {
+        ctx.events.push({ type: 'bark', actorId: npc.id, text: this.rng.pick(['You again?', 'Keep walking.', "I've heard about you."]), emote: 'anger' });
+      } else if (rel.affection > 0.3 || rel.respect > 0.35) {
+        ctx.events.push({ type: 'bark', actorId: npc.id, text: this.rng.pick([`Hey, ${p.name}!`, `Evening, ${p.name}.`, 'Good to see you.']), emote: 'chatter' });
+      } else continue;
+      npc.nextBarkTick = this._tick + TICK_RATE * this.rng.int(20, 40);
+    }
+  }
+
+  /** Everyone within sight who could see (x, y) remembers it. */
+  private witnessMemory(x: number, y: number, kind: MemoryKind, salience: number, radius: number, exclude?: string): void {
+    for (const npc of this.npcs) {
+      if (!npc.present || npc.indoors || npc.id === exclude) continue;
+      if (Math.hypot(npc.x - x, npc.y - y) > radius) continue;
+      if (!lineOfSight(this.layout.map, npc.x, npc.y, x, y)) continue;
+      remember(npc.memory, { kind, salience, important: false, secondhand: false, at: this.now });
+    }
   }
 
   private archetype(id: string): NpcArchetype {
@@ -741,7 +954,7 @@ export class Simulation implements MissionHost {
   }
 
   private npcContext(): NpcContext {
-    return {
+    const ctx: NpcContext = {
       layout: this.layout,
       rng: this.rng,
       events: this.events,
@@ -750,7 +963,13 @@ export class Simulation implements MissionHost {
       player: this.player,
       archetype: (id) => this.archetype(id),
       pathBudget: { remaining: PATH_BUDGET_PER_TICK },
+      dt: DT,
+      now: this.now,
+      minuteDelta: DT * GAME_MINUTES_PER_SECOND,
+      hooks: undefined as unknown as RoutineHooks,
     };
+    ctx.hooks = this.routineHooks(() => ctx);
+    return ctx;
   }
 
   private spawnCtx() {
@@ -795,7 +1014,7 @@ export class Simulation implements MissionHost {
     const p = this.player;
     const obstacles: { x: number; y: number }[] = [];
     if (!p.vehicleId) obstacles.push(p);
-    for (const n of this.npcs) if (n.present) obstacles.push(n);
+    for (const n of this.npcs) if (n.present && !n.indoors) obstacles.push(n);
     for (const w of this.wildlings) obstacles.push(w);
     return {
       layout: this.layout,
@@ -973,9 +1192,10 @@ export class Simulation implements MissionHost {
       for (const c of bodyCircles(v)) {
         if (!p.vehicleId) pushOut(p, c, PLAYER_HALF_EXTENT, this.layout);
         for (const npc of this.npcs) {
-          if (!npc.present) continue;
+          if (!npc.present || npc.indoors) continue;
           if (pushOut(npc, c, NPC_HALF_EXTENT, this.layout) && speed > 1.5 && v.driver === 'player' && this._tick >= npc.shoveCooldownUntilTick) {
             onShoved(npc, this.npcs, ctx);
+            remember(npc.memory, { kind: 'hit-by-car', salience: 1, important: false, secondhand: false, at: this.now });
             this.reportCrime('hit-pedestrian', npc.x, npc.y, 2);
             const faction = ARCHETYPE_FACTION[npc.archetypeId];
             if (faction) this.changeReputation(faction, -6);
@@ -991,6 +1211,7 @@ export class Simulation implements MissionHost {
   /** Record a crime. Witnesses and the wanted level are handled by the law system. */
   reportCrime(kind: import('./core/events').CrimeKind, x: number, y: number, severity: number): void {
     const witnessed = onCrime(this.law, this.lawContext(), kind, x, y, severity);
+    if (severity >= 1) this.witnessMemory(x, y, 'witnessed-crime', Math.min(1, 0.3 + severity * 0.15), 9);
     if (witnessed && severity >= 1) this.changeReputation('wardens', -Math.round(severity * 2));
   }
 
@@ -1003,6 +1224,7 @@ export class Simulation implements MissionHost {
     if (after !== before) {
       this.events.push({ type: 'clock.hour', hour: after });
       factionHour(this.territory, this.layout, this.progression.reputation, this.events);
+      for (const npc of this.npcs) decayMemories(npc.memory);
       recoverDemand(this.market);
       this._progressVersion++;
     }
@@ -1058,6 +1280,9 @@ export class Simulation implements MissionHost {
     this._progressVersion++;
     this.emit({ type: 'notice', text: `Sold ${displayName(w)} for ${price}\u20b5. The Saints won't like this.` });
     this.changeReputation('saints', -4);
+    for (const n of this.npcs) {
+      if (n.archetypeId === 'gutter-saint') remember(n.memory, { kind: 'sold-wildling', salience: 0.5, important: false, secondhand: true, at: this.now });
+    }
   }
 
   private updatePlayer(input: PlayerInput): void {
@@ -1089,7 +1314,7 @@ export class Simulation implements MissionHost {
     const p = this.player;
     const minDist = PLAYER_HALF_EXTENT + NPC_HALF_EXTENT;
     for (const npc of this.npcs) {
-      if (!npc.present) continue;
+      if (!npc.present || npc.indoors) continue;
       let dx = npc.x - p.x;
       let dy = npc.y - p.y;
       let dist = Math.hypot(dx, dy);
@@ -1131,7 +1356,7 @@ export class Simulation implements MissionHost {
     let best: Focus | null = null;
     let bestScore = Infinity;
     for (const npc of this.npcs) {
-      if (!npc.present || npc.mode === 'fleeing') continue;
+      if (!npc.present || npc.indoors || npc.mode === 'fleeing') continue;
       const dx = npc.x - p.x;
       const dy = npc.y - p.y;
       const d = Math.hypot(dx, dy);
@@ -1242,7 +1467,18 @@ export class Simulation implements MissionHost {
 
   private pickConversation(npc: NpcState, archetype: NpcArchetype): Conversation {
     const d = archetype.dialogue;
-    if (this._tick < npc.grudgeUntilTick && d.grudge.length > 0) return this.rng.pick(d.grudge);
+    const rel = relationship(npc.memory);
+    const top = strongest(npc.memory);
+    remember(npc.memory, { kind: 'chatted', salience: 0.3, important: false, secondhand: false, at: this.now });
+    if ((this._tick < npc.grudgeUntilTick || rel.affection < -0.3) && d.grudge.length > 0) {
+      if (top?.secondhand && this.rng.chance(0.6)) return [`People say ${RUMOUR_TEXT[top.kind]}, {player}.`, ...this.rng.pick(d.grudge)];
+      return this.rng.pick(d.grudge);
+    }
+    if (top?.secondhand && top.salience > 0.25 && this.rng.chance(0.5)) {
+      const good = top.kind === 'helped' || top.kind === 'saw-battle-win';
+      return [good ? `Word on the street is ${RUMOUR_TEXT[top.kind]}. Respect, {player}.` : `I heard ${RUMOUR_TEXT[top.kind]}. That true, {player}?`];
+    }
+    if (top?.kind === 'helped' && !top.secondhand) return [`{player}! I still owe you for that. Anything you need, you ask.`];
     const faction = ARCHETYPE_FACTION[archetype.id];
     if (faction && archetype.factionDialogue) {
       const tier = repTier(this.progression.reputation[faction] ?? 0);
@@ -1260,6 +1496,7 @@ export class Simulation implements MissionHost {
     const candidates = this.npcs.filter(
       (n) =>
         n.present &&
+        !n.indoors &&
         (n.mode === 'idle' || n.mode === 'walking') &&
         this._tick >= n.nextBarkTick &&
         Math.hypot(n.x - p.x, n.y - p.y) < 6,

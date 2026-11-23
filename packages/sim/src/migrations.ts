@@ -43,6 +43,12 @@ const STEPS: Record<number, (s: AnySnapshot) => AnySnapshot> = {
       progression: { ...progression, reputation: newProgression().reputation },
     };
   },
+  // v5 → v6: routines, memory, indoor state, crowd pedestrians. Agents are re-created on load.
+  5: (s) => ({
+    ...s,
+    version: 6,
+    npcs: (s.npcs as Record<string, unknown>[]).map((n) => ({ ...n, agent: null, indoors: null, transient: false, memory: [] })),
+  }),
 };
 
 export function migrateSnapshot(raw: unknown): SimSnapshot {

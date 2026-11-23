@@ -240,6 +240,18 @@ export const SLUMS_ARCHETYPES: NpcArchetype[] = [
 
 SLUMS_ARCHETYPES.push(
   {
+    id: 'citizen',
+    role: 'passer-by',
+    temperament: 'timid',
+    walkSpeed: 2.3,
+    dialogue: {
+      greeting: [['Evening.'], ["Can't stop, sorry — late."], ['Mind the puddles.'], ["Don't look at me, I didn't see anything."]],
+      night: [['Should be home by now...'], ['Streetlights are humming again.']],
+      grudge: [['Just leave me alone.']],
+    },
+    barks: { ambient: ['...', 'Ugh, rain.', 'Taxi!'], night: ['So late.'], shoved: ['Hey!', 'Ow!'], alarmed: ['What was that?!', 'Run!'] },
+  },
+  {
     id: 'rival-trainer',
     role: 'pit fighter',
     temperament: 'tough',

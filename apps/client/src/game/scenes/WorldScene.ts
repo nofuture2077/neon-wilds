@@ -11,6 +11,7 @@ import {
   getSpecies,
   mapView,
   progressView,
+  relationship,
   shopView,
   vehicleClass,
   type PlayerInput,
@@ -124,6 +125,7 @@ export class WorldScene extends Phaser.Scene {
       }),
     );
     if (import.meta.env.DEV) {
+      this.input.keyboard?.on('keydown-F3', () => this.toggleDebug());
       // Debug handle for the browser console and end-to-end smoke tests. Not present in production builds.
       (window as unknown as { __NEON_WILDS__?: unknown }).__NEON_WILDS__ = { sim: this.sim, scene: this };
     }
@@ -212,12 +214,24 @@ export class WorldScene extends Phaser.Scene {
       if (Math.abs(cam.zoom - this.baseZoom) > 0.01) cam.setZoom(Phaser.Math.Linear(cam.zoom, this.baseZoom, 0.08));
       else cam.setZoom(this.baseZoom);
     }
+    const seen = new Set<string>();
     for (const npc of this.sim.npcs) {
-      const view = this.npcViews.get(npc.id);
-      if (!view) continue;
-      view.setVisible(npc.present);
-      if (npc.present) view.sync(npc, alpha, deltaSeconds);
+      seen.add(npc.id);
+      let view = this.npcViews.get(npc.id);
+      if (!view) {
+        view = new ActorView(this, this.characterTexture(npc.appearance));
+        this.npcViews.set(npc.id, view);
+      }
+      const visible = npc.present && !npc.indoors;
+      view.setVisible(visible);
+      if (visible) view.sync(npc, alpha, deltaSeconds);
     }
+    for (const [id, view] of this.npcViews) {
+      if (seen.has(id)) continue;
+      view.destroy();
+      this.npcViews.delete(id);
+    }
+    if (this.debugText) this.renderDebug();
     this.wildlingViews.sync(this.sim.wildlings, alpha, deltaSeconds, this.time.now);
 
     this.lighting.update(darkness, this.time.now);
@@ -344,6 +358,51 @@ export class WorldScene extends Phaser.Scene {
       default:
         break;
     }
+  }
+
+  // --- AI debug overlay (dev builds, F3) -------------------------------------
+  private debugText: Phaser.GameObjects.Text[] | null = null;
+
+  private toggleDebug(): void {
+    if (this.debugText) {
+      for (const t of this.debugText) t.destroy();
+      this.debugText = null;
+      return;
+    }
+    this.debugText = [];
+  }
+
+  private renderDebug(): void {
+    const pool = this.debugText!;
+    const near = this.sim.npcs
+      .filter((n) => n.present && !n.indoors && Math.hypot(n.x - this.sim.player.x, n.y - this.sim.player.y) < 12)
+      .slice(0, 16);
+    while (pool.length < near.length) {
+      pool.push(
+        this.add
+          .text(0, 0, '', { fontFamily: 'VT323, monospace', fontSize: '7px', color: '#9effc8', backgroundColor: '#000a', resolution: this.cameras.main.zoom * 2 })
+          .setDepth(Depth.barks + 1)
+          .setOrigin(0.5, 0),
+      );
+    }
+    pool.forEach((t, i) => {
+      const npc = near[i];
+      if (!npc) {
+        t.setVisible(false);
+        return;
+      }
+      const view = this.npcViews.get(npc.id);
+      const a = npc.agent;
+      const rel = relationship(npc.memory);
+      const lines = [
+        `${npc.name} [${npc.mode}${a?.activity ? ':' + a.activity : ''}]`,
+        a ? a.scores.map(([k, v]) => `${k} ${v}`).join(' | ') : '(scripted)',
+        a ? `hun ${a.needs.hunger.toFixed(2)} fat ${a.needs.fatigue.toFixed(2)} soc ${a.needs.social.toFixed(2)}` : '',
+        `trust ${rel.trust.toFixed(2)} fear ${rel.fear.toFixed(2)} aff ${rel.affection.toFixed(2)} · ${npc.memory.length} mem`,
+      ].filter(Boolean);
+      t.setText(lines.join('\n')).setVisible(true);
+      if (view) t.setPosition(view.sprite.x, view.sprite.y + 8);
+    });
   }
 
   private syncOfficers(alpha: number, deltaSeconds: number): void {

@@ -1,4 +1,6 @@
 import type { Appearance } from './content/types';
+import type { AgentState } from './ai/routine';
+import type { MemoryRecord } from './ai/memory';
 import type { BattleAction, BattleState } from './battle/types';
 import type { TilePos } from './core/vec';
 import type { Effect } from './missions/types';
@@ -53,6 +55,14 @@ export interface NpcState extends ActorState {
   /** Mission NPCs exist in the list but stay hidden and inert until spawned. */
   present: boolean;
   stationary: boolean;
+  /** Daily-routine brain; null for stationary/scripted NPCs. */
+  agent: AgentState | null;
+  /** Building id while inside (hidden, not simulated spatially). */
+  indoors: string | null;
+  /** Background pedestrians that come and go (not persisted beyond their lifetime). */
+  transient: boolean;
+  /** What this NPC remembers about the player. */
+  memory: MemoryRecord[];
 }
 
 export interface PlayerInput {
@@ -83,7 +93,7 @@ export type Focus =
   | { kind: 'npc'; id: string; label: string }
   | { kind: 'building'; id: string; label: string };
 
-export const SNAPSHOT_VERSION = 5;
+export const SNAPSHOT_VERSION = 6;
 
 /** Everything needed to resume a simulation. The district layout is regenerated from seed + districtId. */
 export interface SimSnapshot {

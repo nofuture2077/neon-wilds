@@ -65,10 +65,11 @@ describe('Simulation', () => {
 
   it('moves NPCs on their own without player input', () => {
     const sim = newSim();
-    const start = sim.npcs.map((n) => ({ x: n.x, y: n.y }));
+    const named = sim.npcs.filter((n) => n.present && !n.transient);
+    const start = new Map(named.map((n) => [n.id, { x: n.x, y: n.y }]));
     run(sim, TICK_RATE * 20, () => NO_INPUT);
-    const moved = sim.npcs.filter((n, i) => Math.hypot(n.x - start[i]!.x, n.y - start[i]!.y) > 2);
-    expect(moved.length).toBeGreaterThan(sim.npcs.length / 2);
+    const moved = named.filter((n) => Math.hypot(n.x - start.get(n.id)!.x, n.y - start.get(n.id)!.y) > 2);
+    expect(moved.length).toBeGreaterThan(named.length / 2);
   });
 
   it('advances the clock and emits hour events', () => {
@@ -110,7 +111,7 @@ describe('Simulation', () => {
       sim.step(NO_INPUT);
       expect(sim.drainEvents()).toContainEqual({ type: 'dialogue.closed', npcId: npc.id });
       expect(sim.player.conversationWith).toBeNull();
-      expect(npc.mode).toBe('idle');
+      expect(['idle', 'walking']).toContain(npc.mode); // back to its routine
     });
 
     it('substitutes the player name into dialogue', () => {

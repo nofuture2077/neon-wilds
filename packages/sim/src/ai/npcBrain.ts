@@ -15,6 +15,8 @@ import { moveAndCollide } from '../physics/collision';
 import type { DistrictLayout } from '../world/district';
 import type { Pathfinder } from '../world/pathfinding';
 import type { NpcState, PlayerState } from '../state';
+import { lineOfSight, remember } from './memory';
+import { type RoutineHooks, tickRoutine } from './routine';
 
 /** Everything an NPC may read or affect. Brains never touch the Simulation object directly. */
 export interface NpcContext {
@@ -27,6 +29,13 @@ export interface NpcContext {
   archetype(id: string): NpcArchetype;
   /** Remaining A* searches this tick. */
   pathBudget: { remaining: number };
+  /** Seconds simulated by this update (DT, or a multiple of it for far-away NPCs). */
+  dt: number;
+  /** Absolute in-game minute (day * 1440 + minutes). */
+  now: number;
+  /** In-game minutes covered by this update. */
+  minuteDelta: number;
+  hooks: RoutineHooks;
 }
 
 export function updateNpc(npc: NpcState, ctx: NpcContext): void {
@@ -34,6 +43,10 @@ export function updateNpc(npc: NpcState, ctx: NpcContext): void {
   npc.prevY = npc.y;
   npc.speed = 0;
   if (!npc.present) return;
+  if (npc.indoors) {
+    tickRoutine(npc, ctx);
+    return;
+  }
 
   switch (npc.mode) {
     case 'stationary':
@@ -48,21 +61,41 @@ export function updateNpc(npc: NpcState, ctx: NpcContext): void {
       return;
     case 'confronting':
       faceToward(npc, ctx.player.x, ctx.player.y);
-      npc.timer -= DT;
+      npc.timer -= ctx.dt;
       if (npc.timer <= 0) setIdle(npc, 0.5);
       return;
     case 'idle':
-      npc.timer -= DT;
+      if (npc.agent) {
+        tickRoutine(npc, ctx);
+        return;
+      }
+      npc.timer -= ctx.dt;
       if (npc.timer <= 0 && ctx.pathBudget.remaining > 0) {
         ctx.pathBudget.remaining--;
         if (!startWander(npc, ctx)) setIdle(npc, 1 + ctx.rng.next());
       }
       return;
     case 'walking':
+      followPath(npc, npc.walkSpeed, ctx);
+      if (npc.agent) tickRoutine(npc, ctx);
+      return;
     case 'fleeing':
-      followPath(npc, npc.mode === 'fleeing' ? NPC_RUN_SPEED : npc.walkSpeed, ctx);
+      followPath(npc, NPC_RUN_SPEED, ctx);
       return;
   }
+}
+
+/** Start walking to a tile (uses this tick's path budget). */
+export function walkTo(npc: NpcState, tx: number, ty: number, ctx: NpcContext): boolean | 'busy' {
+  if (ctx.pathBudget.remaining <= 0) return 'busy';
+  ctx.pathBudget.remaining--;
+  const path = ctx.pathfinder.find({ tx: Math.floor(npc.x), ty: Math.floor(npc.y) }, { tx, ty }, { maxExpanded: 3000 });
+  if (!path) return false;
+  npc.mode = 'walking';
+  npc.path = path;
+  npc.pathIndex = 0;
+  npc.stuckTime = 0;
+  return true;
 }
 
 function setIdle(npc: NpcState, seconds: number): void {
@@ -149,14 +182,14 @@ function followPath(npc: NpcState, speed: number, ctx: NpcContext): void {
     npc.pathIndex++;
     return;
   }
-  const step = Math.min(speed * DT, dist);
+  const step = Math.min(speed * ctx.dt, dist);
   const res = moveAndCollide(ctx.layout.map, npc.x, npc.y, NPC_HALF_EXTENT, (dx / dist) * step, (dy / dist) * step);
   const moved = Math.hypot(res.x - npc.x, res.y - npc.y);
   npc.x = res.x;
   npc.y = res.y;
-  npc.speed = moved / DT;
-  npc.heading = turnToward(npc.heading, Math.atan2(dy, dx), TURN_RATE * DT);
-  npc.stuckTime = moved < step * 0.3 ? npc.stuckTime + DT : 0;
+  npc.speed = moved / ctx.dt;
+  npc.heading = turnToward(npc.heading, Math.atan2(dy, dx), TURN_RATE * ctx.dt);
+  npc.stuckTime = moved < step * 0.3 ? npc.stuckTime + ctx.dt : 0;
   if (npc.stuckTime > 1) setIdle(npc, 0.5 + ctx.rng.next());
 }
 
@@ -175,6 +208,7 @@ export function onShoved(victim: NpcState, others: readonly NpcState[], ctx: Npc
   victim.shoveCooldownUntilTick = ctx.tick + TICK_RATE * 1.5;
   victim.grudgeUntilTick = ctx.tick + GRUDGE_TICKS;
   ctx.events.push({ type: 'npc.shoved', npcId: victim.id, byPlayer: true });
+  remember(victim.memory, { kind: 'shoved', salience: 0.8, important: false, secondhand: false, at: ctx.now });
 
   switch (archetype.temperament) {
     case 'timid':
@@ -194,8 +228,10 @@ export function onShoved(victim: NpcState, others: readonly NpcState[], ctx: Npc
 
   let barks = 0;
   for (const other of others) {
-    if (other === victim || !other.present || other.mode === 'talking' || other.mode === 'fleeing') continue;
+    if (other === victim || !other.present || other.indoors || other.mode === 'talking' || other.mode === 'fleeing') continue;
     if (Math.hypot(other.x - victim.x, other.y - victim.y) > ALARM_RADIUS) continue;
+    if (!lineOfSight(ctx.layout.map, other.x, other.y, victim.x, victim.y)) continue;
+    remember(other.memory, { kind: 'witnessed-assault', salience: 0.5, important: false, secondhand: false, at: ctx.now });
     const a = ctx.archetype(other.archetypeId);
     const speak = barks < 2 && ctx.rng.chance(0.6);
     if (a.temperament === 'timid' && !other.stationary && ctx.rng.chance(0.8)) {
