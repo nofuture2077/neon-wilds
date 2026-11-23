@@ -7,6 +7,7 @@ import { moveAndCollide } from '../physics/collision';
 import type { ActorState } from '../state';
 import type { DistrictLayout } from './district';
 import type { Pathfinder } from './pathfinding';
+import { regionOf } from './regions';
 import { Tile, type TileKind } from './tiles';
 
 export const WILDLING_HALF_EXTENT = 0.25;
@@ -58,6 +59,8 @@ const HABITAT_TILES: Record<HabitatTile, TileKind[]> = {
   road: [Tile.Road, Tile.RoadLineH, Tile.RoadLineV],
 };
 
+const ALL_HABITAT_TILES: TileKind[] = [Tile.Sidewalk, Tile.Alley, Tile.Grass, Tile.Plaza, Tile.Road];
+
 export function timeOfDay(minutes: number): TimeOfDay {
   const h = minutes / 60;
   if (h >= 6 && h < 17) return 'day';
@@ -76,9 +79,14 @@ export function manageSpawns(list: WildlingEntity[], ctx: WildlingContext): void
   const wild = list.filter((w) => !w.questTag).length;
   if (wild >= TARGET_POPULATION) return;
 
+  // Pick a spot out of view first, then a species that lives there (district, ground, time of day).
+  const tile = findSpawnTile(ctx, ALL_HABITAT_TILES, SPAWN_MIN_DIST, SPAWN_MAX_DIST);
+  if (!tile) return;
+  const region = regionOf(ctx.layout, tile.tx, tile.ty).id;
+  const ground = ctx.layout.map.get(tile.tx, tile.ty);
   const options = Object.values(SPECIES).flatMap((s) =>
     s.habitats
-      .filter((h) => h.district === ctx.layout.id && h.time.includes(ctx.timeOfDay))
+      .filter((h) => h.district === region && h.time.includes(ctx.timeOfDay) && h.tiles.some((t) => HABITAT_TILES[t].includes(ground)))
       .map((h) => {
         const wet = ctx.weather === 'rain' || ctx.weather === 'storm';
         const boost = (wet && s.types.includes('tide') ? 3 : 1) * (ctx.blackout && s.types.includes('spark') ? 3 : 1);
@@ -89,9 +97,6 @@ export function manageSpawns(list: WildlingEntity[], ctx: WildlingContext): void
   const total = options.reduce((a, o) => a + o.weight, 0);
   let r = ctx.rng.next() * total;
   const pick = options.find((o) => (r -= o.weight) <= 0) ?? options[options.length - 1]!;
-  const kinds = pick.habitat.tiles.flatMap((t) => HABITAT_TILES[t]);
-  const tile = findSpawnTile(ctx, kinds, SPAWN_MIN_DIST, SPAWN_MAX_DIST);
-  if (!tile) return;
   const level = ctx.rng.int(pick.habitat.levels[0], pick.habitat.levels[1]);
   const leader = spawnWildling(list, ctx, pick.species.id, level, tile, null);
   for (let i = 1; i < pick.species.flock; i++) {

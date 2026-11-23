@@ -20,19 +20,24 @@ export interface MarketState {
 }
 
 
+/** The block at (x, y), or the nearest one within a few tiles (from a sidewalk or road). */
 export function blockOf(layout: DistrictLayout, x: number, y: number): CityBlock | null {
-  let best: CityBlock | null = null;
-  let bestD = 4;
-  for (const b of layout.blocks) {
-    const dx = Math.max(b.x - x, 0, x - (b.x + b.w));
-    const dy = Math.max(b.y - y, 0, y - (b.y + b.h));
-    const d = Math.hypot(dx, dy);
-    if (d < bestD) {
-      bestD = d;
-      best = b;
+  const { width, height } = layout.map;
+  const tx = Math.floor(x);
+  const ty = Math.floor(y);
+  for (let r = 0; r <= 4; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const nx = tx + dx;
+        const ny = ty + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        const id = layout.blockMap[ny * width + nx]!;
+        if (id >= 0) return layout.blocks[id] ?? null;
+      }
     }
   }
-  return best;
+  return null;
 }
 
 export function controllerOf(inf: Record<string, number>): string | null {
@@ -43,43 +48,33 @@ export function controllerOf(inf: Record<string, number>): string | null {
   return top[0];
 }
 
+/** Starting influence per block, by district region (WORLD.md §3). */
 export function newTerritory(layout: DistrictLayout): TerritoryState {
-  if (layout.id === 'industrial') {
-    const lab = layout.buildings.find((b) => b.name === 'Halcyon Lab 7');
-    const labBlock = lab ? blockOf(layout, lab.x + lab.w / 2, lab.y + lab.h / 2) : null;
-    const t: TerritoryState = { influence: {}, controllers: {} };
-    for (const b of layout.blocks) {
-      t.influence[b.id] = b.id === labBlock?.id ? { 'iron-chain': 25, halcyon: 80 } : { 'iron-chain': 82, halcyon: 12 };
-      t.controllers[b.id] = controllerOf(t.influence[b.id]!);
-    }
-    return t;
-  }
-  if (layout.id === 'harbor') {
-    // The Compact runs the docks; Halcyon holds a toehold around its shipping office.
-    const office = layout.buildings.find((b) => b.name === 'Halcyon Shipping');
-    const officeBlock = office ? blockOf(layout, office.x + office.w / 2, office.y + office.h / 2) : null;
-    const t: TerritoryState = { influence: {}, controllers: {} };
-    for (const b of layout.blocks) {
-      t.influence[b.id] = b.id === officeBlock?.id ? { compact: 30, halcyon: 70 } : { compact: 85, halcyon: 10 };
-      t.controllers[b.id] = controllerOf(t.influence[b.id]!);
-    }
-    return t;
-  }
-  if (layout.id === 'downtown') {
-    // Downtown is Halcyon's: their stewardship is near total.
-    const t: TerritoryState = { influence: {}, controllers: {} };
-    for (const b of layout.blocks) {
-      t.influence[b.id] = { saints: 5, halcyon: 92 };
-      t.controllers[b.id] = 'halcyon';
-    }
-    return t;
-  }
-  const kiosk = layout.buildings.find((b) => b.name === 'Halcyon Outreach Kiosk');
-  const kioskBlock = kiosk ? blockOf(layout, kiosk.x + kiosk.w / 2, kiosk.y + kiosk.h / 2) : null;
   const t: TerritoryState = { influence: {}, controllers: {} };
+  const outpost = (name: string) => {
+    const b = layout.buildings.find((x) => x.name === name);
+    return b ? blockOf(layout, b.x + b.w / 2, b.y + b.h / 2)?.id ?? null : null;
+  };
+  const kiosk = outpost('Halcyon Outreach Kiosk');
+  const shipping = outpost('Halcyon Shipping');
+  const lab = outpost('Halcyon Lab 7');
   for (const b of layout.blocks) {
-    t.influence[b.id] = b.id === kioskBlock?.id ? { saints: 30, halcyon: 65 } : { saints: 70, halcyon: 10 };
-    t.controllers[b.id] = controllerOf(t.influence[b.id]!);
+    let inf: Record<string, number>;
+    switch (b.region) {
+      case 'downtown':
+        inf = { saints: 5, halcyon: 92 };
+        break;
+      case 'harbor':
+        inf = b.id === shipping ? { compact: 30, halcyon: 70 } : { compact: 85, halcyon: 10 };
+        break;
+      case 'industrial':
+        inf = b.id === lab ? { 'iron-chain': 25, halcyon: 80 } : { 'iron-chain': 82, halcyon: 12 };
+        break;
+      default:
+        inf = b.id === kiosk ? { saints: 30, halcyon: 65 } : { saints: 70, halcyon: 10 };
+    }
+    t.influence[b.id] = inf;
+    t.controllers[b.id] = controllerOf(inf);
   }
   return t;
 }

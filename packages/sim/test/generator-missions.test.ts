@@ -102,6 +102,13 @@ describe('procedural missions', () => {
 
     // Talk to the giver → mission starts.
     const giver = sim.npcs.find((n) => n.id === def!.giver)!;
+    // Stand somewhere open, away from doors, so the giver is the only thing to talk to.
+    const open = sim.layout.pedestrianSpawns.find(
+      (t) => sim.layout.map.isPedestrianWalkable(t.tx, t.ty + 1) && sim.layout.buildings.every((b) => Math.hypot(b.entrance.tx - t.tx, b.entrance.ty - t.ty) > 4),
+    )!;
+    sim.player.x = sim.player.prevX = open.tx + 0.5;
+    sim.player.y = sim.player.prevY = open.ty + 0.5;
+    for (const n of sim.npcs) if (n !== giver && Math.hypot(n.x - sim.player.x, n.y - sim.player.y) < 3) n.x += 9;
     giver.x = sim.player.x;
     giver.y = sim.player.y + 0.9;
     giver.mode = 'idle';

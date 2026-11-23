@@ -62,6 +62,23 @@ const STEPS: Record<number, (s: AnySnapshot) => AnySnapshot> = {
   8: (s) => ({ ...s, version: 9, away: {} }),
   // v9 → v10: story choices.
   9: (s) => ({ ...s, version: 10, pendingChoice: null }),
+  // v10 → v11: one seamless organic city replaces the district grids. Progression, story,
+  // reputation and the clock carry over; the world (positions, NPCs, cars, territory) is rebuilt.
+  10: (s) => ({
+    ...s,
+    version: 11,
+    districtId: 'vesper',
+    player: { ...(s.player as Record<string, unknown>), x: -1, y: -1, prevX: -1, prevY: -1, vehicleId: null, conversationWith: null },
+    npcs: [],
+    wildlings: [],
+    vehicles: null,
+    territory: null,
+    factions: null,
+    battle: null,
+    pendingChoice: null,
+    away: {},
+    law: newLawState(),
+  }),
 };
 
 export function migrateSnapshot(raw: unknown): SimSnapshot {

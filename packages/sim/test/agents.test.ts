@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   NO_INPUT,
-  SLUMS,
   Simulation,
   TICK_RATE,
   act,
   decayMemories,
-  generateDistrict,
+  generateCity,
+  VESPER,
   gossip,
   lineOfSight,
   relationship,
@@ -79,8 +79,8 @@ describe('memory and relationships', () => {
   });
 
   it('walls block line of sight', () => {
-    const layout = generateDistrict(SLUMS, 5);
-    const b = layout.buildings[0]!;
+    const layout = generateCity(VESPER, 5);
+    const b = layout.buildings.find((x) => x.w >= 4 && x.h >= 4)!;
     const above = { x: b.x + b.w / 2, y: b.y - 1.5 };
     const below = { x: b.x + b.w / 2, y: b.y + b.h + 1.5 };
     expect(lineOfSight(layout.map, above.x, above.y, below.x, below.y)).toBe(false);

@@ -1,29 +1,31 @@
 import type { DistrictLayout } from './district';
 
-/** Human-readable location for the HUD, e.g. "Rook Avenue" or "Cinder Row & Rook Avenue". */
+/**
+ * Human-readable location for the HUD: the building you're at, the street
+ * you're on, or "A & B" at a junction. Streets are named road-graph edges.
+ */
 export function describeLocation(layout: DistrictLayout, x: number, y: number): string {
   const tx = Math.floor(x);
   const ty = Math.floor(y);
-  const vertical = layout.streets.filter((s) => s.axis === 'vertical');
-  const horizontal = layout.streets.filter((s) => s.axis === 'horizontal');
-  const onV = vertical.find((s) => tx >= s.from && tx <= s.to);
-  const onH = horizontal.find((s) => ty >= s.from && ty <= s.to);
-  if (onV && onH) return `${onH.name} & ${onV.name}`;
-  if (onV) return onV.name;
-  if (onH) return onH.name;
-
   const building = layout.buildings.find((b) => tx >= b.x && tx < b.x + b.w && ty >= b.y && ty < b.y + b.h);
   if (building) return building.name;
-
-  let nearest = '';
-  let best = Infinity;
-  for (const s of layout.streets) {
-    const c = (s.from + s.to + 1) / 2;
-    const d = Math.abs((s.axis === 'vertical' ? x : y) - c);
-    if (d < best) {
-      best = d;
-      nearest = s.name;
+  const { nodes, edges } = layout.graph;
+  for (const n of nodes) {
+    if (Math.hypot(n.x - x, n.y - y) > 5.5) continue;
+    const names = [...new Set(n.edges.map((e) => edges[e]!.name).filter(Boolean))];
+    if (names.length >= 2) return `${names[0]} & ${names[1]}`;
+  }
+  let best = '';
+  let bestD = Infinity;
+  for (const e of edges) {
+    for (let k = 0; k < e.points.length; k += 2) {
+      const p = e.points[k]!;
+      const d = (p.x - x) ** 2 + (p.y - y) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        best = e.name;
+      }
     }
   }
-  return nearest;
+  return best || layout.name;
 }

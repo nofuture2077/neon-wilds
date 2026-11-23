@@ -1,3 +1,4 @@
+import { regionOf } from '../world/regions';
 import { relationship } from '../ai/memory';
 import { ARCHETYPE_FACTION } from '../content/factions';
 import { SPECIES, getSpecies } from '../content/wildlings';
@@ -42,10 +43,11 @@ const timesFor = (hour: number): Array<'day' | 'dusk' | 'night'> => {
 };
 
 /** Species that can actually be found in this district within the next few hours. */
-function availableSpecies(ctx: MissionGenContext): string[] {
+function availableSpecies(ctx: MissionGenContext, near: { x: number; y: number }): string[] {
   const times = timesFor(ctx.hour);
+  const district = regionOf(ctx.layout, near.x, near.y).id;
   return Object.values(SPECIES)
-    .filter((s) => s.captureRate > 0 && s.rarity === 'common' && s.habitats.some((h) => h.district === ctx.layout.id && h.time.some((t) => times.includes(t))))
+    .filter((s) => s.captureRate > 0 && s.rarity === 'common' && s.habitats.some((h) => h.district === district && h.time.some((t) => times.includes(t))))
     .map((s) => s.id);
 }
 
@@ -95,7 +97,7 @@ const delivery: Template = (ctx, id) => {
 const wildlingRequest: Template = (ctx, id) => {
   if (!canCatch(ctx.progression)) return null;
   const giver = freeGiver(ctx, () => true);
-  const species = availableSpecies(ctx);
+  const species = giver ? availableSpecies(ctx, giver) : [];
   if (!giver || !species.length) return null;
   const sp = getSpecies(ctx.rng.pick(species));
   const pay = 90 + Math.round((255 - sp.captureRate) * 0.8);
@@ -184,7 +186,7 @@ const disruptHalcyon: Template = (ctx, id) => {
 
 const halcyonContract: Template = (ctx, id) => {
   if (!canCatch(ctx.progression) || (ctx.progression.reputation.halcyon ?? 0) < -25) return null;
-  const species = availableSpecies(ctx);
+  const species = availableSpecies(ctx, ctx.player);
   if (!species.length) return null;
   const sp = getSpecies(ctx.rng.pick(species));
   const pay = 220 + Math.round((255 - sp.captureRate) * 1.2);

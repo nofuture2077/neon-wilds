@@ -5,7 +5,7 @@ import { moveAndCollide } from '../physics/collision';
 import type { NpcState, PlayerState } from '../state';
 import type { Building, DistrictLayout } from '../world/district';
 import type { Pathfinder } from '../world/pathfinding';
-import { DIR_ANGLE, type Dir, type RoadNetwork, laneCoord } from '../world/roads';
+import type { RoadNetwork } from '../world/roads';
 import { type VehicleState, createVehicle } from '../world/vehicles';
 
 /** Heat needed for each wanted star (index = stars). */
@@ -153,7 +153,7 @@ export function clearWanted(law: LawState, ctx: Pick<LawContext, 'events' | 'veh
   law.officers = [];
   law.officersDeployed = [];
   law.boxedTime = 0;
-  for (const v of ctx.vehicles) if (v.driver === 'police') v.ai = v.ai ? { ...v.ai, route: [], nextDir: null } : v.ai;
+  for (const v of ctx.vehicles) if (v.driver === 'police' && v.ai) v.ai.offroad = true; // rejoin traffic
   if (law.stars !== 0) {
     law.stars = 0;
     ctx.events.push({ type: 'wanted.changed', stars: 0 });
@@ -194,7 +194,7 @@ export function updateLaw(law: LawState, ctx: LawContext): void {
 function managePolice(law: LawState, ctx: LawContext): void {
   const p = ctx.player;
   const cruisers = ctx.vehicles.filter((v) => v.driver === 'police' && v.wreckedTick === null);
-  const desired = law.stars === 0 ? (ctx.layout.id === 'downtown' ? 2 : 1) : [0, 2, 3, 5, 6, 7][law.stars]!;
+  const desired = law.stars === 0 ? 3 : [0, 3, 4, 6, 7, 8][law.stars]!; // a bigger, seamless city needs more patrols
   // Stand down distant extra units once the heat is off.
   if (law.stars === 0) {
     for (const v of cruisers.slice(1)) {
@@ -206,18 +206,12 @@ function managePolice(law: LawState, ctx: LawContext): void {
   }
   if (cruisers.length >= desired) return;
   for (let attempt = 0; attempt < 8; attempt++) {
-    const vertical = ctx.rng.chance(0.5);
-    const band = ctx.rng.pick(vertical ? ctx.roads.vbands : ctx.roads.hbands);
-    const dir: Dir = vertical ? (ctx.rng.chance(0.5) ? 'N' : 'S') : ctx.rng.chance(0.5) ? 'E' : 'W';
-    const along = ctx.rng.range(2, (vertical ? ctx.layout.map.height : ctx.layout.map.width) - 2);
-    const x = vertical ? laneCoord(band, dir) : along;
-    const y = vertical ? along : laneCoord(band, dir);
-    const d = Math.hypot(x - p.x, y - p.y);
-    if (d < 16 || d > 34 || ctx.roads.intersectionAt(x, y)) continue;
-    if (ctx.layout.map.isSolid(Math.floor(x), Math.floor(y))) continue;
-    if (ctx.vehicles.some((o) => Math.hypot(o.x - x, o.y - y) < 4)) continue;
-    const v = createVehicle(ctx.nextId(), 'cruiser', 0, x, y, DIR_ANGLE[dir], 'police', ctx.tick);
-    v.ai = { dir, route: [], nextDir: null, blockedTime: 0 };
+    const spot = ctx.roads.laneNear(ctx.rng, p.x, p.y, 17, 33);
+    if (!spot) return;
+    const pose = ctx.roads.lane(spot.edge, spot.s, spot.forward);
+    if (ctx.vehicles.some((o) => Math.hypot(o.x - pose.x, o.y - pose.y) < 4)) continue;
+    const v = createVehicle(ctx.nextId(), 'cruiser', 0, pose.x, pose.y, pose.heading, 'police', ctx.tick);
+    v.ai = { edge: spot.edge, forward: spot.forward, s: spot.s, route: [], next: null, blockedTime: 0 };
     v.speed = 4;
     ctx.vehicles.push(v);
     return;

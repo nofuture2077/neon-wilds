@@ -1,4 +1,4 @@
-import { Tile, type TileKind, type TileMap, TILE_SIZE } from '@neon-wilds/sim';
+import { Tile, type TileMap, TILE_SIZE } from '@neon-wilds/sim';
 import { createCanvas, hashNoise, px, rect, type PixelCanvas } from './canvas';
 import { PALETTE as P } from './palette';
 
@@ -8,18 +8,14 @@ const T = TILE_SIZE;
 export const SIDEWALK_VARIANT_BASE = 16;
 export const TILESET_COLUMNS = 32;
 
-/** Map a ground tile to its tileset index, picking curb variants from neighbours. */
+/**
+ * Map a ground tile to its tileset index. Streets are drawn as smooth vectors on
+ * top (RoadRenderer); underneath, plain paving fills the tile corners.
+ */
 export function visualTileIndex(map: TileMap, x: number, y: number): number {
   const kind = map.get(x, y);
-  if (kind !== Tile.Sidewalk) return kind;
-  const roadish = (k: TileKind) =>
-    k === Tile.Road || k === Tile.RoadLineH || k === Tile.RoadLineV || k === Tile.CrosswalkH || k === Tile.CrosswalkV;
-  let mask = 0;
-  if (roadish(map.get(x, y - 1))) mask |= 1;
-  if (roadish(map.get(x + 1, y))) mask |= 2;
-  if (roadish(map.get(x, y + 1))) mask |= 4;
-  if (roadish(map.get(x - 1, y))) mask |= 8;
-  return SIDEWALK_VARIANT_BASE + mask;
+  if (kind === Tile.Sidewalk || kind === Tile.Road || kind === Tile.RoadLineH || kind === Tile.RoadLineV || kind === Tile.CrosswalkH || kind === Tile.CrosswalkV) return SIDEWALK_VARIANT_BASE;
+  return kind;
 }
 
 function speckle(c: CanvasRenderingContext2D, ox: number, seed: number, base: number, light: number, dark: number, density = 0.12) {
@@ -115,6 +111,15 @@ export function buildTileset(): PixelCanvas {
 
   rect(c, at(Tile.Building), 0, T, T, 0x15151c);
   speckle(c, at(Tile.Tree), 12, P.grass, P.grassLight, P.grassDark, 0.35);
+
+  // Fenced vacant lot: packed dirt behind a chain-link fence.
+  speckle(c, at(Tile.Lot), 13, 0x2a2228, 0x352b30, 0x1e181d, 0.3);
+  for (let i = 0; i < T; i += 4) {
+    for (let k = 0; k < 4; k++) {
+      px(c, at(Tile.Lot) + ((i + k) % T), k + i, 0x5d5870, 0.5);
+      px(c, at(Tile.Lot) + ((i + 3 - k) % T), k + i, 0x5d5870, 0.5);
+    }
+  }
 
   for (let mask = 0; mask < 16; mask++) drawSidewalk(c, at(SIDEWALK_VARIANT_BASE + mask), mask);
   return pc;

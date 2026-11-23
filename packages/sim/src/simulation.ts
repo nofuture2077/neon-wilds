@@ -19,7 +19,7 @@ import {
   TICK_RATE,
   TURN_RATE,
 } from './constants';
-import { allArchetypes, getDistrictContent, type DistrictContent } from './content';
+import { DISTRICTS, allArchetypes } from './content';
 import { ITEMS, SHOPS } from './content/items';
 import { TRAINERS } from './content/trainers';
 import type { Appearance, Conversation, NpcArchetype } from './content/types';
@@ -55,7 +55,9 @@ import {
   type SimSnapshot,
 } from './state';
 import type { Building, DistrictLayout } from './world/district';
-import { generateDistrict } from './world/generator';
+import { generateCity } from './world/cityGen';
+import { VESPER } from './content/city';
+import { regionOf } from './world/regions';
 import { describeLocation } from './world/location';
 import { Pathfinder } from './world/pathfinding';
 import { RoadNetwork } from './world/roads';
@@ -125,7 +127,6 @@ const ENCOUNTER_RADIUS = 0.62;
  */
 export class Simulation implements MissionHost {
   layout!: DistrictLayout;
-  private content!: DistrictContent;
   private readonly archetypes: Map<string, NpcArchetype>;
   private pedPathfinder!: Pathfinder;
   private creaturePathfinder!: Pathfinder;
@@ -152,6 +153,8 @@ export class Simulation implements MissionHost {
   readonly progression: ProgressionState;
   vehicles: VehicleState[];
   roads!: RoadNetwork;
+  /** District the player was last in (derived from position; used to announce border crossings). */
+  private lastRegion: string | null = null;
   readonly law: LawState;
   territory: TerritoryState;
   readonly market: MarketState;
@@ -163,7 +166,8 @@ export class Simulation implements MissionHost {
 
   private constructor(private readonly seed: number, districtId: string, snapshot: SimSnapshot | null, config: NewGameConfig | null) {
     this.archetypes = new Map(allArchetypes().map((a) => [a.id, a]));
-    this.loadDistrict(districtId);
+    void districtId;
+    this.loadCity();
 
     if (snapshot) {
       this.rng = Rng.fromState(snapshot.rngState);
@@ -188,6 +192,12 @@ export class Simulation implements MissionHost {
       this.world = cloneData(snapshot.world);
       this.away = cloneData(snapshot.away ?? {});
       this.pendingChoice = cloneData(snapshot.pendingChoice ?? null);
+      // Saves migrated from the district-grid era: rebuild the world around the player.
+      if (this.player.x < 0) {
+        this.player.x = this.player.prevX = this.layout.playerSpawn.x;
+        this.player.y = this.player.prevY = this.layout.playerSpawn.y;
+      }
+      if (this.npcs.length === 0) this.npcs = this.spawnNpcs();
     } else if (config) {
       this.rng = new Rng(deriveSeed(seed, 'simulation'));
       this._tick = 0;
@@ -277,7 +287,7 @@ export class Simulation implements MissionHost {
   }
 
   get districtName(): string {
-    return this.layout.name;
+    return regionOf(this.layout, this.player.x, this.player.y).name;
   }
 
   locationLabel(): string {
@@ -344,11 +354,23 @@ export class Simulation implements MissionHost {
       this.player.x = driving.x;
       this.player.y = driving.y;
     }
-    this.checkDistrictExit();
     if (!this.player.vehicleId) this.checkEncounters();
     this.updateFocus();
     if (input.interact && !this.player.vehicleId) this.interact();
     this.maybeAmbientBark(ctx);
+    this.checkRegionChange();
+  }
+
+  /** The city is one map: crossing into another district is just announced. */
+  private checkRegionChange(): void {
+    const r = regionOf(this.layout, this.player.x, this.player.y);
+    if (this.lastRegion === null) this.lastRegion = r.id;
+    if (r.id === this.lastRegion) return;
+    // Hysteresis: only once the player is clearly inside the new district (borders are ragged).
+    const { x, y } = this.player;
+    for (const [dx, dy] of [[3, 0], [-3, 0], [0, 3], [0, -3]] as const) if (regionOf(this.layout, x + dx, y + dy).id !== r.id) return;
+    this.lastRegion = r.id;
+    this.emit({ type: 'district.entered', districtId: r.id, name: r.name });
   }
 
   snapshot(): SimSnapshot {
@@ -475,11 +497,12 @@ export class Simulation implements MissionHost {
         break;
       case 'ending': {
         p.flags[`ending-${effect.id}`] = true;
-        const slums = this.layout.id === 'slums' ? this.territory : this.away.slums?.territory;
+        const slumsBlocks = new Set(this.layout.blocks.filter((b) => b.region === 'slums').map((b) => b.id));
+        const slums = { controllers: Object.fromEntries(Object.entries(this.territory.controllers).filter(([id]) => slumsBlocks.has(id))) };
         const epilogue = buildEpilogue(effect.id, {
           progression: p,
           npcs: [...this.npcs, ...Object.values(this.away).flatMap((a) => a.npcs)],
-          slumsControllers: slums?.controllers ?? {},
+          slumsControllers: slums.controllers,
           playerName: this.player.name,
         });
         this.emit({ type: 'game.ending', ending: effect.id, title: epilogue.title, slides: epilogue.slides });
@@ -817,44 +840,63 @@ export class Simulation implements MissionHost {
   // Overworld
 
   private spawnNpcs(): NpcState[] {
-    const spawns = this.layout.pedestrianSpawns.filter(
-      (s) => Math.hypot(s.tx + 0.5 - this.player.x, s.ty + 0.5 - this.player.y) > 4,
-    );
-    return this.content.npcs.map((def) => {
-      const archetype = this.archetype(def.archetype);
-      const postBuilding = def.post ? this.layout.buildings.find((b) => b.name === def.post) : undefined;
-      const tile = postBuilding ? this.freeTileNear(postBuilding.entrance.tx, postBuilding.entrance.ty, postBuilding) : this.rng.pick(spawns);
-      const x = tile.tx + 0.5;
-      const y = tile.ty + 0.5;
-      const stationary = def.stationary ?? false;
-      return {
-        id: def.id,
-        name: def.name,
-        archetypeId: def.archetype,
-        appearance: { ...def.appearance },
-        x,
-        y,
-        prevX: x,
-        prevY: y,
-        heading: this.rng.range(-Math.PI, Math.PI),
-        speed: 0,
-        walkSpeed: archetype.walkSpeed * this.rng.range(0.9, 1.1),
-        mode: stationary ? 'stationary' : 'idle',
-        timer: this.rng.range(0, 2),
-        path: [],
-        pathIndex: 0,
-        stuckTime: 0,
-        grudgeUntilTick: 0,
-        shoveCooldownUntilTick: 0,
-        nextBarkTick: TICK_RATE * this.rng.int(5, 30),
-        present: (def.spawn ?? 'start') === 'start',
-        stationary,
-        agent: null,
-        indoors: null,
-        transient: false,
-        memory: [],
-      } satisfies NpcState;
-    });
+    const out: NpcState[] = [];
+    for (const [districtId, content] of Object.entries(DISTRICTS)) {
+      const spawns = this.layout.pedestrianSpawns.filter(
+        (t) => regionOf(this.layout, t.tx, t.ty).id === districtId && Math.hypot(t.tx + 0.5 - this.player.x, t.ty + 0.5 - this.player.y) > 4,
+      );
+      for (const def of content.npcs) {
+        const archetype = this.archetype(def.archetype);
+        const postBuilding = def.post ? this.layout.buildings.find((b) => b.name === def.post) : undefined;
+        const tile = postBuilding
+          ? this.freeTileNear(postBuilding.entrance.tx, postBuilding.entrance.ty, postBuilding, out)
+          : spawns.length
+            ? this.rng.pick(spawns)
+            : this.rng.pick(this.layout.pedestrianSpawns);
+        const x = tile.tx + 0.5;
+        const y = tile.ty + 0.5;
+        const stationary = def.stationary ?? false;
+        out.push({
+          id: def.id,
+          name: def.name,
+          archetypeId: def.archetype,
+          appearance: { ...def.appearance },
+          x,
+          y,
+          prevX: x,
+          prevY: y,
+          heading: this.rng.range(-Math.PI, Math.PI),
+          speed: 0,
+          walkSpeed: archetype.walkSpeed * this.rng.range(0.9, 1.1),
+          mode: stationary ? 'stationary' : 'idle',
+          timer: this.rng.range(0, 2),
+          path: [],
+          pathIndex: 0,
+          stuckTime: 0,
+          grudgeUntilTick: 0,
+          shoveCooldownUntilTick: 0,
+          nextBarkTick: TICK_RATE * this.rng.int(5, 30),
+          present: (def.spawn ?? 'start') === 'start',
+          stationary,
+          agent: null,
+          indoors: null,
+          transient: false,
+          memory: [],
+        } satisfies NpcState);
+      }
+    }
+    return out;
+  }
+
+  /** One of the few buildings nearest to a point (the city is big; nobody commutes across all of it). */
+  private nearestOf(list: Building[], at: { x: number; y: number }, salt: number): Building | null {
+    if (!list.length) return null;
+    const near = list
+      .map((b) => ({ b, d: Math.hypot(b.entrance.tx - at.x, b.entrance.ty - at.y) }))
+      .filter((e) => e.d < 70)
+      .sort((p, q) => p.d - q.d || p.b.id.localeCompare(q.b.id))
+      .slice(0, 5);
+    return near.length ? near[Math.abs(salt) % near.length]!.b : null;
   }
 
   /** Give every non-scripted NPC a home, a workplace and a daily routine (deterministic per NPC). */
@@ -870,13 +912,13 @@ export class Simulation implements MissionHost {
       const pick = <T,>(list: T[], salt: number): T | null => (list.length ? list[(i * 7 + salt) % list.length]! : null);
       let workId: string | null = null;
       let workSpot: { tx: number; ty: number } | null = null;
-      if (routine.workplace === 'workshop') workId = pick(workshops, 1)?.id ?? null;
-      if (routine.workplace === 'office') workId = pick(offices, 3)?.id ?? null;
+      if (routine.workplace === 'workshop') workId = (this.nearestOf(workshops, npc, i + 1) ?? pick(workshops, 1))?.id ?? null;
+      if (routine.workplace === 'office') workId = (this.nearestOf(offices, npc, i + 3) ?? pick(offices, 3))?.id ?? null;
       if (routine.workplace === 'stall' && square) {
         const tx = square.x + 3 + ((i * 5) % Math.max(1, square.w - 6));
         workSpot = this.layout.map.isPedestrianWalkable(tx, square.y + 2) ? { tx, ty: square.y + 2 } : { tx: square.x + 1, ty: square.y + 1 };
       }
-      npc.agent = newAgent(pick(homes, 0)?.id ?? null, workId, workSpot, i * 31 + 7);
+      npc.agent = newAgent(this.nearestOf(homes, npc, i)?.id ?? null, workId, workSpot, i * 31 + 7);
     });
   }
 
@@ -965,14 +1007,14 @@ export class Simulation implements MissionHost {
     const desired = Math.round(base * (eventActive(this.world, 'night-market') ? 1.8 : 1) * (this.world.weather === 'storm' ? 0.4 : this.world.weather === 'rain' ? 0.7 : 1));
     const count = this.npcs.filter((n) => n.transient && !n.id.startsWith('crew-')).length;
     if (count >= desired) return;
-    const spawns = this.layout.pedestrianSpawns;
-    for (let k = 0; k < 6; k++) {
-      const t = this.rng.pick(spawns);
+    // Just out of view, on a sidewalk.
+    const near = this.layout.pedestrianSpawns.filter((t) => {
       const d = Math.hypot(t.tx - p.x, t.ty - p.y);
-      if (d < 16 || d > 30) continue;
-      this.spawnCitizen(t.tx + 0.5, t.ty + 0.5, false);
-      return;
-    }
+      return d >= 16 && d <= 30;
+    });
+    if (near.length === 0) return;
+    const t = this.rng.pick(near);
+    this.spawnCitizen(t.tx + 0.5, t.ty + 0.5, false);
   }
 
   private spawnCitizen(x: number, y: number, fleeing: boolean): NpcState {
@@ -1002,7 +1044,7 @@ export class Simulation implements MissionHost {
       nextBarkTick: this._tick + TICK_RATE * this.rng.int(10, 40),
       present: true,
       stationary: false,
-      agent: newAgent(homes.length ? this.rng.pick(homes).id : null, null, null, this.rng.int(0, 99)),
+      agent: newAgent(this.nearestOf(homes, { x, y }, this.rng.int(0, 99))?.id ?? null, null, null, this.rng.int(0, 99)),
       indoors: null,
       transient: true,
       memory: [],
@@ -1092,7 +1134,7 @@ export class Simulation implements MissionHost {
     return `w${this.progression.nextUid++}`;
   }
 
-  private freeTileNear(tx: number, ty: number, avoid: Building): { tx: number; ty: number } {
+  private freeTileNear(tx: number, ty: number, avoid: Building, extra: readonly NpcState[] = []): { tx: number; ty: number } {
     const map = this.layout.map;
     for (let r = 1; r < 4; r++) {
       for (let dy = -r; dy <= r; dy++) {
@@ -1100,7 +1142,7 @@ export class Simulation implements MissionHost {
           const x = tx + dx;
           const y = ty + dy;
           const onEntrance = x === avoid.entrance.tx && y === avoid.entrance.ty;
-          const occupied = this.npcs?.some((n) => n.present && n.stationary && Math.floor(n.x) === x && Math.floor(n.y) === y);
+          const occupied = [...(this.npcs ?? []), ...extra].some((n) => n.present && n.stationary && Math.floor(n.x) === x && Math.floor(n.y) === y);
           if (!onEntrance && !occupied && map.isPedestrianWalkable(x, y)) return { tx: x, ty: y };
         }
       }
@@ -1334,14 +1376,13 @@ export class Simulation implements MissionHost {
   }
 
   // ---------------------------------------------------------------------------
-  // City graph: districts and travel
+  // The city: one seamless map made of district regions
 
-  private loadDistrict(id: string): void {
-    this.content = getDistrictContent(id);
-    let layout = this.layoutCache.get(id);
+  private loadCity(): void {
+    let layout = this.layoutCache.get('vesper');
     if (!layout) {
-      layout = generateDistrict(this.content.district, this.seed);
-      this.layoutCache.set(id, layout);
+      layout = generateCity(VESPER, this.seed);
+      this.layoutCache.set('vesper', layout);
     }
     this.layout = layout;
     const map = layout.map;
@@ -1350,119 +1391,66 @@ export class Simulation implements MissionHost {
     this.roads = new RoadNetwork(layout);
   }
 
-  layoutOf(id: string): DistrictLayout {
-    if (id === this.layout.id) return this.layout;
-    let layout = this.layoutCache.get(id);
-    if (!layout) {
-      layout = generateDistrict(getDistrictContent(id).district, this.seed);
-      this.layoutCache.set(id, layout);
-    }
-    return layout;
+  /** Kept for API compatibility: every district is part of the one city layout. */
+  layoutOf(_id: string): DistrictLayout {
+    return this.layout;
   }
 
+  /** District region the player is standing in. */
   get districtId(): string {
-    return this.layout.id;
+    return regionOf(this.layout, this.player.x, this.player.y).id;
   }
 
-  /** Is a district reachable yet? Downtown opens once Last Run is done. */
-  isUnlocked(id: string): boolean {
-    if (id === 'slums') return true;
-    return this.progression.missions.some((m) => m.id === 'last-run' && m.status === 'completed');
+  isUnlocked(_id: string): boolean {
+    return true;
   }
 
-  /** World position of the exit from the current district toward `to`, if any. */
-  exitToward(to: string): { x: number; y: number } | null {
-    const exit = this.layout.exits.find((e) => e.to === to);
-    const band = exit && this.layout.streets.find((st) => st.axis === 'horizontal' && st.name === exit.street);
-    if (!exit || !band) return null;
-    return { x: exit.side === 'east' ? this.layout.map.width - 1.5 : 1.5, y: band.from + 2.5 };
-  }
-
-  /** Which district an NPC currently lives in (active or away). */
+  /** Which district an NPC is currently in. */
   npcDistrict(id: string): string | null {
-    if (this.npcs.some((n) => n.id === id)) return this.layout.id;
-    for (const [d, state] of Object.entries(this.away)) if (state.npcs.some((n) => n.id === id)) return d;
-    return null;
+    const n = this.npcs.find((x) => x.id === id);
+    return n ? regionOf(this.layout, n.x, n.y).id : null;
   }
 
   private findNpcAnywhere(id: string): NpcState | undefined {
-    return this.npcs.find((n) => n.id === id) ?? Object.values(this.away).flatMap((a) => a.npcs).find((n) => n.id === id);
+    return this.npcs.find((n) => n.id === id);
   }
 
-  private checkDistrictExit(): void {
-    const p = this.player;
-    if (this._tick % 5 !== 0 || this._battle || p.conversationWith) return;
-    for (const exit of this.layout.exits) {
-      const band = this.layout.streets.find((st) => st.axis === 'horizontal' && st.name === exit.street);
-      if (!band || p.y < band.from || p.y > band.to + 1) continue;
-      const atEdge = exit.side === 'east' ? p.x > this.layout.map.width - 1.2 : p.x < 1.2;
-      if (!atEdge) continue;
-      if (!this.isUnlocked(exit.to)) {
-        if (this._tick >= this.encounterCooldownUntilTick) {
-          this.emit({ type: 'notice', text: 'A Warden checkpoint blocks the bridge. "Residents only tonight."' });
-          this.encounterCooldownUntilTick = this._tick + TICK_RATE * 3;
-        }
-        const v = this.playerVehicle;
-        const push = exit.side === 'east' ? -1.5 : 1.5;
-        if (v) {
-          v.x += push;
-          v.vx = v.vy = v.speed = 0;
-        }
-        p.x += push;
-        return;
+  /** Fast travel (taxi): put the player, and their car, on a street near a district's heart. */
+  travelTo(to: string, _street?: string): void {
+    const region = VESPER.regions.find((r) => r.id === to);
+    if (!region) return;
+    const ax = region.anchor.x * this.layout.map.width;
+    const ay = region.anchor.y * this.layout.map.height;
+    let best: { tx: number; ty: number } | null = null;
+    let bestD = Infinity;
+    for (const t of this.layout.pedestrianSpawns) {
+      if (regionOf(this.layout, t.tx, t.ty).id !== to) continue;
+      const d = Math.hypot(t.tx - ax, t.ty - ay);
+      if (d < bestD) {
+        bestD = d;
+        best = t;
       }
-      this.travelTo(exit.to, exit.street);
-      return;
     }
-  }
-
-  /** Move the player (and their car) into another district; the old one is parked. */
-  travelTo(to: string, street: string): void {
-    const from = this.layout.id;
-    const car = this.playerVehicle;
-    if (car) this.vehicles.splice(this.vehicles.indexOf(car), 1);
-    this.law.officers = [];
-    this.law.officersDeployed = [];
-    this.away[from] = {
-      npcs: this.npcs.filter((n) => !n.transient),
-      wildlings: this.wildlings.filter((w) => w.questTag),
-      vehicles: this.vehicles.filter((v) => v.driver !== 'ai' && v.driver !== 'police'),
-      territory: this.territory,
-    };
-    this.loadDistrict(to);
-    const saved = this.away[to];
-    delete this.away[to];
-    if (saved) {
-      this.npcs = saved.npcs;
-      this.wildlings = saved.wildlings;
-      this.vehicles = saved.vehicles;
-      this.territory = saved.territory;
-    } else {
-      this.npcs = this.spawnNpcs();
-      this.wildlings = [];
-      this.vehicles = parkedVehiclesFromLayout(this.layout);
-      this.territory = newTerritory(this.layout);
-    }
-    this.assignAgents();
-    // Arrive at the matching exit on the other side.
-    const back = this.layout.exits.find((e) => e.to === from) ?? this.layout.exits[0];
-    const band = back && this.layout.streets.find((st) => st.axis === 'horizontal' && st.name === (back.street ?? street));
-    const east = back?.side === 'east';
-    const x = east ? this.layout.map.width - 3 : 3;
-    const y = band ? band.from + (east ? 1.5 : 3.5) : this.layout.playerSpawn.y;
+    if (!best) return;
     const p = this.player;
-    p.x = p.prevX = x;
-    p.y = p.prevY = y;
-    p.heading = east ? Math.PI : 0;
+    p.x = p.prevX = best.tx + 0.5;
+    p.y = p.prevY = best.ty + 0.5;
+    p.vx = p.vy = 0;
+    const car = this.playerVehicle;
     if (car) {
-      car.x = car.prevX = x;
-      car.y = car.prevY = y;
-      car.heading = p.heading;
-      this.vehicles.push(car);
+      const lane = this.roads.nearest(p.x, p.y);
+      const pose = lane ? this.roads.lane(lane.edge, lane.s, true) : { x: p.x, y: p.y, heading: 0 };
+      car.x = car.prevX = pose.x;
+      car.y = car.prevY = pose.y;
+      car.heading = pose.heading;
+      car.vx = car.vy = car.speed = 0;
+      p.x = pose.x;
+      p.y = pose.y;
     }
     this.encounterCooldownUntilTick = this._tick + TICK_RATE * 3;
     this._progressVersion++;
-    this.emit({ type: 'district.entered', districtId: to, name: this.layout.name });
+    this.lastRegion = to;
+    this.emit({ type: 'district.entered', districtId: to, name: region.name });
   }
 
   get absHour(): number {
@@ -1536,10 +1524,10 @@ export class Simulation implements MissionHost {
       hour: this.hour,
       absHour: this.absHour,
     };
-    const slumsActive = this.layout.id === 'slums';
-    const slumsLayout = this.layoutOf('slums');
-    const slumsTerritory = slumsActive ? this.territory : (this.away.slums?.territory ?? newTerritory(slumsLayout));
-    if (!slumsActive && this.away.slums) this.away.slums.territory = slumsTerritory;
+    // The Saints/Halcyon contest plays out over the Slums region of the city.
+    const slumsActive = true;
+    const slumsLayout = { ...this.layout, blocks: this.layout.blocks.filter((b) => b.region === 'slums' && (b.kind === 'lots' || b.kind === 'park')) };
+    const slumsTerritory = this.territory;
     for (const f of this.factionAgents) {
       factionTick(f, {
         layout: slumsLayout,

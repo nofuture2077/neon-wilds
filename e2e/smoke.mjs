@@ -207,6 +207,13 @@ await step('10-continued');
 await sim(() => {
   const { sim } = window.__NEON_WILDS__;
   const car = sim.vehicles.find((v) => v.driver === 'none' && v.wreckedTick === null);
+  // Park it on the longest road first, so there is room to drive.
+  const roads = sim.roads;
+  const longest = [...roads.edges].sort((a, b) => roads.edgeLength(b.id) - roads.edgeLength(a.id))[0];
+  const pose = roads.lane(longest.id, 6, true);
+  car.x = car.prevX = pose.x;
+  car.y = car.prevY = pose.y;
+  car.heading = pose.heading;
   sim.player.x = sim.player.prevX = car.x;
   sim.player.y = sim.player.prevY = car.y + 1.2;
 });

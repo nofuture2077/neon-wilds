@@ -1,34 +1,26 @@
 import Phaser from 'phaser';
-import { TILE_SIZE, Tile, type DistrictLayout, type Prop } from '@neon-wilds/sim';
+import { TILE_SIZE, Tile, regionOf, type DistrictLayout, type Prop } from '@neon-wilds/sim';
 import { buildBuilding } from '../assets/buildings';
 import { TEXTURES, addCanvasTexture } from '../assets/manifest';
 import { visualTileIndex } from '../assets/tiles';
 import { Depth } from './depth';
+import { renderRoads } from './RoadRenderer';
 import type { Lighting } from './lighting';
 
 const T = TILE_SIZE;
 const LAMP_TINTS = [0xffb070, 0xff6fc0, 0x6fe8ff, 0xffb070] as const;
 
 /**
- * Builds the static visuals of a district from its simulation layout:
- * ground tilemap, buildings, props, tree canopies and light sources.
+ * Builds the static visuals of the city from its simulation layout: ground
+ * tilemap, vector streets, buildings, props, tree canopies and light sources.
  * Pure presentation — nothing here feeds back into the simulation.
  */
-export interface ExitGate {
-  x: number;
-  y: number;
-  to: string;
-  rect: Phaser.GameObjects.Rectangle;
-}
-
-const roadWidth = (band: { from: number; to: number }) => band.to - band.from + 1;
-
-/** Builds the district's static visuals; returns the exit gates so the scene can open them. */
-export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting: Lighting, gates?: ExitGate[]): void {
+export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting: Lighting): void {
   renderGround(scene, layout);
+  renderRoads(scene, layout);
   for (const b of layout.buildings) {
     const key = `building-${b.id}`;
-    const art = buildBuilding(b, layout.style === 'downtown');
+    const art = buildBuilding(b, b.region === 'downtown' || b.landmark);
     addCanvasTexture(scene, key, art.canvas);
     scene.add
       .rectangle(b.x * T + 6, b.y * T + 4, b.w * T, b.h * T, 0x000000, 0.45)
@@ -38,32 +30,13 @@ export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting
     for (const l of art.lights) {
       lighting.add(b.x * T + l.x, b.y * T + l.y, l.color, l.scale, 0.75, l.day, l.flicker ? 0.08 : 0, l.scale <= 0.3 ? 'window' : 'neon');
     }
+    if (b.landmark) {
+      // Landmarks glow from afar: a big halo in the building's neon colour.
+      lighting.add((b.x + b.w / 2) * T, (b.y + b.h / 2) * T, b.neon ?? 0xff3fa4, 2.6, 0.35, 0.1, 0.03, 'neon');
+    }
   }
 
-  for (const p of layout.props) renderProp(scene, p, lighting, layout.style);
-
-  // District exits: a sign over the road, and a checkpoint barrier while the road is closed.
-  for (const exit of layout.exits) {
-    const band = layout.streets.find((st) => st.axis === 'horizontal' && st.name === exit.street);
-    if (!band) continue;
-    const east = exit.side === 'east';
-    const x = (east ? layout.map.width - 2.5 : 2.5) * T;
-    const y = (band.from + 2.5) * T;
-    const label = ({ downtown: 'NEON DOWNTOWN', slums: 'THE SLUMS', harbor: 'HARBOR DISTRICT', industrial: 'INDUSTRIAL ZONE' } as Record<string, string>)[exit.to] ?? exit.to.toUpperCase();
-    scene.add
-      .text(x, y - 3 * T, `${east ? '' : '\u25c0 '}${label}${east ? ' \u25b6' : ''}`, {
-        fontFamily: 'Press Start 2P, monospace',
-        fontSize: '6px',
-        color: '#7ff6ff',
-        backgroundColor: '#0b0b18',
-        padding: { x: 3, y: 2 },
-        resolution: 6,
-      })
-      .setOrigin(0.5)
-      .setDepth(Depth.canopy);
-    lighting.add(x, y - 3 * T, 0x00e5ff, 0.8, 0.6, 0.25, 0, 'neon');
-    if (gates) gates.push({ x, y, to: exit.to, rect: scene.add.rectangle(x, y, 6, roadWidth(band) * T, 0xff3b3b, 0.85).setDepth(Depth.actors + 1) });
-  }
+  for (const p of layout.props) renderProp(scene, p, lighting, regionOf(layout, p.x, p.y).style);
 
   for (let ty = 0; ty < layout.map.height; ty++) {
     for (let tx = 0; tx < layout.map.width; tx++) {

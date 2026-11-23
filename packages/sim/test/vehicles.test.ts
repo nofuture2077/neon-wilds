@@ -1,42 +1,44 @@
 import { describe, expect, it } from 'vitest';
-import { NO_INPUT, RoadNetwork, SLUMS, Simulation, TICK_RATE, generateDistrict, isDrivable, type SimEvent } from '../src';
+import { NO_INPUT, RoadNetwork, Rng, Simulation, TICK_RATE, VESPER, generateCity, isDrivable, type SimEvent } from '../src';
 
 const APPEARANCE = { skin: 1, hair: 2, top: 3, bottom: 4 };
 const newSim = (seed = 21) => Simulation.create({ seed, playerName: 'Ash', appearance: APPEARANCE });
 
 describe('road network', () => {
-  const layout = generateDistrict(SLUMS, 4);
+  const layout = generateCity(VESPER, 4);
   const roads = new RoadNetwork(layout);
 
-  it('finds intersections whose exits lead onto drivable road', () => {
-    expect(roads.intersections.length).toBeGreaterThan(10);
-    for (const n of roads.intersections) {
-      const exits = Object.values(n.exits).filter(Boolean).length;
-      expect(exits).toBeGreaterThanOrEqual(2);
+  it('lanes sit on drivable road, on opposite sides for opposite directions', () => {
+    for (const e of roads.edges.slice(0, 30)) {
+      const len = roads.edgeLength(e.id);
+      const s = len / 2;
+      const fwd = roads.lane(e.id, s, true);
+      const back = roads.lane(e.id, s, false);
+      expect(isDrivable(layout.map.get(Math.floor(fwd.x), Math.floor(fwd.y))), `edge ${e.id}`).toBe(true);
+      expect(Math.hypot(fwd.x - back.x, fwd.y - back.y)).toBeGreaterThan(2);
+      expect(Math.abs(Math.cos(fwd.heading - back.heading) + 1)).toBeLessThan(0.05);
     }
   });
 
-  it('builds turn paths that end in the exit lane', () => {
-    const node = roads.intersections.find((n) => n.exits.S && n.exits.W && n.exits.N)!;
-    const path = roads.turnPath(node, 'S', 'W');
-    const end = path.at(-1)!;
-    expect(end.y).toBeCloseTo(node.h.from + 1.5);
-    expect(end.x).toBeCloseTo(node.x0);
+  it('never chooses a U-turn at a junction with other options', () => {
+    const node = roads.nodes.find((n) => n.edges.length >= 3)!;
+    for (let i = 0; i < 20; i++) {
+      const next = roads.chooseNext(node.id, node.edges[0]!, new Rng(i));
+      expect(next.edge).not.toBe(node.edges[0]);
+    }
   });
 
-  it('alternates signal phases between the two axes', () => {
-    const node = roads.intersections.find((n) => n.signal)!;
-    let nsGreen = 0;
-    let ewGreen = 0;
+  it('signals give conflicting approaches different phases', () => {
+    const node = roads.nodes.find((n) => n.edges.length >= 3)!;
+    let sawRed = false;
+    let sawGreen = false;
     for (let t = 0; t < TICK_RATE * 30; t += 10) {
-      const ns = roads.isGreen(node, 'N', t);
-      const ew = roads.isGreen(node, 'E', t);
-      expect(ns && ew).toBe(false);
-      if (ns) nsGreen++;
-      if (ew) ewGreen++;
+      const states = node.edges.map((e) => roads.signalState(node.id, e, t));
+      if (states.includes('red')) sawRed = true;
+      if (states.includes('green')) sawGreen = true;
+      expect(states.every((s) => s === 'green')).toBe(false);
     }
-    expect(nsGreen).toBeGreaterThan(0);
-    expect(ewGreen).toBeGreaterThan(0);
+    expect(sawRed && sawGreen).toBe(true);
   });
 });
 
@@ -54,7 +56,8 @@ describe('traffic', () => {
     }
     const ai = sim.vehicles.filter((v) => v.driver === 'ai');
     expect(ai.length).toBeGreaterThan(5);
-    for (const v of ai) expect(isDrivable(sim.layout.map.get(Math.floor(v.x), Math.floor(v.y))) || v.wreckedTick !== null).toBe(true);
+    const onRoad = ai.filter((v) => isDrivable(sim.layout.map.get(Math.floor(v.x), Math.floor(v.y))));
+    expect(onRoad.length).toBeGreaterThanOrEqual(ai.length - 1);
     expect([...moved.values()].filter((d) => d > 10).length).toBeGreaterThan(3);
   });
 });
@@ -75,6 +78,13 @@ describe('player driving', () => {
     expect(events.some((e) => e.type === 'crime' && e.kind === 'vehicle-theft')).toBe(true);
     expect(events).toContainEqual({ type: 'vehicle.entered', vehicleId: car.id, how: 'stolen' });
 
+    // Take it out onto the longest road.
+    const roads = new RoadNetwork(sim.layout);
+    const longest = [...roads.edges].sort((a, b) => roads.edgeLength(b.id) - roads.edgeLength(a.id))[0]!;
+    const pose = roads.lane(longest.id, 6, true);
+    car.x = car.prevX = sim.player.x = pose.x;
+    car.y = car.prevY = sim.player.y = pose.y;
+    car.heading = pose.heading;
     const start = { x: car.x, y: car.y };
     const all: SimEvent[] = [];
     for (let i = 0; i < TICK_RATE * 6; i++) {

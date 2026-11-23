@@ -50,6 +50,8 @@ export interface NpcState extends ActorState {
   path: TilePos[];
   pathIndex: number;
   stuckTime: number;
+  /** After a failed path search, don't search again before this tick. */
+  pathRetryTick?: number;
   /** Until this tick the NPC remembers being shoved by the player. */
   grudgeUntilTick: number;
   shoveCooldownUntilTick: number;
@@ -97,7 +99,7 @@ export type Focus =
   | { kind: 'npc'; id: string; label: string }
   | { kind: 'building'; id: string; label: string };
 
-export const SNAPSHOT_VERSION = 10;
+export const SNAPSHOT_VERSION = 11;
 
 /** Everything needed to resume a simulation. The district layout is regenerated from seed + districtId. */
 export interface SimSnapshot {

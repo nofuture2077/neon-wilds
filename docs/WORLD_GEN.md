@@ -1,6 +1,6 @@
 # NEON WILDS — Hybrid World Generation ("Authored Bones, Procedural Flesh")
 
-> Owners: World Designer and Technical Architect · Goal added after Milestone 1 · Status: **v2 organic grid shipped in M3** (varied blocks, superblocks, courtyards, squares, state dressing for territory). Next: city graph and Downtown (M4), free-angle grammars (M5), tuning (M7)
+> Owners: World Designer and Technical Architect · Goal added after Milestone 1 · Status: **v3 seamless organic city shipped in M5** (one map for all districts, free-angle curved streets, region grammars, landmarks, parks, docks, vector street rendering). See §8. Next: Old Town and Outskirts regions, vignettes (L6), building rotations (M7)
 >
 > **Goal:** a Vesper City that feels **handmade, unique, non-repetitive, organic (not a square grid) and alive**. It combines preplanned, authored structure with deterministic procedural content. Everything is conventional, seeded procedural generation: no generative AI.
 
@@ -72,3 +72,16 @@ The simulation keeps its fast tile grid (collision, A*, sidewalks). Geometry is 
 | M7 | Building kit rotations, weather wear, density and performance tuning |
 
 **Acceptance:** blind test — players cannot spot repetition within a 10-minute walk; no straight street longer than 30 tiles without a feature; every district is recognisable from a screenshot.
+
+## 8. v3 as built: one seamless city (`world/cityGen.ts`, `content/city.ts`)
+
+Player feedback after M5 part 1: *"all map parts are just squares, all streets follow a fixed grid; I want a seamless, organic map with winding roads, landmarks, and much more diversity in buildings and parks."* v3 replaces the per-district grids with **one 230×170 map** for the whole city:
+
+1. **Regions (L0).** Each district is a region with an anchor point. Region membership is a noise-warped Voronoi diagram, so borders are ragged, not straight. A noisy south-east coastline makes the sea.
+2. **Road graph (L2).** Each region seeds nodes on its own rotated, jittered lattice (spacing, jitter, angle per region). Candidate edges form a Gabriel graph; Kruskal's MST guarantees connectivity, and extra edges become loops with a per-region probability. Each edge is a quadratic Bézier with a per-region bend (Slums wind, Downtown is a near-straight rotated grid, Industrial is wide and straight).
+3. **Rasterisation.** A distance field to the polylines gives road (≤ 2.6 tiles), sidewalk (≤ 4.6) and block land. Crosswalks are 4-connected tile strips across the road, a few tiles from each junction.
+4. **Blocks (L3).** Faces of the road graph become blocks. The open outskirts are split into a built-up fringe along each road and wild land beyond it. Per block: lots (frontage buildings, doors facing the sidewalk, then a ring of back-lot buildings around courtyards), parks (pond, ring path, winding paths, trees, benches), docks on the harbor shore, or tiny pockets.
+5. **Identity.** Every district's authored buildings are placed once in their own region; the first is the **landmark** on the region's biggest building (Lumen Spire, Furnace Pits, Night Market, Courier Co-op), lit with a big halo. Street names follow the straightest continuation through junctions.
+6. **Validation.** Anything walkable that pedestrians cannot reach becomes a fenced `Lot`; buildings whose doors open onto such pockets are removed. Tests check road and sidewalk connectivity, a reachable entrance for every named building, one landmark per region, parks, size variety, region anchors and determinism (`test/citygen.test.ts`). Generation takes about 20–50 ms.
+
+**Traffic** follows lanes on the graph (right-hand traffic, curved turns through the junction centre, two-phase signals at junctions of three or more roads). **Rendering** strokes the graph with Canvas 2D (asphalt, neon curbs, sidewalks, centre lines, zebra crossings, stop lines) and bakes it into 1024 px textures. The tile layer underneath only shows paving. Crossing into another district is just a toast and a change of music; there is no loading.

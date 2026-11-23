@@ -67,7 +67,7 @@ Perception, memory records and gossip, relationship graph, needs and emotion, HS
 
 ## M5 — Story and content (part 1 ✅, part 2 next)
 
-Part 1 delivered: city graph and Downtown; branching choices; Acts I–III (7 story missions); Saints and Halcyon arcs; four endings with a state-built epilogue. Part 2: Harbor, Old Town, Industrial and Outskirts; the Compact, Choir and Iron Chain arcs; side character arcs; the secret ending; the remaining species; vignettes.
+Part 1 delivered: city graph and Downtown; branching choices; Acts I–III (7 story missions); Saints and Halcyon arcs; four endings with a state-built epilogue. Since then: Harbor and the Compact arc, the Industrial Zone and the Iron Chain arc, keyboard-only battles with auto-advancing text, and **world generation v3**: one seamless organic city with curved streets, landmarks, parks and docks ([WORLD_GEN.md §8](WORLD_GEN.md)). Part 2: Old Town and Outskirts; the Compact, Choir and Iron Chain arcs; side character arcs; the secret ending; the remaining species; vignettes.
 
 
 First: the multi-district city graph and Downtown (carried over from M3/M4), then the narrative.
@@ -87,7 +87,7 @@ Audio (SFX, ambience, procedural music mixing and leitmotif variation), animatio
 
 | Criterion | Milestone |
 |---|---|
-| Explore a functioning urban district | M1 ✅ (two districts since M5) |
+| Explore a functioning urban district | M1 ✅ (one seamless four-district city since M5) |
 | ≥ 10 creatures encountered and captured; battles functional | M2 ✅ |
 | NPC schedules, reactions, memory | M4 ✅ |
 | ≥ 2 factions operate independently and change influence | M4 ✅ (GOAP) |

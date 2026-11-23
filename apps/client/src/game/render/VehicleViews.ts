@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE_SIZE, type RoadNetwork, type VehicleState, vehicleClass } from '@neon-wilds/sim';
+import { ROAD_HALF, STOP_DISTANCE, TILE_SIZE, type RoadNetwork, type VehicleState, vehicleClass } from '@neon-wilds/sim';
 import { TEXTURES } from '../assets/manifest';
 import { Depth } from './depth';
 
@@ -125,24 +125,28 @@ export class VehicleViews {
   }
 }
 
-/** Signal heads at every signalised intersection, one per approach. */
+/** Signal heads at every signalised junction of the road graph, one per approach (on the curb to its right). */
 export class SignalViews {
-  private readonly heads: { img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; node: number; dir: 'N' | 'E' | 'S' | 'W' }[] = [];
+  private readonly heads: { img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; node: number; edge: number }[] = [];
 
   constructor(scene: Phaser.Scene, private readonly roads: RoadNetwork) {
-    for (const n of roads.intersections) {
-      if (!n.signal) continue;
-      const spots: Array<['N' | 'E' | 'S' | 'W', number, number]> = [
-        ['S', n.x0 - 0.3, n.y0 - 0.3],
-        ['N', n.x1 + 1.3, n.y1 + 1.3],
-        ['E', n.x0 - 0.3, n.y1 + 1.3],
-        ['W', n.x1 + 1.3, n.y0 - 0.3],
-      ];
-      for (const [dir, x, y] of spots) {
-        if (!n.exits[dir === 'S' ? 'N' : dir === 'N' ? 'S' : dir === 'E' ? 'W' : 'E']) continue; // no approach from that side
-        const img = scene.add.image(x * T, y * T, TEXTURES.signal).setDepth(Depth.canopy);
-        const glow = scene.add.image(x * T, y * T, TEXTURES.glow).setScale(0.22).setBlendMode(Phaser.BlendModes.ADD).setDepth(Depth.glow);
-        this.heads.push({ img, glow, node: n.id, dir });
+    for (const n of roads.nodes) {
+      if (!roads.isSignal(n)) continue;
+      for (const edgeId of n.edges) {
+        const e = roads.edges[edgeId]!;
+        const len = roads.edgeLength(edgeId);
+        if (len < STOP_DISTANCE * 2) continue;
+        const atA = e.a === n.id;
+        const c = roads.centre(edgeId, atA ? STOP_DISTANCE - 0.6 : len - STOP_DISTANCE + 0.6);
+        // Direction of travel toward the junction; its right-hand curb is at (-dy, dx).
+        const dx = atA ? -c.tx : c.tx;
+        const dy = atA ? -c.ty : c.ty;
+        const off = ROAD_HALF + 0.7;
+        const x = (c.x - dy * off) * T;
+        const y = (c.y + dx * off) * T;
+        const img = scene.add.image(x, y, TEXTURES.signal).setDepth(Depth.canopy);
+        const glow = scene.add.image(x, y, TEXTURES.glow).setScale(0.22).setBlendMode(Phaser.BlendModes.ADD).setDepth(Depth.glow);
+        this.heads.push({ img, glow, node: n.id, edge: edgeId });
       }
     }
   }
@@ -154,8 +158,7 @@ export class SignalViews {
         h.img.setTint(0x333333);
         continue;
       }
-      const node = this.roads.intersections[h.node]!;
-      const state = this.roads.signalState(node, h.dir, tick);
+      const state = this.roads.signalState(h.node, h.edge, tick);
       const color = state === 'green' ? 0x4fffb0 : state === 'amber' ? 0xffb347 : 0xff3b3b;
       h.img.setTint(color);
       h.glow.setTint(color);

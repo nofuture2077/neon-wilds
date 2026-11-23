@@ -87,15 +87,32 @@ export function updateNpc(npc: NpcState, ctx: NpcContext): void {
 
 /** Start walking to a tile (uses this tick's path budget). */
 export function walkTo(npc: NpcState, tx: number, ty: number, ctx: NpcContext): boolean | 'busy' {
+  if (npc.pathRetryTick !== undefined && ctx.tick < npc.pathRetryTick) return false;
   if (ctx.pathBudget.remaining <= 0) return 'busy';
   ctx.pathBudget.remaining--;
-  const path = ctx.pathfinder.find({ tx: Math.floor(npc.x), ty: Math.floor(npc.y) }, { tx, ty }, { maxExpanded: 3000 });
-  if (!path) return false;
+  const path = ctx.pathfinder.find(walkableNear(ctx, Math.floor(npc.x), Math.floor(npc.y)), { tx, ty }, { maxExpanded: 4000, weight: 1.5 });
+  if (!path) {
+    npc.pathRetryTick = ctx.tick + TICK_RATE * 8;
+    return false;
+  }
+  delete npc.pathRetryTick;
   npc.mode = 'walking';
   npc.path = path;
   npc.pathIndex = 0;
   npc.stuckTime = 0;
   return true;
+}
+
+/** The NPC's tile, or a walkable neighbour if it has been shoved onto the road. */
+function walkableNear(ctx: NpcContext, tx: number, ty: number): { tx: number; ty: number } {
+  const map = ctx.layout.map;
+  if (map.isPedestrianWalkable(tx, ty)) return { tx, ty };
+  for (let r = 1; r <= 3; r++) {
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) === r && map.isPedestrianWalkable(tx + dx, ty + dy)) return { tx: tx + dx, ty: ty + dy };
+    }
+  }
+  return { tx, ty };
 }
 
 function setIdle(npc: NpcState, seconds: number): void {
@@ -120,7 +137,7 @@ function startWander(npc: NpcState, ctx: NpcContext): boolean {
     const ty = from.ty + ctx.rng.int(-20, 20);
     if (Math.abs(tx - from.tx) + Math.abs(ty - from.ty) < 5) continue;
     if (!map.isPedestrianWalkable(tx, ty)) continue;
-    const path = ctx.pathfinder.find(from, { tx, ty }, { maxExpanded: 2500 });
+    const path = ctx.pathfinder.find(from, { tx, ty }, { maxExpanded: 2500, weight: 1.3 });
     if (path && path.length > 0) {
       npc.mode = 'walking';
       npc.path = path;
@@ -148,7 +165,7 @@ export function startFlee(npc: NpcState, threatX: number, threatY: number, ctx: 
       best = { tx, ty };
     }
   }
-  const path = best ? ctx.pathfinder.find(from, best, { maxExpanded: 2500 }) : null;
+  const path = best ? ctx.pathfinder.find(from, best, { maxExpanded: 2500, weight: 1.3 }) : null;
   if (path && path.length > 0) {
     npc.mode = 'fleeing';
     npc.path = path;

@@ -26,7 +26,7 @@ import { TEXTURES, addCanvasTexture } from '../assets/manifest';
 import { InputMapper } from '../input/InputMapper';
 import { ActorView } from '../render/ActorView';
 import { BarkLayer } from '../render/BarkLayer';
-import { type ExitGate, renderCity } from '../render/CityRenderer';
+import { renderCity } from '../render/CityRenderer';
 import { Depth } from '../render/depth';
 import { Lighting, darknessAt } from '../render/lighting';
 import { WildlingViews } from '../render/WildlingViews';
@@ -98,8 +98,7 @@ export class WorldScene extends Phaser.Scene {
     const layout = this.sim.layout;
 
     this.lighting = new Lighting(this);
-    this.gates = [];
-    renderCity(this, layout, this.lighting, this.gates);
+    renderCity(this, layout, this.lighting);
 
     this.player = new ActorView(this, this.characterTexture(this.sim.player.appearance));
     for (const npc of this.sim.npcs) {
@@ -223,7 +222,6 @@ export class WorldScene extends Phaser.Scene {
     this.signals.update(this.sim.tick, this.sim.world.event?.id === 'blackout');
     this.syncOfferMarkers();
     this.syncObjectiveMarker();
-    for (const g of this.gates) g.rect.setVisible(!this.sim.isUnlocked(g.to));
     this.territoryViews.update(this.sim.territory.controllers, darkness);
     this.syncOfficers(alpha, deltaSeconds);
 
@@ -322,8 +320,6 @@ export class WorldScene extends Phaser.Scene {
       }
       case 'district.entered': {
         store.pushToast(`Entering ${event.name}`, 'mission');
-        this.registry.set('liveSim', this.sim);
-        this.time.delayedCall(0, () => this.scene.restart(this.scene.settings.data));
         break;
       }
       case 'wanted.changed':
@@ -433,7 +429,6 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private readonly offerMarkers = new Map<string, Phaser.GameObjects.Text>();
-  private gates: ExitGate[] = [];
   private objectiveMarker: Phaser.GameObjects.Container | null = null;
   private objective: { x: number; y: number; label: string; where: string } | null = null;
 

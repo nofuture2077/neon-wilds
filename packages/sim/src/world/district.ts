@@ -1,3 +1,4 @@
+import type { RoadGraph } from './cityGen';
 import type { TileMap } from './tilemap';
 
 export type Facing = 'north' | 'south' | 'east' | 'west';
@@ -34,6 +35,10 @@ export interface Building {
   door: { tx: number; ty: number; facing: Facing };
   /** Walkable tile directly outside the door. */
   entrance: { tx: number; ty: number };
+  /** District region the building stands in. */
+  region: string;
+  /** The region's signature building (taller, spotlit). */
+  landmark: boolean;
 }
 
 export type PropKind = 'parked-car' | 'street-lamp' | 'bench' | 'dumpster' | 'container';
@@ -93,16 +98,32 @@ export interface DistrictExit {
 
 export interface CityBlock {
   id: string;
+  /** Bounding box (blocks are irregular since world generation v3). */
   x: number;
   y: number;
   w: number;
   h: number;
-  kind: 'lots' | 'park' | 'square' | 'docks';
+  kind: 'lots' | 'park' | 'square' | 'docks' | 'wild' | 'pocket';
+  region: string;
+  area: number;
+}
+
+export interface RegionInfo {
+  id: string;
+  name: string;
+  style: 'slums' | 'downtown' | 'harbor' | 'industrial';
 }
 
 export interface DistrictLayout {
   id: string;
   name: string;
+  /** Road graph (world generation v3); empty for legacy grid layouts. */
+  graph: RoadGraph;
+  /** Region index per tile (into `regions`). */
+  regionMap: Uint8Array;
+  /** Per tile: index into `blocks`, or -1 for roads and sidewalks. */
+  blockMap: Int32Array;
+  regions: RegionInfo[];
   style: 'slums' | 'downtown' | 'harbor' | 'industrial';
   exits: DistrictExit[];
   map: TileMap;

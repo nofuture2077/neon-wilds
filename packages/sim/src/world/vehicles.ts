@@ -2,7 +2,7 @@ import { DT, TICK_RATE } from '../constants';
 import type { EventQueue } from '../core/events';
 import type { Rng } from '../core/rng';
 import type { DistrictLayout } from './district';
-import { type Band, DIR_ANGLE, DIR_VEC, type Dir, LEFT_OF, OPPOSITE, RIGHT_OF, type RoadNetwork, isDrivable, laneCoord } from './roads';
+import { type RoadNetwork, STOP_DISTANCE } from './roads';
 
 export type VehicleClassId = 'compact' | 'sedan' | 'van' | 'cruiser';
 
@@ -33,11 +33,16 @@ export const VEHICLE_CLASSES: Record<VehicleClassId, VehicleClass> = {
 export type DriverKind = 'none' | 'player' | 'ai' | 'police';
 
 export interface VehicleAi {
-  dir: Dir;
-  /** Waypoints while turning through an intersection. */
+  /** Road-graph edge the car drives on, its direction, and arc length from node a. */
+  edge: number;
+  forward: boolean;
+  s: number;
+  /** Waypoints while crossing a junction (or turning around). */
   route: { x: number; y: number }[];
-  nextDir: Dir | null;
+  next: { edge: number; forward: boolean } | null;
   blockedTime: number;
+  /** Left the lanes to chase someone; snaps back to the nearest lane afterwards. */
+  offroad?: boolean;
 }
 
 export interface VehicleState {
@@ -297,34 +302,31 @@ export function manageTraffic(list: VehicleState[], ctx: VehicleContext, player:
 }
 
 function spawnTrafficCar(list: VehicleState[], ctx: VehicleContext, player: { x: number; y: number }): void {
-  const { roads, rng, layout } = ctx;
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const vertical = rng.chance(0.5);
-    const bands = vertical ? roads.vbands : roads.hbands;
-    const band = rng.pick(bands);
-    const dir: Dir = vertical ? (rng.chance(0.5) ? 'N' : 'S') : rng.chance(0.5) ? 'E' : 'W';
-    const along = vertical ? rng.range(1, layout.map.height - 1) : rng.range(1, layout.map.width - 1);
-    const lane = laneCoord(band, dir);
-    const x = vertical ? lane : along;
-    const y = vertical ? along : lane;
-    const d = Math.hypot(x - player.x, y - player.y);
-    if (d < SPAWN_MIN || d > SPAWN_MAX) continue;
-    if (roads.intersectionAt(x, y)) continue;
-    if (!onRoadLane(ctx, x, y)) continue;
-    if (list.some((o) => Math.hypot(o.x - x, o.y - y) < 4)) continue;
-    const classId: VehicleClassId = rng.chance(0.15) ? 'van' : rng.chance(0.5) ? 'sedan' : 'compact';
-    const v = createVehicle(ctx.nextId(), classId, rng.int(0, 5), x, y, DIR_ANGLE[dir], 'ai', ctx.tick);
-    v.ai = { dir, route: [], nextDir: null, blockedTime: 0 };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const spot = ctx.roads.laneNear(ctx.rng, player.x, player.y, SPAWN_MIN, SPAWN_MAX);
+    if (!spot) return;
+    const pose = ctx.roads.lane(spot.edge, spot.s, spot.forward);
+    if (list.some((o) => Math.hypot(o.x - pose.x, o.y - pose.y) < 4)) continue;
+    const classId: VehicleClassId = ctx.rng.chance(0.15) ? 'van' : ctx.rng.chance(0.5) ? 'sedan' : 'compact';
+    const v = createVehicle(ctx.nextId(), classId, ctx.rng.int(0, 5), pose.x, pose.y, pose.heading, 'ai', ctx.tick);
+    v.ai = { edge: spot.edge, forward: spot.forward, s: spot.s, route: [], next: null, blockedTime: 0 };
     v.speed = 3;
     list.push(v);
     return;
   }
 }
 
-function onRoadLane(ctx: VehicleContext, x: number, y: number): boolean {
-  const tx = Math.floor(x);
-  const ty = Math.floor(y);
-  return !ctx.layout.map.isSolid(tx, ty) && isDrivable(ctx.layout.map.get(tx, ty));
+/** Put an AI car back on the nearest lane (after a chase or being shoved off the road). */
+export function snapToLane(v: VehicleState, ctx: Pick<VehicleContext, 'roads'>): void {
+  const near = ctx.roads.nearest(v.x, v.y);
+  if (!near || !v.ai) return;
+  const tangent = ctx.roads.centre(near.edge, near.s);
+  const forward = Math.cos(v.heading) * tangent.tx + Math.sin(v.heading) * tangent.ty >= 0;
+  v.ai.edge = near.edge;
+  v.ai.forward = forward;
+  v.ai.s = near.s;
+  v.ai.route = [];
+  v.ai.next = null;
 }
 
 /** Distance to the nearest thing ahead that this AI car must not hit, or Infinity. */
@@ -353,6 +355,11 @@ function clearanceAhead(v: VehicleState, all: readonly VehicleState[], ctx: Vehi
   return best;
 }
 
+/**
+ * AI driving on the road graph: follow the lane along the edge, stop for
+ * red lights and obstacles, then cross the junction on a curve into the
+ * chosen next edge. Pursuing police leave the lanes when close.
+ */
 export function driveAi(v: VehicleState, all: readonly VehicleState[], ctx: VehicleContext): void {
   v.prevX = v.x;
   v.prevY = v.y;
@@ -365,42 +372,47 @@ export function driveAi(v: VehicleState, all: readonly VehicleState[], ctx: Vehi
   const pursuing = v.driver === 'police' && ctx.pursuit !== null;
   if (pursuing && Math.hypot(ctx.pursuit!.x - v.x, ctx.pursuit!.y - v.y) < 12) {
     chase(v, all, ctx, ctx.pursuit!);
+    ai.offroad = true;
     return;
   }
-  const cruise = pursuing ? c.maxSpeed : Math.min(c.maxSpeed, 4.6);
-  let target = cruise;
+  if (ai.offroad) {
+    ai.offroad = false;
+    snapToLane(v, ctx);
+  }
+
+  const roads = ctx.roads;
+  const len = roads.edgeLength(ai.edge);
+  let target = pursuing ? c.maxSpeed : Math.min(c.maxSpeed, 4.6);
 
   if (ai.route.length === 0) {
-    const next = ctx.roads.nextIntersection(v.x, v.y, ai.dir);
-    if (!next || next.distance > 3) {
-      // Dead end (waterfront, map edge): turn around into the opposite lane.
-      const d = DIR_VEC[ai.dir];
-      const ahead = ctx.layout.map.get(Math.floor(v.x + d.x * 2.2), Math.floor(v.y + d.y * 2.2));
-      if (!isDrivable(ahead) || ctx.layout.map.isSolid(Math.floor(v.x + d.x * 2.2), Math.floor(v.y + d.y * 2.2))) {
-        const back = OPPOSITE[ai.dir];
-        const band = ai.dir === 'N' || ai.dir === 'S' ? ctx.roads.vbandAt(v.x) : ctx.roads.hbandAt(v.y);
-        if (band) {
-          const lane = laneCoord(band, back);
-          const tx = ai.dir === 'N' || ai.dir === 'S' ? lane : v.x - d.x * 1.5;
-          const ty = ai.dir === 'N' || ai.dir === 'S' ? v.y - d.y * 1.5 : lane;
-          ai.route = [{ x: v.x + (tx - v.x) * 0.5 + d.x * 0.4, y: v.y + (ty - v.y) * 0.5 + d.y * 0.4 }, { x: tx, y: ty }];
-          ai.nextDir = back;
-        }
+    const remaining = ai.forward ? len - STOP_DISTANCE - ai.s : ai.s - STOP_DISTANCE;
+    const node = roads.aheadNode(ai.edge, ai.forward);
+    if (remaining <= 0.15) {
+      // Enter the junction: pick the next edge and build a curved crossing.
+      const next = roads.chooseNext(node.id, ai.edge, ctx.rng, pursuing ? ctx.pursuit! : undefined);
+      const nextLen = roads.edgeLength(next.edge);
+      const startS = next.forward ? Math.min(STOP_DISTANCE, nextLen / 2) : Math.max(nextLen - STOP_DISTANCE, nextLen / 2);
+      const from = { x: v.x, y: v.y };
+      const to = roads.lane(next.edge, startS, next.forward);
+      const steps = 6;
+      ai.route = [];
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const a = (1 - t) * (1 - t);
+        const b = 2 * (1 - t) * t;
+        const d = t * t;
+        ai.route.push({ x: a * from.x + b * node.x + d * to.x, y: a * from.y + b * node.y + d * to.y });
       }
-    }
-    if (next) {
-      if (next.distance < 0.2) {
-        ai.nextDir = pursuing ? chooseExitToward(next.node.exits, ai.dir, v, ctx.pursuit!) : chooseExit(next.node.exits, ai.dir, ctx.rng);
-        ai.route = ctx.roads.turnPath(next.node, ai.dir, ai.nextDir);
-      } else {
-        if (!ctx.signalsOff && !ctx.roads.isGreen(next.node, ai.dir, ctx.tick) && !pursuing) {
-          target = Math.min(target, Math.max(0, (next.distance - 0.3) * 1.6));
-        }
-        target = Math.min(target, 2.6 + next.distance * 0.8);
+      ai.next = { edge: next.edge, forward: next.forward };
+      ai.s = startS;
+    } else {
+      if (!pursuing && !ctx.signalsOff && roads.isSignal(node) && remaining < 3.5 && !roads.isGreen(node.id, ai.edge, ctx.tick)) {
+        target = Math.min(target, Math.max(0, (remaining - 0.2) * 1.6));
       }
+      target = Math.min(target, 2.8 + remaining * 0.7);
     }
   } else {
-    target = Math.min(target, pursuing ? 5 : 2.6);
+    target = Math.min(target, pursuing ? 5 : 2.8);
   }
 
   const clear = clearanceAhead(v, all, ctx);
@@ -414,38 +426,50 @@ export function driveAi(v: VehicleState, all: readonly VehicleState[], ctx: Vehi
   v.braking = target < v.speed - 0.3;
   v.speed += Math.max(-accel * DT, Math.min(accel * DT, target - v.speed));
   v.speed = Math.max(0, v.speed);
+  const step = v.speed * DT;
 
-  // Steering: follow the turn route, else hold the lane centre.
-  let tx: number;
-  let ty: number;
-  const node = ai.route[0];
-  if (node) {
-    tx = node.x;
-    ty = node.y;
-    if (Math.hypot(tx - v.x, ty - v.y) < 0.35) {
-      ai.route.shift();
-      if (ai.route.length === 0 && ai.nextDir) {
-        ai.dir = ai.nextDir;
-        ai.nextDir = null;
+  if (ai.route.length > 0) {
+    // Junction crossing: steer along the curve's waypoints.
+    let remainingStep = step;
+    while (remainingStep > 0 && ai.route.length > 0) {
+      const p = ai.route[0]!;
+      const dx = p.x - v.x;
+      const dy = p.y - v.y;
+      const d = Math.hypot(dx, dy);
+      if (d <= remainingStep) {
+        v.x = p.x;
+        v.y = p.y;
+        remainingStep -= d;
+        ai.route.shift();
+        if (d > 1e-4) v.heading = Math.atan2(dy, dx);
+      } else {
+        v.x += (dx / d) * remainingStep;
+        v.y += (dy / d) * remainingStep;
+        v.heading = Math.atan2(dy, dx);
+        remainingStep = 0;
       }
     }
+    if (ai.route.length === 0 && ai.next) {
+      ai.edge = ai.next.edge;
+      ai.forward = ai.next.forward;
+      ai.next = null;
+    }
   } else {
-    const d = DIR_VEC[ai.dir];
-    const band = ai.dir === 'N' || ai.dir === 'S' ? ctx.roads.vbandAt(v.x) : ctx.roads.hbandAt(v.y);
-    const lane = band ? laneCoord(band as Band, ai.dir) : ai.dir === 'N' || ai.dir === 'S' ? v.x : v.y;
-    tx = ai.dir === 'N' || ai.dir === 'S' ? lane : v.x + d.x * 2;
-    ty = ai.dir === 'N' || ai.dir === 'S' ? v.y + d.y * 2 : lane;
+    ai.s += ai.forward ? step : -step;
+    const pose = roads.lane(ai.edge, ai.s, ai.forward);
+    v.x = pose.x;
+    v.y = pose.y;
+    v.heading = turnTowardAngle(v.heading, pose.heading, 6 * DT);
   }
-  const want = Math.atan2(ty - v.y, tx - v.x);
-  let delta = want - v.heading;
-  while (delta > Math.PI) delta -= Math.PI * 2;
-  while (delta < -Math.PI) delta += Math.PI * 2;
-  const maxTurn = c.turnRate * 1.4 * DT;
-  const turn = Math.max(-maxTurn, Math.min(maxTurn, delta)) / DT;
   v.vx = Math.cos(v.heading) * v.speed;
   v.vy = Math.sin(v.heading) * v.speed;
-  const impact = integrate(v, ctx, v.speed > 0.05 ? turn : 0);
-  if (impact > 2) damageVehicle(v, (impact - 2) * 5, ctx);
+}
+
+function turnTowardAngle(current: number, target: number, maxStep: number): number {
+  let d = target - current;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return Math.abs(d) <= maxStep ? target : current + Math.sign(d) * maxStep;
 }
 
 /** Driverless or wrecked cars roll to a stop. */
@@ -487,43 +511,8 @@ function chase(v: VehicleState, all: readonly VehicleState[], ctx: VehicleContex
   v.vy = Math.sin(v.heading) * v.speed;
   const impact = integrate(v, ctx, v.speed > 0.05 ? turn : 0);
   if (impact > 2.5) damageVehicle(v, (impact - 2.5) * 3, ctx);
-  if (v.ai) {
-    // Re-align lane state with the nearest road axis for when the chase ends.
-    v.ai.route = [];
-    v.ai.dir = Math.abs(Math.cos(v.heading)) > Math.abs(Math.sin(v.heading)) ? (Math.cos(v.heading) > 0 ? 'E' : 'W') : Math.sin(v.heading) > 0 ? 'S' : 'N';
-  }
 }
 
-/** Greedy route choice: take the exit that points most toward the target. */
-function chooseExitToward(exits: Record<Dir, boolean>, dir: Dir, v: VehicleState, target: { x: number; y: number }): Dir {
-  const tx = target.x - v.x;
-  const ty = target.y - v.y;
-  let best: Dir = OPPOSITE[dir];
-  let bestScore = -Infinity;
-  for (const d of [dir, RIGHT_OF[dir], LEFT_OF[dir]] as Dir[]) {
-    if (!exits[d]) continue;
-    const score = DIR_VEC[d].x * tx + DIR_VEC[d].y * ty;
-    if (score > bestScore) {
-      bestScore = score;
-      best = d;
-    }
-  }
-  return best;
-}
-
-function chooseExit(exits: Record<Dir, boolean>, dir: Dir, rng: Rng): Dir {
-  const options: Array<[Dir, number]> = [];
-  if (exits[dir]) options.push([dir, 3]);
-  if (exits[RIGHT_OF[dir]]) options.push([RIGHT_OF[dir], 1.5]);
-  if (exits[LEFT_OF[dir]]) options.push([LEFT_OF[dir], 1]);
-  if (options.length === 0) return OPPOSITE[dir];
-  const total = options.reduce((a, [, w]) => a + w, 0);
-  let r = rng.next() * total;
-  for (const [d, w] of options) if ((r -= w) <= 0) return d;
-  return options[0]![0];
-}
-
-/** Separate overlapping vehicles and apply crash damage. */
 export function resolveVehicleContacts(list: VehicleState[], ctx: VehicleContext): void {
   for (let i = 0; i < list.length; i++) {
     const a = list[i]!;

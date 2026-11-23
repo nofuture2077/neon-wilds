@@ -11,6 +11,8 @@ export interface PathOptions {
   maxExpanded?: number;
   /** Allow diagonal moves (never cutting corners). */
   diagonal?: boolean;
+  /** Heuristic weight (>1 = weighted A*: far fewer expansions, paths at most this factor longer). */
+  weight?: number;
 }
 
 const SQRT2 = Math.SQRT2;
@@ -51,6 +53,7 @@ export class Pathfinder {
     const { width, height } = this.grid;
     const maxExpanded = options.maxExpanded ?? 6000;
     const diagonal = options.diagonal ?? true;
+    const w = options.weight ?? 1;
     if (!this.grid.passable(goal.tx, goal.ty) || !this.grid.passable(start.tx, start.ty)) return null;
     if (start.tx === goal.tx && start.ty === goal.ty) return [];
 
@@ -69,7 +72,7 @@ export class Pathfinder {
     this.g[startIdx] = 0;
     this.parent[startIdx] = -1;
     this.stamp[startIdx] = gen;
-    this.push(startIdx, heuristic(start.tx, start.ty, goal.tx, goal.ty));
+    this.push(startIdx, w * heuristic(start.tx, start.ty, goal.tx, goal.ty));
 
     let expanded = 0;
     const dirCount = diagonal ? 8 : 4;
@@ -98,7 +101,7 @@ export class Pathfinder {
         this.stamp[ni] = gen;
         this.g[ni] = tentative;
         this.parent[ni] = current;
-        this.push(ni, tentative + heuristic(nx, ny, goal.tx, goal.ty));
+        this.push(ni, tentative + w * heuristic(nx, ny, goal.tx, goal.ty));
       }
     }
     return null;

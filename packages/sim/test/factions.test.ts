@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EventQueue, NO_INPUT, Simulation, TICK_RATE, controllerOf, createWildling, factionTick, newFactionAgents, newTerritory, planGoap, repTier, Rng, type GoapAction, type SimEvent } from '../src';
+import { EventQueue, NO_INPUT, blockOf, Simulation, TICK_RATE, controllerOf, createWildling, factionTick, newFactionAgents, newTerritory, planGoap, repTier, Rng, type GoapAction, type SimEvent } from '../src';
 
 const APPEARANCE = { skin: 1, hair: 2, top: 3, bottom: 4 };
 const newSim = (seed = 41, startMinutes?: number) =>
@@ -34,21 +34,36 @@ describe('reputation', () => {
 describe('territory', () => {
   it('Halcyon starts around its kiosk and the Saints hold the rest', () => {
     const sim = newSim(42);
-    const controllers = Object.values(sim.territory.controllers);
+    const slums = new Set(sim.layout.blocks.filter((b) => b.region === 'slums').map((b) => b.id));
+    const controllers = Object.entries(sim.territory.controllers).filter(([id]) => slums.has(id)).map(([, c]) => c);
     expect(controllers.filter((c) => c === 'halcyon').length).toBe(1);
     expect(controllers.filter((c) => c === 'saints').length).toBeGreaterThan(5);
+    // Elsewhere: Halcyon owns Downtown, the Compact the Harbor, the Iron Chain the Industrial Zone.
+    const ownerOf = (region: string) => {
+      const counts: Record<string, number> = {};
+      for (const b of sim.layout.blocks.filter((x) => x.region === region)) {
+        const c = sim.territory.controllers[b.id];
+        if (c) counts[c] = (counts[c] ?? 0) + 1;
+      }
+      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+    };
+    expect(ownerOf('downtown')).toBe('halcyon');
+    expect(ownerOf('harbor')).toBe('compact');
+    expect(ownerOf('industrial')).toBe('iron-chain');
   });
 
   it('factions contest blocks over time, and player standing tips the balance', () => {
     const sim = newSim(43);
+    // The Slums are the contested district: run the strategy on that part of the city, like the simulation does.
+    const slumsLayout = { ...sim.layout, blocks: sim.layout.blocks.filter((b) => b.region === 'slums' && (b.kind === 'lots' || b.kind === 'park')) };
     const run = (rep: Record<string, number>) => {
-      const t = newTerritory(sim.layout);
+      const t = newTerritory(slumsLayout);
       const agents = newFactionAgents();
       const ev = new EventQueue();
       for (let h = 0; h < 72; h++) {
         for (const f of agents) {
           factionTick(f, {
-            layout: sim.layout,
+            layout: slumsLayout,
             territory: t,
             reputation: rep,
             events: ev,
@@ -105,10 +120,7 @@ describe('economy', () => {
   it('prices react to who controls the shop block', () => {
     const sim = newSim(46);
     const pawn = sim.layout.buildings.find((b) => b.name === 'Paper Moon Pawn')!;
-    const blockId = Object.keys(sim.territory.influence).find((id) => {
-      const b = sim.layout.blocks.find((x) => x.id === id)!;
-      return pawn.x >= b.x && pawn.x < b.x + b.w && pawn.y >= b.y && pawn.y < b.y + b.h;
-    })!;
+    const blockId = blockOf(sim.layout, pawn.x + pawn.w / 2, pawn.y + pawn.h / 2)!.id;
     sim.territory.controllers[blockId] = 'saints';
     const saintsPrice = sim.shopPrice('paper-moon', 'coil-snare');
     sim.territory.controllers[blockId] = 'halcyon';

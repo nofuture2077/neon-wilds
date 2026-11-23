@@ -65,8 +65,11 @@ Goals are chosen by utility; plans come from a depth-limited A* over boolean fac
 ### ADR-021 — Generated missions are data in the save
 Generated `MissionDef`s live in progression (bounded: only offered or known missions are kept), so saves replay exactly and the runtime treats generated and handcrafted missions the same way.
 
-### ADR-022 — One active district, others parked (LOD 3)
+### ADR-022 — One active district, others parked (LOD 3) — *superseded by ADR-024*
 Only the player's district runs at full fidelity. Others keep their named NPCs, quest entities, parked or stolen cars and territory frozen; faction strategy for the Slums keeps running abstractly. Layouts are regenerated from the seed and cached, never saved. Districts are rebuilt on entry by restarting the world scene around the same running simulation.
 
 ### ADR-023 — Story gating by flags, items and reputation; endings by explicit conditions
 Missions use `requires`/`requiresFlags`/`blockedByFlags`/`requiresItems`; dialogue options use `when` (flags, notFlags, minRep, anyOf). Every story path is covered by a playthrough test so content changes can't silently strand a player.
+
+### ADR-024 — One seamless city map (world gen v3)
+All districts are regions of one generated map (`generateCity(VESPER, seed)`), replacing separate district grids and the scene restart on district change. Roads are a planar graph (Gabriel graph + MST + loops, Bézier edges) rasterised to tiles for collision and pathfinding, and drawn as vectors for looks. The layout is regenerated from the seed, never saved; saves from earlier versions migrate by rebuilding the world around the player (story and progression are kept). The cost is a larger simulation, handled with LOD for far NPCs, weighted A* with a retry cooldown, nearby homes and workplaces, and spawning traffic, police and crowds only in a distance band around the player.

@@ -1,3 +1,4 @@
+import { VESPER } from './content/city';
 import { FACTIONS, type RepTier, repTier } from './content/factions';
 import { ITEMS, SHOPS } from './content/items';
 import { SKILLS } from './content/skills';
@@ -7,7 +8,6 @@ import type { ElementType } from './creatures/types';
 import { computeStats, displayName, maxHp, xpForLevel } from './creatures/wildling';
 import { currentObjective, missionDef } from './missions/runtime';
 import { describeLocation } from './world/location';
-import { DISTRICTS, getDistrictContent } from './content';
 import type { Simulation } from './simulation';
 
 /**
@@ -202,6 +202,10 @@ export interface MapView {
   height: number;
   tiles: Uint8Array;
   blocks: { x: number; y: number; w: number; h: number; controller: string | null }[];
+  /** Per tile: index into `blocks`, or -1. */
+  blockMap: Int32Array;
+  /** District names, placed at their hearts. */
+  districts: { name: string; x: number; y: number }[];
   places: { x: number; y: number; name: string; kind: 'clinic' | 'shop' | 'landmark' }[];
   player: { x: number; y: number };
   markers: { x: number; y: number; label: string }[];
@@ -212,23 +216,12 @@ export function objectiveMarkers(sim: Simulation): { x: number; y: number; label
   const layout = sim.layout;
   const markers: { x: number; y: number; label: string; where: string }[] = [];
   const push = (x: number, y: number, label: string) => markers.push({ x, y, label, where: describeLocation(layout, x, y) });
-  /** Target lives in another district: point at the road out. */
-  const elsewhere = (district: string, label: string) => {
-    const exit = sim.exitToward(district);
-    if (exit) markers.push({ x: exit.x, y: exit.y, label: `${label} (${getDistrictContent(district).district.name})`, where: `the road to ${getDistrictContent(district).district.name}` });
-  };
   for (const rt of sim.progression.missions) {
     const obj = currentObjective(rt, sim.progression);
     if (!obj) continue;
     if (obj.kind === 'inspect') {
       const b = layout.buildings.find((x) => x.name === obj.target);
       if (b) push(b.entrance.tx + 0.5, b.entrance.ty + 0.5, obj.text);
-      else {
-        const other = Object.keys(DISTRICTS).find((d) => d !== layout.id && sim.layoutOf(d).buildings.some((x) => x.name === obj.target));
-        if (other) elsewhere(other, obj.text);
-      }
-    } else if ((obj.kind === 'talk' || obj.kind === 'defeat') && sim.npcDistrict(obj.target) && sim.npcDistrict(obj.target) !== layout.id) {
-      elsewhere(sim.npcDistrict(obj.target)!, obj.text);
     } else if (obj.kind === 'talk' || obj.kind === 'defeat') {
       const n = sim.npcs.find((x) => x.id === obj.target && x.present);
       if (n) {
@@ -256,6 +249,8 @@ export function mapView(sim: Simulation): MapView {
     height: layout.map.height,
     tiles: layout.map.tiles,
     blocks: layout.blocks.map((b) => ({ x: b.x, y: b.y, w: b.w, h: b.h, controller: sim.territory.controllers[b.id] ?? null })),
+    blockMap: layout.blockMap,
+    districts: VESPER.regions.map((r) => ({ name: r.name, x: r.anchor.x * layout.map.width, y: r.anchor.y * layout.map.height })),
     places: layout.buildings
       .filter((b) => b.neon !== null)
       .map((b) => ({

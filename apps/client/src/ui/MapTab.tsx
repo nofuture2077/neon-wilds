@@ -15,10 +15,11 @@ const COLORS: Record<number, string> = {
   [Tile.Water]: '#1b3f7a',
   [Tile.Building]: '#15121c',
   [Tile.Tree]: '#1a3a24',
+  [Tile.Lot]: '#2a2228',
 };
-const FACTION_COLOR: Record<string, string> = { saints: '#d7dde8', halcyon: '#00e5ff' };
+const FACTION_COLOR: Record<string, string> = { saints: '#d7dde8', halcyon: '#00e5ff', compact: '#4fffb0', 'iron-chain': '#ff9a30' };
 
-/** District map with territory overlay, landmarks and mission markers. */
+/** City map with district names, territory overlay, landmarks and mission markers. */
 export function MapTab() {
   const ref = useRef<HTMLCanvasElement>(null);
   const map = useGameStore.getState().queries?.map();
@@ -36,16 +37,23 @@ export function MapTab() {
         ctx.fillRect(x * s, y * s, s, s);
       }
     }
-    for (const b of map.blocks) {
-      const c = b.controller ? FACTION_COLOR[b.controller] : '#ff3fa4';
-      ctx.strokeStyle = c ?? '#888';
-      ctx.globalAlpha = b.controller ? 0.9 : 0.6;
-      ctx.lineWidth = 2;
-      ctx.setLineDash(b.controller ? [] : [4, 3]);
-      ctx.strokeRect(b.x * s + 1, b.y * s + 1, b.w * s - 2, b.h * s - 2);
-      ctx.globalAlpha = 0.08;
-      ctx.fillStyle = c ?? '#888';
-      ctx.fillRect(b.x * s, b.y * s, b.w * s, b.h * s);
+    // Territory: tint each block's tiles in its controller's colour; outline the block edge.
+    for (let y = 0; y < map.height; y++) {
+      for (let x = 0; x < map.width; x++) {
+        const id = map.blockMap[y * map.width + x]!;
+        if (id < 0) continue;
+        const controller = map.blocks[id]?.controller;
+        const c = controller ? FACTION_COLOR[controller] : null;
+        if (!c) continue;
+        ctx.globalAlpha = 0.16;
+        ctx.fillStyle = c;
+        ctx.fillRect(x * s, y * s, s, s);
+        const edge = map.blockMap[y * map.width + x - 1] !== id || map.blockMap[y * map.width + x + 1] !== id || map.blockMap[(y - 1) * map.width + x] !== id || map.blockMap[(y + 1) * map.width + x] !== id;
+        if (edge) {
+          ctx.globalAlpha = 0.55;
+          ctx.fillRect(x * s, y * s, s, s);
+        }
+      }
     }
     ctx.globalAlpha = 1;
     ctx.setLineDash([]);
@@ -60,6 +68,15 @@ export function MapTab() {
       ctx.lineTo(m.x * s - 6, m.y * s - 6);
       ctx.lineTo(m.x * s + 6, m.y * s - 6);
       ctx.fill();
+    }
+    ctx.font = `${Math.max(10, s * 3)}px "Press Start 2P", monospace`;
+    ctx.textAlign = 'center';
+    for (const d of map.districts) {
+      ctx.fillStyle = 'rgba(7,7,15,0.7)';
+      const w = ctx.measureText(d.name.toUpperCase()).width;
+      ctx.fillRect(d.x * s - w / 2 - 4, d.y * s - s * 3 - 4, w + 8, s * 3 + 8);
+      ctx.fillStyle = '#7ff6ff';
+      ctx.fillText(d.name.toUpperCase(), d.x * s, d.y * s);
     }
     ctx.fillStyle = '#ff3fa4';
     ctx.beginPath();
@@ -80,7 +97,8 @@ export function MapTab() {
         <Legend color="#b37dff" label="Landmark" />
         <Legend color="#d7dde8" label="Saints turf" />
         <Legend color="#00e5ff" label="Halcyon zone" />
-        <Legend color="#ff3fa4" label="Contested (dashed)" />
+        <Legend color="#4fffb0" label="Tidewater Compact" />
+        <Legend color="#ff9a30" label="Iron Chain" />
       </div>
       {map.markers.map((m, i) => (
         <div key={i} className="font-term text-xl text-neon-yellow">

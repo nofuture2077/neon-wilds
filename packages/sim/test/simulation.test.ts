@@ -178,7 +178,7 @@ describe('Simulation', () => {
 
     it('inspecting a building entrance emits its description', () => {
       const sim = newSim();
-      const b = sim.layout.buildings[0]!;
+      const b = sim.layout.buildings.find((x) => !x.service && x.kind === 'residential')!;
       sim.player.x = b.entrance.tx + 0.5;
       sim.player.y = b.entrance.ty + 0.5;
       // keep NPCs out of the way
@@ -188,6 +188,7 @@ describe('Simulation', () => {
         n.mode = 'idle';
         n.timer = 100;
       }
+      sim.player.heading = Math.atan2(b.door.ty + 0.5 - sim.player.y, b.door.tx + 0.5 - sim.player.x);
       sim.step({ ...NO_INPUT, interact: true });
       expect(sim.drainEvents()).toContainEqual({
         type: 'building.inspected',

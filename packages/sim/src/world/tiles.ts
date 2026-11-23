@@ -16,6 +16,8 @@ export const Tile = {
   Water: 10,
   Building: 11,
   Tree: 12,
+  /** Fenced vacant lot / unreachable yard. */
+  Lot: 13,
 } as const;
 
 export type TileKind = (typeof Tile)[keyof typeof Tile];
@@ -43,6 +45,7 @@ const INFO: Record<TileKind, TileInfo> = {
   [Tile.Water]: { solid: true, pedestrian: false, drivable: false },
   [Tile.Building]: { solid: true, pedestrian: false, drivable: false },
   [Tile.Tree]: { solid: true, pedestrian: false, drivable: false },
+  [Tile.Lot]: { solid: true, pedestrian: false, drivable: false },
 };
 
 export function tileInfo(kind: TileKind): TileInfo {

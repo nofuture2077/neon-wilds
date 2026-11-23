@@ -43,13 +43,15 @@ describe('wanted system', () => {
     civilian.x = sim.player.x + 2;
     civilian.y = sim.player.y;
     let reported = false;
+    let wanted = false;
     for (let attempt = 0; attempt < 10 && !reported; attempt++) {
       sim.reportCrime('vehicle-theft', sim.player.x, sim.player.y, 1);
       const events = run(sim, TICK_RATE * 10);
       reported = events.some((e) => e.type === 'notice' && e.text.includes('called the Wardens'));
+      wanted ||= events.some((e) => e.type === 'wanted.changed' && e.stars >= 1);
     }
     expect(reported).toBe(true);
-    expect(sim.law.stars).toBeGreaterThanOrEqual(1);
+    expect(wanted).toBe(true); // (a patrol may well have busted the player since)
 
     const saints = newSim(33);
     for (const n of saints.npcs) n.present = false;
