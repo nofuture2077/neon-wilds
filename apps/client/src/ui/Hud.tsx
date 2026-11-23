@@ -15,7 +15,15 @@ export function Hud() {
     <div className="pointer-events-none absolute inset-0 p-4">
       <div className="flex flex-col items-start gap-2">
         <div className="panel inline-flex flex-col gap-1 px-4 py-3">
-          <span className="font-pixel text-[10px] text-neon-pink">{hud.district}</span>
+          <span className="font-pixel text-[10px] text-neon-pink">
+            {hud.district}
+            {hud.turf && (
+              <span className={hud.turf === 'halcyon' ? 'text-neon-cyan' : 'text-slate-300'}>
+                {' · '}
+                {hud.turf === 'halcyon' ? 'Halcyon zone' : hud.turf === 'saints' ? 'Saints turf' : hud.turf}
+              </span>
+            )}
+          </span>
           <span className="font-term text-2xl leading-none text-white">{hud.location}</span>
         </div>
         {objective && (

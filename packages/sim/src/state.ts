@@ -3,6 +3,7 @@ import type { BattleAction, BattleState } from './battle/types';
 import type { TilePos } from './core/vec';
 import type { Effect } from './missions/types';
 import type { ProgressionState } from './progression';
+import type { MarketState, TerritoryState } from './factions/territory';
 import type { LawState } from './law/law';
 import type { VehicleState } from './world/vehicles';
 import type { WildlingEntity } from './world/wildlings';
@@ -75,13 +76,14 @@ export type SimCommand =
   | { type: 'party.setLead'; partyIndex: number }
   | { type: 'party.deposit'; partyIndex: number }
   | { type: 'party.withdraw'; storageIndex: number }
-  | { type: 'shop.buy'; shopId: string; itemId: string; qty: number };
+  | { type: 'shop.buy'; shopId: string; itemId: string; qty: number }
+  | { type: 'market.sellWildling'; from: 'party' | 'storage'; index: number };
 
 export type Focus =
   | { kind: 'npc'; id: string; label: string }
   | { kind: 'building'; id: string; label: string };
 
-export const SNAPSHOT_VERSION = 4;
+export const SNAPSHOT_VERSION = 5;
 
 /** Everything needed to resume a simulation. The district layout is regenerated from seed + districtId. */
 export interface SimSnapshot {
@@ -103,4 +105,8 @@ export interface SimSnapshot {
   /** Null means "regenerate parked cars from the layout" (used when migrating older saves). */
   vehicles: VehicleState[] | null;
   law: LawState;
+  day: number;
+  /** Null means "initialise from the layout" (migrated saves). */
+  territory: TerritoryState | null;
+  market: MarketState;
 }

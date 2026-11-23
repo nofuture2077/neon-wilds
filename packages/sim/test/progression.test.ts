@@ -180,10 +180,13 @@ describe('shops and clinic', () => {
     at(sim, 'Paper Moon Pawn');
     const ev = interact(sim);
     expect(ev).toContainEqual({ type: 'shop.opened', shopId: 'paper-moon' });
+    const price = sim.shopPrice('paper-moon', 'tin-snare');
+    expect(price).toBeGreaterThan(40);
+    expect(price).toBeLessThan(90);
     sim.enqueue({ type: 'shop.buy', shopId: 'paper-moon', itemId: 'tin-snare', qty: 1 });
     sim.step(NO_INPUT);
     expect(sim.progression.inventory['tin-snare']).toBe(1);
-    expect(sim.progression.money).toBe(40);
+    expect(sim.progression.money).toBe(100 - price);
     sim.enqueue({ type: 'shop.buy', shopId: 'paper-moon', itemId: 'coil-snare', qty: 1 });
     sim.step(NO_INPUT);
     expect(sim.progression.inventory['coil-snare']).toBeUndefined();

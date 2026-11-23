@@ -76,10 +76,20 @@ export interface DistrictDefinition {
   residentialNames: string[];
 }
 
+export interface CityBlock {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  kind: 'lots' | 'park' | 'square';
+}
+
 export interface DistrictLayout {
   id: string;
   name: string;
   map: TileMap;
+  blocks: CityBlock[];
   buildings: Building[];
   props: Prop[];
   streets: Street[];

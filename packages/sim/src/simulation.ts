@@ -29,6 +29,7 @@ import { createWildling, displayName, healFully, maxHp } from './creatures/wildl
 import { migrateSnapshot } from './migrations';
 import { checkAutoStart, isObjective, offerFrom, startMission, trigger, type MissionHost } from './missions/runtime';
 import type { Effect } from './missions/types';
+import type { WildlingInstance } from './creatures/model';
 import { moveAndCollide } from './physics/collision';
 import {
   type ProgressionState,
@@ -54,6 +55,18 @@ import { describeLocation } from './world/location';
 import { Pathfinder } from './world/pathfinding';
 import { RoadNetwork } from './world/roads';
 import { type LawContext, type LawState, clearWanted, newLawState, onCrime, pursuitTarget, updateLaw } from './law/law';
+import { ARCHETYPE_FACTION, repTier } from './content/factions';
+import {
+  type MarketState,
+  type TerritoryState,
+  adjustInfluence,
+  blockOf,
+  factionHour,
+  newTerritory,
+  priceOf,
+  recoverDemand,
+  wildlingSalePrice,
+} from './factions/territory';
 import {
   type VehicleContext,
   type VehicleState,
@@ -121,6 +134,9 @@ export class Simulation implements MissionHost {
   readonly vehicles: VehicleState[];
   readonly roads: RoadNetwork;
   readonly law: LawState;
+  readonly territory: TerritoryState;
+  readonly market: MarketState;
+  private _day: number;
   private _battle: BattleState | null;
 
   private constructor(private readonly seed: number, districtId: string, snapshot: SimSnapshot | null, config: NewGameConfig | null) {
@@ -155,6 +171,9 @@ export class Simulation implements MissionHost {
       this.nextEntityId = snapshot.nextEntityId;
       this.vehicles = snapshot.vehicles ? cloneData(snapshot.vehicles) : parkedVehiclesFromLayout(this.layout);
       this.law = cloneData(snapshot.law);
+      this.territory = snapshot.territory ? cloneData(snapshot.territory) : newTerritory(this.layout);
+      this.market = cloneData(snapshot.market);
+      this._day = snapshot.day;
     } else if (config) {
       this.rng = new Rng(deriveSeed(seed, 'simulation'));
       this._tick = 0;
@@ -186,6 +205,9 @@ export class Simulation implements MissionHost {
       this.nextEntityId = 1;
       this.vehicles = parkedVehiclesFromLayout(this.layout);
       this.law = newLawState();
+      this.territory = newTerritory(this.layout);
+      this.market = { demand: {} };
+      this._day = 0;
       checkAutoStart(this);
     } else {
       throw new Error('Simulation requires a snapshot or a config');
@@ -310,6 +332,9 @@ export class Simulation implements MissionHost {
       nextEntityId: this.nextEntityId,
       vehicles: cloneData(this.vehicles),
       law: cloneData(this.law),
+      day: this._day,
+      territory: cloneData(this.territory),
+      market: cloneData(this.market),
     };
   }
 
@@ -367,6 +392,9 @@ export class Simulation implements MissionHost {
       case 'set-flag':
         p.flags[effect.flag] = true;
         break;
+      case 'reputation':
+        this.changeReputation(effect.faction, effect.delta);
+        break;
     }
   }
 
@@ -412,6 +440,9 @@ export class Simulation implements MissionHost {
         case 'shop.buy':
           this.buy(cmd.shopId, cmd.itemId, cmd.qty);
           break;
+        case 'market.sellWildling':
+          this.sellWildling(cmd.from, cmd.index);
+          break;
       }
     }
   }
@@ -435,7 +466,7 @@ export class Simulation implements MissionHost {
     const shop = SHOPS[shopId];
     const item = ITEMS[itemId];
     if (!shop || !item || !shop.items.includes(itemId) || qty < 1 || qty > 99) return;
-    const cost = item.price * qty;
+    const cost = this.shopPrice(shopId, itemId) * qty;
     if (this.progression.money < cost) {
       this.emit({ type: 'notice', text: "You can't afford that." });
       return;
@@ -595,6 +626,19 @@ export class Simulation implements MissionHost {
         if (battle.kind === 'trainer' && battle.trainerId) {
           p.money += battle.rewardMoney;
           if (!p.defeatedTrainers.includes(battle.trainerId)) p.defeatedTrainers.push(battle.trainerId);
+          const npc = this.npcs.find((n) => n.id === battle.trainerId);
+          const faction = npc ? ARCHETYPE_FACTION[npc.archetypeId] : undefined;
+          if (faction === 'halcyon') {
+            this.changeReputation('halcyon', -8);
+            this.changeReputation('saints', 4);
+            const block = blockOf(this.layout, this.player.x, this.player.y);
+            if (block) {
+              adjustInfluence(this.territory, block.id, 'halcyon', -15, this.events);
+              adjustInfluence(this.territory, block.id, 'saints', 10, this.events);
+            }
+          } else if (faction) {
+            this.changeReputation(faction, 3);
+          }
         }
         break;
       case 'fled':
@@ -807,6 +851,7 @@ export class Simulation implements MissionHost {
     }
     this.player.vx = this.player.vy = 0;
     clearWanted(this.law, { events: this.events, vehicles: this.vehicles });
+    this.changeReputation('wardens', -5);
     this.emit({ type: 'busted', lostMoney: lost });
     this.emit({
       type: 'message',
@@ -932,6 +977,8 @@ export class Simulation implements MissionHost {
           if (pushOut(npc, c, NPC_HALF_EXTENT, this.layout) && speed > 1.5 && v.driver === 'player' && this._tick >= npc.shoveCooldownUntilTick) {
             onShoved(npc, this.npcs, ctx);
             this.reportCrime('hit-pedestrian', npc.x, npc.y, 2);
+            const faction = ARCHETYPE_FACTION[npc.archetypeId];
+            if (faction) this.changeReputation(faction, -6);
           }
         }
         for (const w of this.wildlings) {
@@ -943,14 +990,74 @@ export class Simulation implements MissionHost {
 
   /** Record a crime. Witnesses and the wanted level are handled by the law system. */
   reportCrime(kind: import('./core/events').CrimeKind, x: number, y: number, severity: number): void {
-    onCrime(this.law, this.lawContext(), kind, x, y, severity);
+    const witnessed = onCrime(this.law, this.lawContext(), kind, x, y, severity);
+    if (witnessed && severity >= 1) this.changeReputation('wardens', -Math.round(severity * 2));
   }
 
   private advanceClock(): void {
     const before = this.hour;
-    this._minutes = (this._minutes + DT * GAME_MINUTES_PER_SECOND) % 1440;
+    const next = this._minutes + DT * GAME_MINUTES_PER_SECOND;
+    if (next >= 1440) this._day++;
+    this._minutes = next % 1440;
     const after = this.hour;
-    if (after !== before) this.events.push({ type: 'clock.hour', hour: after });
+    if (after !== before) {
+      this.events.push({ type: 'clock.hour', hour: after });
+      factionHour(this.territory, this.layout, this.progression.reputation, this.events);
+      recoverDemand(this.market);
+      this._progressVersion++;
+    }
+  }
+
+  get day(): number {
+    return this._day;
+  }
+
+  /** Change the player's standing with a faction (clamped to -100..100). */
+  changeReputation(faction: string, delta: number): void {
+    const rep = this.progression.reputation;
+    const before = rep[faction] ?? 0;
+    const after = Math.max(-100, Math.min(100, before + delta));
+    if (after === before) return;
+    rep[faction] = after;
+    this._progressVersion++;
+    this.emit({ type: 'reputation.changed', faction, delta: after - before, value: after });
+  }
+
+  /** Current shop price, including territory and reputation effects. */
+  shopPrice(shopId: string, itemId: string): number {
+    const shop = SHOPS[shopId];
+    if (!shop) return 0;
+    return priceOf(itemId, shop.name, { day: this._day, territory: this.territory, layout: this.layout, reputation: this.progression.reputation });
+  }
+
+  salePrice(w: WildlingInstance): number {
+    return wildlingSalePrice(w, this.market);
+  }
+
+  /** Faction controlling the block the player is in, if any. */
+  controllerAtPlayer(): string | null {
+    const b = blockOf(this.layout, this.player.x, this.player.y);
+    return b ? (this.territory.controllers[b.id] ?? null) : null;
+  }
+
+  private sellWildling(from: 'party' | 'storage', index: number): void {
+    const p = this.progression;
+    const pawn = this.layout.buildings.find((b) => b.name === 'Paper Moon Pawn');
+    if (this._battle || !pawn || Math.hypot(this.player.x - (pawn.entrance.tx + 0.5), this.player.y - (pawn.entrance.ty + 0.5)) > 3) return;
+    const list = from === 'party' ? p.party : p.storage;
+    const w = list[index];
+    if (!w || w.speciesId === 'glitchling') return;
+    if (from === 'party' && p.party.filter((x) => x.hp > 0).length <= 1 && w.hp > 0) {
+      this.emit({ type: 'notice', text: "You can't sell your last healthy Wildling." });
+      return;
+    }
+    const price = this.salePrice(w);
+    list.splice(index, 1);
+    p.money += price;
+    this.market.demand[w.speciesId] = Math.max(0.3, (this.market.demand[w.speciesId] ?? 1) - 0.2);
+    this._progressVersion++;
+    this.emit({ type: 'notice', text: `Sold ${displayName(w)} for ${price}\u20b5. The Saints won't like this.` });
+    this.changeReputation('saints', -4);
   }
 
   private updatePlayer(input: PlayerInput): void {
@@ -1011,6 +1118,8 @@ export class Simulation implements MissionHost {
       if (shove) {
         onShoved(npc, this.npcs, ctx);
         this.reportCrime('assault', npc.x, npc.y, 0.5);
+        const faction = ARCHETYPE_FACTION[npc.archetypeId];
+        if (faction) this.changeReputation(faction, -3);
       }
     }
   }
@@ -1097,6 +1206,18 @@ export class Simulation implements MissionHost {
       return;
     }
     if (b.service?.kind === 'clinic') {
+      const fee = (this.progression.reputation.saints ?? 0) <= -20 ? 80 : 0;
+      if (fee > 0 && this.progression.party.length > 0) {
+        if (this.progression.money < fee) {
+          this.emit({ type: 'message', speaker: b.name, pages: [`Needle folds her arms. "${fee}\u20b5. Saints\u2019 rules don\u2019t cover people who sell strays."`] });
+          return;
+        }
+        this.progression.money -= fee;
+        for (const w of this.progression.party) healFully(w, true);
+        this._progressVersion++;
+        this.emit({ type: 'message', speaker: b.name, pages: [`Needle patches up your Wildlings without a word and pockets the ${fee}\u20b5.`] });
+        return;
+      }
       for (const w of this.progression.party) healFully(w, true);
       this._progressVersion++;
       this.emit({
@@ -1122,6 +1243,12 @@ export class Simulation implements MissionHost {
   private pickConversation(npc: NpcState, archetype: NpcArchetype): Conversation {
     const d = archetype.dialogue;
     if (this._tick < npc.grudgeUntilTick && d.grudge.length > 0) return this.rng.pick(d.grudge);
+    const faction = ARCHETYPE_FACTION[archetype.id];
+    if (faction && archetype.factionDialogue) {
+      const tier = repTier(this.progression.reputation[faction] ?? 0);
+      if ((tier === 'Trusted' || tier === 'Family') && archetype.factionDialogue.friendly.length) return this.rng.pick(archetype.factionDialogue.friendly);
+      if ((tier === 'Distrusted' || tier === 'Hunted') && archetype.factionDialogue.hostile.length) return this.rng.pick(archetype.factionDialogue.hostile);
+    }
     if (this.isNight && d.night.length > 0 && this.rng.chance(0.5)) return this.rng.pick(d.night);
     return this.rng.pick(d.greeting);
   }

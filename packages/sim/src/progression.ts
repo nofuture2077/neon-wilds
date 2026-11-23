@@ -14,6 +14,8 @@ export interface ProgressionState {
   missions: MissionRuntime[];
   defeatedTrainers: string[];
   nextUid: number;
+  /** factionId → -100..100 */
+  reputation: Record<string, number>;
 }
 
 export function newProgression(): ProgressionState {
@@ -27,6 +29,7 @@ export function newProgression(): ProgressionState {
     missions: [],
     defeatedTrainers: [],
     nextUid: 1,
+    reputation: { saints: 0, halcyon: 0, compact: 0, choir: 0, 'iron-chain': 0, wardens: 0 },
   };
 }
 

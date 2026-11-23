@@ -116,6 +116,16 @@ export const SLUMS_ARCHETYPES: NpcArchetype[] = [
         ['Walk away, {player}. Slowly.'],
       ],
     },
+    factionDialogue: {
+      friendly: [
+        ["Mother Rook's been asking about you, {player}. Good things, mostly.", 'Need patching up? Ottilie\u2019s door is always open for family.'],
+        ["Halcyon posters went up on Lantern Parade again. We've been peeling them off.", 'Keep your eyes open for their vans. Wildlings go in, nothing comes out.'],
+      ],
+      hostile: [
+        ["You've been making friends with the wrong people, {player}.", "Ottilie's clinic will still treat you. It'll just cost you now."],
+        ['Saints remember. Every shove, every sold Wildling. Every single one.'],
+      ],
+    },
     barks: {
       ambient: ['Keep your head down.', 'Saints are watching.', 'Quiet night. Too quiet.'],
       night: ['Lights are humming again.', "Stay off Drain Street after midnight."],

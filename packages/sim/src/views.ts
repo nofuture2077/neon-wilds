@@ -1,4 +1,5 @@
-import { ITEMS } from './content/items';
+import { FACTIONS, type RepTier, repTier } from './content/factions';
+import { ITEMS, SHOPS } from './content/items';
 import { MISSIONS } from './content/missions';
 import { SKILLS } from './content/skills';
 import { SPECIES, getSpecies } from './content/wildlings';
@@ -130,5 +131,112 @@ export function battleView(sim: Simulation): BattleView | null {
     enemyRemaining: b.enemy.party.filter((w) => w.hp > 0).length,
     snares: items('snare'),
     medicine: items('medicine'),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Shops, factions and the map
+
+export interface ShopView {
+  id: string;
+  name: string;
+  money: number;
+  items: { id: string; name: string; description: string; price: number; owned: number }[];
+  blackMarket: boolean;
+  sellables: { from: 'party' | 'storage'; index: number; name: string; speciesId: string; level: number; price: number }[];
+}
+
+export function shopView(sim: Simulation, shopId: string): ShopView | null {
+  const shop = SHOPS[shopId];
+  if (!shop) return null;
+  const p = sim.progression;
+  const blackMarket = shopId === 'paper-moon';
+  const sellable = (from: 'party' | 'storage') =>
+    (from === 'party' ? p.party : p.storage).flatMap((w, index) =>
+      w.speciesId === 'glitchling' ? [] : [{ from, index, name: displayName(w), speciesId: w.speciesId, level: w.level, price: sim.salePrice(w) }],
+    );
+  return {
+    id: shopId,
+    name: shop.name,
+    money: p.money,
+    items: shop.items.map((id) => ({
+      id,
+      name: ITEMS[id]?.name ?? id,
+      description: ITEMS[id]?.description ?? '',
+      price: sim.shopPrice(shopId, id),
+      owned: p.inventory[id] ?? 0,
+    })),
+    blackMarket,
+    sellables: blackMarket ? [...sellable('party'), ...sellable('storage')] : [],
+  };
+}
+
+export interface FactionView {
+  id: string;
+  name: string;
+  color: number;
+  leader: string;
+  motto: string;
+  reputation: number;
+  tier: RepTier;
+  blocks: number;
+}
+
+export function factionsView(sim: Simulation): FactionView[] {
+  const controllers = Object.values(sim.territory.controllers);
+  return FACTIONS.map((f) => ({
+    id: f.id,
+    name: f.name,
+    color: f.color,
+    leader: f.leader,
+    motto: f.motto,
+    reputation: sim.progression.reputation[f.id] ?? 0,
+    tier: repTier(sim.progression.reputation[f.id] ?? 0),
+    blocks: controllers.filter((c) => c === f.id).length,
+  }));
+}
+
+export interface MapView {
+  width: number;
+  height: number;
+  tiles: Uint8Array;
+  blocks: { x: number; y: number; w: number; h: number; controller: string | null }[];
+  places: { x: number; y: number; name: string; kind: 'clinic' | 'shop' | 'landmark' }[];
+  player: { x: number; y: number };
+  markers: { x: number; y: number; label: string }[];
+}
+
+export function mapView(sim: Simulation): MapView {
+  const layout = sim.layout;
+  const markers: MapView['markers'] = [];
+  for (const rt of sim.progression.missions) {
+    const obj = currentObjective(rt);
+    if (!obj) continue;
+    if (obj.kind === 'inspect') {
+      const b = layout.buildings.find((x) => x.name === obj.target);
+      if (b) markers.push({ x: b.entrance.tx + 0.5, y: b.entrance.ty + 0.5, label: obj.text });
+    } else if (obj.kind === 'talk' || obj.kind === 'defeat') {
+      const n = sim.npcs.find((x) => x.id === obj.target && x.present);
+      if (n) markers.push({ x: n.x, y: n.y, label: obj.text });
+    } else if (obj.kind === 'resolve-tag') {
+      const w = sim.wildlings.find((x) => x.questTag === obj.target);
+      if (w) markers.push({ x: w.x, y: w.y, label: obj.text });
+    }
+  }
+  return {
+    width: layout.map.width,
+    height: layout.map.height,
+    tiles: layout.map.tiles,
+    blocks: layout.blocks.map((b) => ({ x: b.x, y: b.y, w: b.w, h: b.h, controller: sim.territory.controllers[b.id] ?? null })),
+    places: layout.buildings
+      .filter((b) => b.neon !== null)
+      .map((b) => ({
+        x: b.entrance.tx + 0.5,
+        y: b.entrance.ty + 0.5,
+        name: b.name,
+        kind: b.service?.kind === 'clinic' ? 'clinic' : b.service?.kind === 'shop' ? 'shop' : 'landmark',
+      })),
+    player: { x: sim.player.x, y: sim.player.y },
+    markers,
   };
 }

@@ -201,7 +201,8 @@ export function generateDistrict(def: DistrictDefinition, seed: number): Distric
     }
   }
 
-  return { id: def.id, name: def.name, map, buildings, props, streets, playerSpawn, pedestrianSpawns };
+  const cityBlocks = blocks.map((b) => ({ id: `block-${b.key}`, x: b.x, y: b.y, w: b.w, h: b.h, kind: b.kind }));
+  return { id: def.id, name: def.name, map, blocks: cityBlocks, buildings, props, streets, playerSpawn, pedestrianSpawns };
 }
 
 function inBand(v: number, count: number, bandStart: (i: number) => number, roadW: number): boolean {

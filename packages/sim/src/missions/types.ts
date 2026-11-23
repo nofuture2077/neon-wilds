@@ -8,7 +8,8 @@ export type Effect =
   | { type: 'despawn-npc'; npc: string }
   | { type: 'start-trainer-battle'; npc: string }
   | { type: 'spawn-quest-wildling'; species: string; level: number; tag: string }
-  | { type: 'set-flag'; flag: string };
+  | { type: 'set-flag'; flag: string }
+  | { type: 'reputation'; faction: string; delta: number };
 
 export type ObjectiveKind = 'inspect' | 'talk' | 'defeat' | 'resolve-tag';
 

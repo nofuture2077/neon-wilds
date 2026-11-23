@@ -23,6 +23,8 @@ export interface NpcArchetype {
     /** Used while the NPC remembers being shoved by the player. */
     grudge: Conversation[];
   };
+  /** Optional lines chosen by the player's standing with the NPC's faction. */
+  factionDialogue?: { friendly: Conversation[]; hostile: Conversation[] };
   barks: {
     ambient: string[];
     night: string[];

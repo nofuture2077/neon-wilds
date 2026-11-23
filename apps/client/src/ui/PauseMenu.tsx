@@ -3,6 +3,8 @@ import { type PauseTab, useGameStore } from '../state/gameStore';
 import { type SlotInfo, listSaves, slotLabel, writeSave } from '../services/saves';
 import { SLOTS, type SlotId, formatPlayTime } from '../services/saveFormat';
 import { ControlsPanel } from './ControlsPanel';
+import { FactionsTab } from './FactionsTab';
+import { MapTab } from './MapTab';
 import { CreatureIcon, HpBar, StatusBadge, TypeBadge, XpBar } from './widgets';
 import { useGamepadNav } from './useGamepadNav';
 
@@ -10,7 +12,9 @@ const TABS: Array<[PauseTab, string]> = [
   ['party', 'Party'],
   ['bag', 'Bag'],
   ['index', 'Index'],
+  ['map', 'Map'],
   ['journal', 'Journal'],
+  ['factions', 'Factions'],
   ['save', 'Save'],
   ['controls', 'Controls'],
 ];
@@ -56,7 +60,9 @@ export function PauseMenu() {
           {tab === 'party' && <PartyTab />}
           {tab === 'bag' && <BagTab />}
           {tab === 'index' && <IndexTab />}
+          {tab === 'map' && <MapTab />}
           {tab === 'journal' && <JournalTab />}
+          {tab === 'factions' && <FactionsTab />}
           {tab === 'save' && <SaveTab />}
           {tab === 'controls' && <ControlsPanel />}
         </div>

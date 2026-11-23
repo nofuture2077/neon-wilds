@@ -88,6 +88,8 @@ export const MISSIONS: MissionDef[] = [
       { type: 'give-item', item: 'tin-snare', qty: 5 },
       { type: 'give-item', item: 'patch-kit', qty: 3 },
       { type: 'give-money', amount: 150 },
+      { type: 'reputation', faction: 'saints', delta: 15 },
+      { type: 'reputation', faction: 'halcyon', delta: -10 },
       { type: 'spawn-npc', npc: 'npc-vik', near: 'Paper Moon Pawn' },
     ],
   },
@@ -115,6 +117,7 @@ export const MISSIONS: MissionDef[] = [
     rewards: [
       { type: 'give-money', amount: 150 },
       { type: 'give-item', item: 'coil-snare', qty: 2 },
+      { type: 'reputation', faction: 'saints', delta: 8 },
     ],
   },
   {
@@ -125,6 +128,9 @@ export const MISSIONS: MissionDef[] = [
     giver: 'npc-vik',
     offer: ["Hey, courier. You've got a Wildling everybody's whispering about.", "I want a fight. Talk to me again when you're ready — and bring more than one Wildling if you're smart."],
     objectives: [{ text: 'Defeat Vik Torrance outside Paper Moon Pawn', kind: 'defeat', target: 'npc-vik' }],
-    rewards: [{ type: 'give-item', item: 'lull-snare', qty: 2 }],
+    rewards: [
+      { type: 'give-item', item: 'lull-snare', qty: 2 },
+      { type: 'reputation', faction: 'iron-chain', delta: 12 },
+    ],
   },
 ];

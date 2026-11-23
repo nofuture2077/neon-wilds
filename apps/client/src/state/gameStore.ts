@@ -1,4 +1,4 @@
-import type { Appearance, BattleLog, BattleView, ProgressView, SimCommand, SimSnapshot, StatusKind } from '@neon-wilds/sim';
+import type { Appearance, BattleLog, BattleView, FactionView, MapView, ProgressView, ShopView, SimCommand, SimSnapshot, StatusKind } from '@neon-wilds/sim';
 import { create } from 'zustand';
 import { emitBattleFx } from '../game/battleFx';
 
@@ -35,6 +35,15 @@ export interface HudState {
   vehicleHealth: number | null;
   stars: number;
   seen: boolean;
+  /** Faction controlling the player's block, if any. */
+  turf: string | null;
+}
+
+/** Read-only queries into the running simulation, provided by the game host. */
+export interface GameQueries {
+  shop(shopId: string): ShopView | null;
+  factions(): FactionView[];
+  map(): MapView;
 }
 
 export interface Toast {
@@ -68,7 +77,7 @@ export interface BattleUiState {
   pendingItem: string | null;
 }
 
-export type PauseTab = 'party' | 'bag' | 'index' | 'journal' | 'save' | 'controls';
+export type PauseTab = 'party' | 'bag' | 'index' | 'map' | 'journal' | 'factions' | 'save' | 'controls';
 
 interface GameStore {
   screen: Screen;
@@ -88,6 +97,7 @@ interface GameStore {
   commandSink: ((cmd: SimCommand) => void) | null;
   /** Set by the game host; returns a consistent snapshot for saving, or null if saving is not allowed now. */
   snapshotSource: (() => { snapshot: SimSnapshot; location: string } | null) | null;
+  queries: GameQueries | null;
 
   goTo(screen: Screen): void;
   startSession(session: Session): void;
@@ -111,7 +121,7 @@ interface GameStore {
   battleChooseItem(itemId: string | null): void;
 }
 
-const EMPTY_HUD: HudState = { district: '', location: '', clock: '', isNight: false, prompt: null, promptKey: 'E', speed: null, vehicleHealth: null, stars: 0, seen: false };
+const EMPTY_HUD: HudState = { district: '', location: '', clock: '', isNight: false, prompt: null, promptKey: 'E', speed: null, vehicleHealth: null, stars: 0, seen: false, turf: null };
 let toastSeq = 1;
 
 function shown(view: BattleView, side: 'player' | 'enemy', index = view.activeIndex): ShownCreature {
@@ -135,6 +145,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   shopId: null,
   commandSink: null,
   snapshotSource: null,
+  queries: null,
 
   goTo: (screen) => set({ screen }),
   startSession: (session) =>
@@ -151,7 +162,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       progress: null,
       hud: EMPTY_HUD,
     })),
-  quitToMenu: () => set({ screen: 'menu', paused: false, dialogue: null, dialogueQueue: [], battle: null, shopId: null, commandSink: null, snapshotSource: null }),
+  quitToMenu: () => set({ screen: 'menu', paused: false, dialogue: null, dialogueQueue: [], battle: null, shopId: null, commandSink: null, snapshotSource: null, queries: null }),
   setPaused: (paused) => set({ paused }),
   setPauseTab: (pauseTab) => set({ pauseTab }),
   setHud: (hud) => {
@@ -166,7 +177,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       prev.speed === hud.speed &&
       prev.vehicleHealth === hud.vehicleHealth &&
       prev.stars === hud.stars &&
-      prev.seen === hud.seen
+      prev.seen === hud.seen &&
+      prev.turf === hud.turf
     ) {
       return;
     }

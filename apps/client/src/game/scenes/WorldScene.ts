@@ -6,8 +6,12 @@ import {
   Simulation,
   TILE_SIZE,
   battleView,
+  describeLocation,
+  factionsView,
   getSpecies,
+  mapView,
   progressView,
+  shopView,
   vehicleClass,
   type PlayerInput,
   type SimEvent,
@@ -24,6 +28,7 @@ import { Depth } from '../render/depth';
 import { Lighting, darknessAt } from '../render/lighting';
 import { WildlingViews } from '../render/WildlingViews';
 import { SignalViews, VehicleViews } from '../render/VehicleViews';
+import { TerritoryViews } from '../render/TerritoryViews';
 
 /** Max simulation catch-up per frame (prevents a spiral of death after a tab stall). */
 const MAX_FRAME_SECONDS = 0.25;
@@ -42,6 +47,7 @@ export class WorldScene extends Phaser.Scene {
   private wildlingViews!: WildlingViews;
   private vehicleViews!: VehicleViews;
   private signals!: SignalViews;
+  private territoryViews!: TerritoryViews;
   private cameraTarget!: Phaser.GameObjects.Zone;
   private baseZoom = 3;
   private pendingAction = false;
@@ -84,6 +90,7 @@ export class WorldScene extends Phaser.Scene {
     this.wildlingViews = new WildlingViews(this, textRes);
     this.vehicleViews = new VehicleViews(this);
     this.signals = new SignalViews(this, this.sim.roads);
+    this.territoryViews = new TerritoryViews(this, this.sim.layout);
     this.focusMarker = this.add.image(0, 0, TEXTURES.focus).setDepth(Depth.focus).setVisible(false);
     this.barks = new BarkLayer(this, textRes);
     this.controls = new InputMapper(this);
@@ -101,6 +108,11 @@ export class WorldScene extends Phaser.Scene {
     useGameStore.setState({
       commandSink: (cmd) => this.sim.enqueue(cmd),
       snapshotSource: () => (this.canSave() ? { snapshot: this.sim.snapshot(), location: this.sim.locationLabel() } : null),
+      queries: {
+        shop: (id) => shopView(this.sim, id),
+        factions: () => factionsView(this.sim),
+        map: () => mapView(this.sim),
+      },
     });
     if (session.kind === 'load') store.pushToast(`Loaded ${session.slot === 'auto' ? 'autosave' : 'save'}.`, 'info');
 
@@ -184,6 +196,7 @@ export class WorldScene extends Phaser.Scene {
     const darkness = darknessAt(this.sim.minutes);
     this.vehicleViews.sync(this.sim.vehicles, alpha, deltaSeconds * 1000, darkness, this.time.now);
     this.signals.update(this.sim.tick);
+    this.territoryViews.update(this.sim.territory.controllers, darkness);
     this.syncOfficers(alpha, deltaSeconds);
 
     // Camera: look ahead of a moving car and zoom out with speed (GTA 2 style).
@@ -264,6 +277,19 @@ export class WorldScene extends Phaser.Scene {
         if (event.stars > 0) {
           store.pushToast(`Wanted: ${'\u2605'.repeat(event.stars)}`, 'warning');
           this.cameras.main.flash(120, 60, 90, 255);
+        }
+        break;
+      case 'territory.changed': {
+        const b = this.sim.layout.blocks.find((x) => x.id === event.blockId);
+        const where = b ? describeLocation(this.sim.layout, b.x + b.w / 2, b.y + b.h / 2) : 'the Slums';
+        const name = event.controller === 'halcyon' ? 'Halcyon' : event.controller === 'saints' ? 'The Gutter Saints' : null;
+        store.pushToast(name ? `${name} took control near ${where}.` : `The blocks near ${where} are contested.`, 'mission');
+        break;
+      }
+      case 'reputation.changed':
+        if (Math.abs(event.delta) >= 3) {
+          const names: Record<string, string> = { saints: 'Gutter Saints', halcyon: 'Halcyon', compact: 'Tidewater Compact', choir: 'Verdant Choir', 'iron-chain': 'Iron Chain', wardens: 'Wardens' };
+          store.pushToast(`${names[event.faction] ?? event.faction} ${event.delta > 0 ? '+' : ''}${event.delta}`, event.delta > 0 ? 'reward' : 'warning');
         }
         break;
       case 'busted':
@@ -371,6 +397,7 @@ export class WorldScene extends Phaser.Scene {
       vehicleHealth: driving ? Math.round((driving.hp / vehicleClass(driving).hp) * 100) : null,
       stars: sim.law.stars,
       seen: sim.law.seen,
+      turf: sim.controllerAtPlayer(),
     });
   }
 

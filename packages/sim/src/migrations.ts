@@ -31,6 +31,18 @@ const STEPS: Record<number, (s: AnySnapshot) => AnySnapshot> = {
   }),
   // v3 → v4: police and wanted levels.
   3: (s) => ({ ...s, version: 4, law: newLawState() }),
+  // v4 → v5: factions, territory and the economy.
+  4: (s) => {
+    const progression = s.progression as Record<string, unknown>;
+    return {
+      ...s,
+      version: 5,
+      day: 0,
+      territory: null,
+      market: { demand: {} },
+      progression: { ...progression, reputation: newProgression().reputation },
+    };
+  },
 };
 
 export function migrateSnapshot(raw: unknown): SimSnapshot {
