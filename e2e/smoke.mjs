@@ -136,10 +136,13 @@ await step('06-wild-battle');
 assert(await sim(() => window.__NEON_WILDS__.sim.battle?.kind === 'wild'), 'wild battle started');
 await press('e');
 await sim(() => {
-  const b = window.__NEON_WILDS__.sim.battle;
+  const { sim } = window.__NEON_WILDS__;
+  const b = sim.battle;
   b.enemy.party[0].hp = 1;
+  b.enemy.party[0].status = { kind: 'dazed', turns: 99, stacks: 1 };
+  sim.progression.inventory['tin-snare'] = 30;
 });
-for (let i = 0; i < 12; i++) {
+for (let i = 0; i < 30; i++) {
   const inBattle = await sim(() => !!window.__NEON_WILDS__.sim.battle);
   if (!inBattle) break;
   const snare = page.getByRole('button', { name: 'Snare' });
