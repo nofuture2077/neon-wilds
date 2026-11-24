@@ -7,6 +7,7 @@ import {
   TILE_SIZE,
   battleView,
   boardView,
+  recordsView,
   describeLocation,
   factionsView,
   getSpecies,
@@ -136,6 +137,7 @@ export class WorldScene extends Phaser.Scene {
         factions: () => factionsView(this.sim),
         map: () => mapView(this.sim),
         board: () => boardView(this.sim),
+        records: () => recordsView(this.sim),
       },
     });
     if (session.kind === 'load') store.pushToast(`Loaded ${session.slot === 'auto' ? 'autosave' : 'save'}.`, 'info');
@@ -387,6 +389,9 @@ export class WorldScene extends Phaser.Scene {
         break;
       case 'notice':
         store.pushToast(event.text, 'info');
+        break;
+      case 'achievement':
+        store.pushToast(`Achievement: ${event.title}`, 'reward');
         break;
       case 'tip':
         store.pushTip({ id: event.id, title: event.title, text: event.text });

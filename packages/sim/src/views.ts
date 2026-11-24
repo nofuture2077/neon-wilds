@@ -10,6 +10,7 @@ import { currentObjective, missionDef } from './missions/runtime';
 import { describeLocation } from './world/location';
 import type { Simulation } from './simulation';
 import { SHUTTLE_FARE } from './constants';
+import { ACHIEVEMENTS } from './achievements';
 import { regionOf } from './world/regions';
 
 /**
@@ -292,5 +293,42 @@ export function boardView(sim: Simulation): BoardView {
     shuttle: VESPER.regions
       .filter((r) => p.flags[`visited:${r.id}`])
       .map((r) => ({ id: r.id, name: r.name, fare: SHUTTLE_FARE, here: regionOf(sim.layout, sim.player.x, sim.player.y).id === r.id })),
+  };
+}
+
+export interface RecordsView {
+  stats: { label: string; value: string }[];
+  achievements: { id: string; title: string; description: string; unlocked: boolean }[];
+  unlocked: number;
+  total: number;
+}
+
+/** Local statistics and achievements (the static release has no online leaderboards). */
+export function recordsView(sim: Simulation): RecordsView {
+  const p = sim.progression;
+  const s = p.stats;
+  const n = (v: number) => Math.round(v).toLocaleString('en-US');
+  const missions = p.missions.filter((m) => m.status === 'completed').length;
+  return {
+    stats: [
+      { label: 'Species caught', value: n(p.index.caught.length) },
+      { label: 'Wildlings caught', value: n(s.captures) },
+      { label: 'Battles won', value: n(s.battlesWon) },
+      { label: 'Trainers beaten', value: n(p.defeatedTrainers.length) },
+      { label: 'Missions completed', value: n(missions) },
+      { label: 'Distance on foot', value: `${n(s.walked)} tiles` },
+      { label: 'Distance driven', value: `${n(s.driven)} tiles` },
+      { label: 'Cars stolen', value: n(s.carsStolen) },
+      { label: 'Cars sold for parts', value: n(s.carsSold) },
+      { label: 'Times busted', value: n(s.timesBusted) },
+      { label: 'Street scenes found', value: n(s.scenesLooked) },
+      { label: 'Founders’ murals', value: `${Object.keys(p.flags).filter((f) => f.startsWith('mural:')).length} / 8` },
+    ],
+    achievements: ACHIEVEMENTS.map((a) => {
+      const unlocked = !!p.flags[`ach:${a.id}`];
+      return { id: a.id, title: a.secret && !unlocked ? '???' : a.title, description: a.secret && !unlocked ? 'A secret.' : a.description, unlocked };
+    }),
+    unlocked: ACHIEVEMENTS.filter((a) => p.flags[`ach:${a.id}`]).length,
+    total: ACHIEVEMENTS.length,
   };
 }

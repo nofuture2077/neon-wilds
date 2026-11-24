@@ -1,6 +1,7 @@
 import { newLawState } from './law/law';
 import { newWorldState } from './world/director';
 import { newProgression } from './progression';
+import { newStats } from './achievements';
 import { SNAPSHOT_VERSION, type SimSnapshot } from './state';
 
 type AnySnapshot = { version: number } & Record<string, unknown>;
@@ -68,6 +69,8 @@ const STEPS: Record<number, (s: AnySnapshot) => AnySnapshot> = {
   11: (s) => rebuildWorld(s, 12),
   // v12 → v13: the Outskirts widen the map.
   12: (s) => rebuildWorld(s, 13),
+  // v13 → v14: lifetime statistics.
+  13: (s) => ({ ...s, version: 14, progression: { ...(s.progression as Record<string, unknown>), stats: newStats() } }),
 };
 
 /**

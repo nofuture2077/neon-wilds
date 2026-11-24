@@ -23,6 +23,7 @@ import { DISTRICTS, allArchetypes } from './content';
 import { ITEMS, SHOPS } from './content/items';
 import { MURAL_COUNT } from './content/missions';
 import { nextTip } from './guide';
+import { checkAchievements } from './achievements';
 import { type VignetteDef, vignetteActive, vignetteDef } from './world/vignettes';
 import { SHUTTLE_FARE } from './constants';
 import { TRAINERS } from './content/trainers';
@@ -326,8 +327,12 @@ export class Simulation implements MissionHost {
     this.advanceClock();
     const vctx = this.vehicleContext();
     if (input.action) this.toggleVehicle();
+    const fromX = this.player.x;
+    const fromY = this.player.y;
     if (this.player.vehicleId) this.updateDriving(input, vctx);
     else this.updatePlayer(input);
+    const moved = Math.hypot(this.player.x - fromX, this.player.y - fromY);
+    if (moved < 2) this.progression.stats[this.player.vehicleId ? 'driven' : 'walked'] += moved;
 
     const ctx = this.npcContext();
     // Simulation LOD: far-away NPCs update every 6th tick with a larger time step.
@@ -346,6 +351,7 @@ export class Simulation implements MissionHost {
       }
     }
     if (this._tick % 30 === 0) this.updateGuide(false);
+    if (this._tick % 120 === 0) for (const a of checkAchievements(this.progression)) this.emit({ type: 'achievement', id: a.id, title: a.title, description: a.description });
     if (this.player.vehicleId && this._tick % 10 === 0) this.checkChopShop();
     if (this._tick % 60 === 0) {
       this.manageVignettes();
@@ -710,6 +716,10 @@ export class Simulation implements MissionHost {
     const def = v ? vignetteDef(v.def) : undefined;
     if (!v || !def) return;
     this.emit({ type: 'message', speaker: def.title, pages: def.look.map((x) => this.personalise(x)) });
+    if (!this.progression.flags[`seen:${v.id}`]) {
+      this.progression.flags[`seen:${v.id}`] = true;
+      this.progression.stats.scenesLooked++;
+    }
     const flag = `vig:${v.id}`;
     if (def.reward && !this.progression.flags[flag]) {
       this.progression.flags[flag] = true;
@@ -788,6 +798,7 @@ export class Simulation implements MissionHost {
     this.toggleVehicleForce(v);
     this.vehicles.splice(this.vehicles.indexOf(v), 1);
     this.progression.money += payout;
+    this.progression.stats.carsSold++;
     this._progressVersion++;
     this.emit({ type: 'chop-shop', vehicleId: v.id, payout });
   }
@@ -898,12 +909,14 @@ export class Simulation implements MissionHost {
           caught.status = null;
           const where = receiveWildling(p, caught);
           this.emit({ type: 'wildling.received', speciesId: caught.speciesId, destination: where });
+          p.stats.captures++;
           this.checkIndexMilestone();
         }
         if (entity) this.wildlings.splice(entityIndex, 1);
         break;
       }
       case 'win':
+        p.stats.battlesWon++;
         if (entity) this.wildlings.splice(entityIndex, 1);
         if (battle.kind === 'trainer' && battle.trainerId) {
           p.money += battle.rewardMoney;
@@ -1348,6 +1361,7 @@ export class Simulation implements MissionHost {
 
   /** Arrested: fined, released at the Warden substation, wanted level cleared. */
   private bust(): void {
+    this.progression.stats.timesBusted++;
     const v = this.playerVehicle;
     if (v) {
       v.driver = 'none';
@@ -1426,6 +1440,7 @@ export class Simulation implements MissionHost {
       how = 'stolen';
       this.reportCrime('vehicle-theft', v.x, v.y, 1);
     }
+    if (how !== 'own') this.progression.stats.carsStolen++;
     v.driver = 'player';
     v.ai = null;
     v.stolen = true;

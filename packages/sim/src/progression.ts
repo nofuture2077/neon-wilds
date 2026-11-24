@@ -1,3 +1,4 @@
+import { type PlayerStats, newStats } from './achievements';
 import type { WildlingInstance } from './creatures/model';
 import type { MissionDef, MissionRuntime } from './missions/types';
 
@@ -23,6 +24,8 @@ export interface ProgressionState {
   missionSeq: number;
   /** Day the job board was last refreshed. */
   boardDay: number;
+  /** Lifetime statistics (local only). */
+  stats: PlayerStats;
 }
 
 export function newProgression(): ProgressionState {
@@ -41,6 +44,7 @@ export function newProgression(): ProgressionState {
     board: [],
     missionSeq: 1,
     boardDay: -1,
+    stats: newStats(),
   };
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_INPUT, Rng, Simulation, createWildling, nextTip, type SimEvent } from '../src';
+import { ACHIEVEMENTS, NO_INPUT, Rng, Simulation, checkAchievements, createWildling, migrateSnapshot, newStats, nextTip, recordsView, type SimEvent } from '../src';
 
 const APPEARANCE = { skin: 1, hair: 2, top: 3, bottom: 4 };
 
@@ -96,5 +96,29 @@ describe('the Co-op shuttle', () => {
     run(sim, 2);
     expect(sim.districtId).toBe('harbor');
     expect(sim.progression.money).toBe(70);
+  });
+});
+
+describe('local statistics and achievements', () => {
+  it('counts distance and unlocks achievements once', () => {
+    const sim = started(36);
+    const p = sim.progression;
+    for (let i = 0; i < 120; i++) sim.step({ ...NO_INPUT, moveX: 1 });
+    expect(p.stats.walked).toBeGreaterThan(1);
+    p.stats.captures = 1;
+    const unlocked = checkAchievements(p).map((a) => a.id);
+    expect(unlocked).toContain('first-catch');
+    expect(checkAchievements(p).map((a) => a.id)).not.toContain('first-catch');
+    const records = recordsView(sim);
+    expect(records.achievements.find((a) => a.id === 'first-catch')?.unlocked).toBe(true);
+    expect(records.achievements.find((a) => a.id === 'ending-the-hollow')?.title).toBe('???');
+    expect(records.total).toBe(ACHIEVEMENTS.length);
+  });
+
+  it('adds empty statistics to older saves', () => {
+    const snap = JSON.parse(JSON.stringify(started(37).snapshot()));
+    snap.version = 13;
+    delete snap.progression.stats;
+    expect(migrateSnapshot(snap).progression.stats).toEqual(newStats());
   });
 });

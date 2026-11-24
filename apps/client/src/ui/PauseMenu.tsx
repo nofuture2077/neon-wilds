@@ -5,6 +5,7 @@ import { SLOTS, type SlotId, formatPlayTime } from '../services/saveFormat';
 import { saveMusicVolume } from '../audio/useMusic';
 import { ControlsPanel } from './ControlsPanel';
 import { FactionsTab } from './FactionsTab';
+import { RecordsTab } from './RecordsTab';
 import { MapTab } from './MapTab';
 import { CreatureIcon, HpBar, StatusBadge, TypeBadge, XpBar } from './widgets';
 import { useGamepadNav } from './useGamepadNav';
@@ -16,6 +17,7 @@ const TABS: Array<[PauseTab, string]> = [
   ['map', 'Map'],
   ['journal', 'Journal'],
   ['factions', 'Factions'],
+  ['records', 'Records'],
   ['save', 'Save'],
   ['options', 'Options'],
 ];
@@ -64,6 +66,7 @@ export function PauseMenu() {
           {tab === 'map' && <MapTab />}
           {tab === 'journal' && <JournalTab />}
           {tab === 'factions' && <FactionsTab />}
+          {tab === 'records' && <RecordsTab />}
           {tab === 'save' && <SaveTab />}
           {tab === 'options' && <OptionsTab />}
         </div>

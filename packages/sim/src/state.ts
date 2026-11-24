@@ -103,7 +103,7 @@ export type Focus =
   /** A vignette (authored street scene) the player can look at. */
   | { kind: 'spot'; id: string; label: string };
 
-export const SNAPSHOT_VERSION = 13;
+export const SNAPSHOT_VERSION = 14;
 
 /** Everything needed to resume a simulation. The district layout is regenerated from seed + districtId. */
 export interface SimSnapshot {

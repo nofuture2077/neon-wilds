@@ -1,4 +1,4 @@
-import type { Appearance, BattleLog, BattleView, BoardView, FactionView, MapView, ProgressView, ShopView, SimCommand, SimSnapshot, StatusKind } from '@neon-wilds/sim';
+import type { Appearance, BattleLog, BattleView, BoardView, FactionView, MapView, ProgressView, RecordsView, ShopView, SimCommand, SimSnapshot, StatusKind } from '@neon-wilds/sim';
 import { create } from 'zustand';
 import { emitBattleFx } from '../game/battleFx';
 
@@ -57,6 +57,7 @@ export interface GameQueries {
   factions(): FactionView[];
   map(): MapView;
   board(): BoardView;
+  records(): RecordsView;
 }
 
 export interface Toast {
@@ -90,7 +91,7 @@ export interface BattleUiState {
   pendingItem: string | null;
 }
 
-export type PauseTab = 'party' | 'bag' | 'index' | 'map' | 'journal' | 'factions' | 'save' | 'options';
+export type PauseTab = 'party' | 'bag' | 'index' | 'map' | 'journal' | 'factions' | 'records' | 'save' | 'options';
 
 interface GameStore {
   screen: Screen;

@@ -51,6 +51,7 @@ export * from './missions/epilogue';
 export * from './content/harbor';
 export * from './content/industrial';
 export * from './guide';
+export * from './achievements';
 export * from './world/vignettes';
 export * from './content/oldtown';
 export * from './content/outskirts';
