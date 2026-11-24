@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TEXTURES } from '../assets/manifest';
 import { Depth } from './depth';
+import type { StaticCuller } from './culler';
 import { getSettings } from '../../settings';
 
 /**
@@ -38,6 +39,7 @@ interface Light {
 export class Lighting {
   private readonly overlay: Phaser.GameObjects.Rectangle;
   private readonly lights: Light[] = [];
+  private culler: StaticCuller | null = null;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.overlay = scene.add
@@ -46,6 +48,12 @@ export class Lighting {
       .setScrollFactor(0)
       .setDepth(Depth.darkness);
     this.resize();
+  }
+
+  /** Cull lights with the city: only lights near the camera are updated and drawn. */
+  useCuller(culler: StaticCuller): void {
+    this.culler = culler;
+    for (const l of this.lights) culler.add(l.image);
   }
 
   resize(): void {
@@ -63,6 +71,7 @@ export class Lighting {
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(Depth.glow);
     this.lights.push({ category, image, strength, dayStrength, flicker, phase: (x * 13.7 + y * 7.3) % 100 });
+    this.culler?.add(image);
     return image;
   }
 
@@ -71,6 +80,7 @@ export class Lighting {
     this.overlay.setAlpha(Math.min(0.75, darkness * 0.42 + gloom + (blackout ? 0.18 : 0)));
     const t = timeMs / 1000;
     for (const l of this.lights) {
+      if (this.culler?.isCulled(l.image)) continue;
       if (blackout && (l.category === 'neon' || l.category === 'lamp' || (l.category === 'window' && l.phase % 3 > 0.6))) {
         l.image.setAlpha(0);
         continue;

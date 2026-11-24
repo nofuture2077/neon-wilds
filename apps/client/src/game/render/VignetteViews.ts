@@ -3,6 +3,7 @@ import { TILE_SIZE, type DistrictLayout, vignetteActive, vignetteDef } from '@ne
 import { vignetteKey } from '../assets/vignetteProps';
 import { Depth } from './depth';
 import type { Lighting } from './lighting';
+import type { StaticCuller } from './culler';
 
 const T = TILE_SIZE;
 const LIGHTS: Record<string, { color: number; scale: number; flicker: number }> = {
@@ -18,7 +19,7 @@ export class VignetteViews {
   private readonly scenes: Array<{ def: string; objects: Phaser.GameObjects.Image[] }> = [];
   private lastHour = -1;
 
-  constructor(scene: Phaser.Scene, layout: DistrictLayout, lighting: Lighting) {
+  constructor(scene: Phaser.Scene, layout: DistrictLayout, lighting: Lighting, culler: StaticCuller) {
     for (const v of layout.vignettes) {
       const def = vignetteDef(v.def);
       if (!def) continue;
@@ -26,7 +27,9 @@ export class VignetteViews {
       for (const p of def.props) {
         const x = (v.tx + p.dx + 0.5) * T;
         const y = (v.ty + p.dy + 0.5) * T;
-        objects.push(scene.add.image(x, y, vignetteKey(p.kind)).setDepth(Depth.groundProps + 1));
+        const img = scene.add.image(x, y, vignetteKey(p.kind)).setDepth(Depth.groundProps + 1);
+        culler.add(img);
+        objects.push(img);
         const light = LIGHTS[p.kind];
         if (light) objects.push(lighting.add(x, y, light.color, light.scale, 0.6, 0.05, light.flicker, 'other'));
       }

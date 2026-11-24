@@ -39,6 +39,7 @@ import { SignalViews, VehicleViews } from '../render/VehicleViews';
 import { TerritoryViews } from '../render/TerritoryViews';
 import { WeatherViews } from '../render/WeatherViews';
 import { VignetteViews } from '../render/VignetteViews';
+import { StaticCuller } from '../render/culler';
 
 /** Max simulation catch-up per frame (prevents a spiral of death after a tab stall). */
 const MAX_FRAME_SECONDS = 0.25;
@@ -61,6 +62,7 @@ export class WorldScene extends Phaser.Scene {
   private weatherViews!: WeatherViews;
   private vignetteViews!: VignetteViews;
   private lastSiren = 0;
+  private culler!: StaticCuller;
   private cameraTarget!: Phaser.GameObjects.Zone;
   private baseZoom = 3;
   private pendingAction = false;
@@ -106,7 +108,9 @@ export class WorldScene extends Phaser.Scene {
     const layout = this.sim.layout;
 
     this.lighting = new Lighting(this);
-    renderCity(this, layout, this.lighting);
+    this.culler = new StaticCuller(this.cameras.main, layout.map.width * TILE_SIZE);
+    this.lighting.useCuller(this.culler);
+    renderCity(this, layout, this.lighting, this.culler);
 
     this.player = new ActorView(this, this.characterTexture(this.sim.player.appearance));
     for (const npc of this.sim.npcs) {
@@ -118,7 +122,7 @@ export class WorldScene extends Phaser.Scene {
     this.signals = new SignalViews(this, this.sim.roads);
     this.territoryViews = new TerritoryViews(this, this.sim.layout);
     this.weatherViews = new WeatherViews(this);
-    this.vignetteViews = new VignetteViews(this, layout, this.lighting);
+    this.vignetteViews = new VignetteViews(this, layout, this.lighting, this.culler);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => sfx.setEngine(null));
     this.vignetteViews.update(this.sim.hour);
     this.focusMarker = this.add.image(0, 0, TEXTURES.focus).setDepth(Depth.focus).setVisible(false);
@@ -275,6 +279,7 @@ export class WorldScene extends Phaser.Scene {
     this.lighting.update(darkness, this.time.now, gloom, this.sim.world.event?.id === 'blackout');
     this.weatherViews.update(weather, deltaSeconds * 1000, this.time.now);
     this.vignetteViews.update(this.sim.hour);
+    this.culler.update();
     sfx.setEngine(driving ? driving.speed : null);
     if (this.sim.law.stars > 0 && this.time.now - this.lastSiren > 5000) {
       this.lastSiren = this.time.now;

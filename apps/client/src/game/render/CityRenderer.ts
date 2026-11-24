@@ -5,6 +5,7 @@ import { TEXTURES, addCanvasTexture } from '../assets/manifest';
 import { type GroundLook, visualTileIndex } from '../assets/tiles';
 import { Depth } from './depth';
 import type { Lighting } from './lighting';
+import type { StaticCuller } from './culler';
 
 const T = TILE_SIZE;
 const LAMP_TINTS = [0xffb070, 0xff6fc0, 0x6fe8ff, 0xffb070] as const;
@@ -14,7 +15,7 @@ const LAMP_TINTS = [0xffb070, 0xff6fc0, 0x6fe8ff, 0xffb070] as const;
  * tilemap, vector streets, buildings, props, tree canopies and light sources.
  * Pure presentation — nothing here feeds back into the simulation.
  */
-export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting: Lighting): void {
+export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting: Lighting, culler: StaticCuller): void {
   renderGround(scene, layout);
   for (const b of layout.buildings) {
     const key = `building-${b.id}`;
@@ -31,11 +32,8 @@ export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting
       const dy = ly - (b.h * T) / 2;
       return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
     };
-    scene.add
-      .rectangle(cx + 6, cy + 4, b.w * T, b.h * T, 0x000000, 0.45)
-      .setRotation(b.angle)
-      .setDepth(Depth.buildingShadow);
-    scene.add.image(cx, cy, key).setRotation(b.angle).setDepth(Depth.buildings);
+    culler.add(scene.add.rectangle(cx + 6, cy + 4, b.w * T, b.h * T, 0x000000, 0.45).setRotation(b.angle).setDepth(Depth.buildingShadow));
+    culler.add(scene.add.image(cx, cy, key).setRotation(b.angle).setDepth(Depth.buildings));
     for (const l of art.lights) {
       const p = at(l.x, l.y);
       lighting.add(p.x, p.y, l.color, l.scale, 0.75, l.day, l.flicker ? 0.08 : 0, l.scale <= 0.3 ? 'window' : 'neon');
@@ -46,12 +44,12 @@ export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting
     }
   }
 
-  for (const p of layout.props) renderProp(scene, p, lighting, regionOf(layout, p.x, p.y).style);
+  for (const p of layout.props) renderProp(scene, p, lighting, regionOf(layout, p.x, p.y).style, culler);
 
   for (let ty = 0; ty < layout.map.height; ty++) {
     for (let tx = 0; tx < layout.map.width; tx++) {
       if (layout.map.get(tx, ty) === Tile.Tree) {
-        scene.add.image((tx + 0.5) * T, (ty + 0.5) * T, TEXTURES.tree).setDepth(Depth.canopy);
+        culler.add(scene.add.image((tx + 0.5) * T, (ty + 0.5) * T, TEXTURES.tree).setDepth(Depth.canopy));
       }
     }
   }
@@ -72,7 +70,7 @@ function renderGround(scene: Phaser.Scene, layout: DistrictLayout): void {
   tilemap.createLayer(0, tileset, 0, 0)?.setDepth(Depth.ground);
 }
 
-function renderProp(scene: Phaser.Scene, p: Prop, lighting: Lighting, style: string): void {
+function renderProp(scene: Phaser.Scene, p: Prop, lighting: Lighting, style: string, culler: StaticCuller): void {
   const cx = (p.x + p.w / 2) * T;
   const cy = (p.y + p.h / 2) * T;
   switch (p.kind) {
@@ -84,7 +82,7 @@ function renderProp(scene: Phaser.Scene, p: Prop, lighting: Lighting, style: str
       const off = { north: [0, -5], south: [0, 5], east: [5, 0], west: [-5, 0] }[p.facing];
       const lx = cx + (off?.[0] ?? 0);
       const ly = cy + (off?.[1] ?? 0);
-      scene.add.image(lx, ly, TEXTURES.lamp).setDepth(Depth.canopy);
+      culler.add(scene.add.image(lx, ly, TEXTURES.lamp).setDepth(Depth.canopy));
       // Industrial streets burn sodium orange; elsewhere lamps mix warm white with neon tints.
       // Industrial streets burn sodium orange, Old Town has gas lamps; elsewhere warm white mixes with neon.
       const tint = style === 'industrial' ? 0xff9a30 : style === 'oldtown' || style === 'outskirts' ? 0xffc46b : LAMP_TINTS[(p.x * 7 + p.y * 3) % LAMP_TINTS.length]!;
@@ -92,14 +90,14 @@ function renderProp(scene: Phaser.Scene, p: Prop, lighting: Lighting, style: str
       break;
     }
     case 'bench':
-      scene.add.image(cx, cy, TEXTURES.bench).setRotation(p.facing === 'north' || p.facing === 'south' ? Math.PI / 2 : 0).setDepth(Depth.groundProps);
+      culler.add(scene.add.image(cx, cy, TEXTURES.bench).setRotation(p.facing === 'north' || p.facing === 'south' ? Math.PI / 2 : 0).setDepth(Depth.groundProps));
       break;
     case 'container':
-      scene.add.image(cx + 3, cy + 4, TEXTURES.container(p.variant)).setTint(0x000000).setAlpha(0.4).setDepth(Depth.shadows);
-      scene.add.image(cx, cy, TEXTURES.container(p.variant)).setDepth(Depth.groundProps + 1);
+      culler.add(scene.add.image(cx + 3, cy + 4, TEXTURES.container(p.variant)).setTint(0x000000).setAlpha(0.4).setDepth(Depth.shadows));
+      culler.add(scene.add.image(cx, cy, TEXTURES.container(p.variant)).setDepth(Depth.groundProps + 1));
       break;
     case 'dumpster':
-      scene.add.image(cx, cy, TEXTURES.dumpster).setDepth(Depth.groundProps);
+      culler.add(scene.add.image(cx, cy, TEXTURES.dumpster).setDepth(Depth.groundProps));
       break;
   }
 }
