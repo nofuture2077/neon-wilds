@@ -135,6 +135,19 @@ const CHOP_VALUE: Record<string, number> = { compact: 120, sedan: 180, van: 220,
 /** Species caught at which the Co-op pays an Index bounty. */
 const INDEX_MILESTONES = [5, 10, 15, 20, 25, 30];
 
+/**
+ * Act II is open: arcs can be played in any order, so a story trainer meets the player part-way.
+ * The team keeps its authored spread but its top level comes down to at most two above the
+ * player's best Wildling — never more than six below what was authored. Stronger players get
+ * the authored levels.
+ */
+export function scaledTrainerLevels(authored: number[], playerLevels: number[]): number[] {
+  const top = Math.max(...authored);
+  const best = playerLevels.length ? Math.max(...playerLevels) : top;
+  const scaledTop = Math.min(top, Math.max(top - 6, best + 2));
+  return authored.map((l) => Math.max(2, l - (top - scaledTop)));
+}
+
 export class Simulation implements MissionHost {
   layout!: DistrictLayout;
   private readonly archetypes: Map<string, NpcArchetype>;
@@ -820,7 +833,8 @@ export class Simulation implements MissionHost {
   private startTrainerBattle(npcId: string): void {
     const t = TRAINERS[npcId];
     if (!t || !this.progression.party.some(isHealthy)) return;
-    const party = t.party.map((m) => createWildling(m.species, m.level, this.rng, this.newUid(), this._tick));
+    const levels = scaledTrainerLevels(t.party.map((m) => m.level), this.progression.party.filter(isHealthy).map((w) => w.level));
+    const party = t.party.map((m, i) => createWildling(m.species, levels[i]!, this.rng, this.newUid(), this._tick));
     const tile = this.layout.map.get(Math.floor(this.player.x), Math.floor(this.player.y));
     this.beginBattle({
       kind: 'trainer',

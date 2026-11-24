@@ -410,7 +410,8 @@ function awardXp(ctx: BattleContext, defeated: WildlingInstance, log: BattleLog[
   if (earners.length === 0) return;
   const total = xpReward(defeated, b.kind === 'trainer');
   for (const w of earners) {
-    const amount = Math.max(1, Math.floor((total / earners.length) * (defeated.level > w.level ? 1.2 : 1)));
+    // Catch-up: beating something stronger pays more, up to +80%.
+    const amount = Math.max(1, Math.floor((total / earners.length) * (1 + Math.min(0.8, Math.max(0, defeated.level - w.level) * 0.1))));
     log.push({ t: 'xp', uid: w.uid, amount });
     log.push({ t: 'text', text: `${displayName(w)} gained ${amount} XP.` });
     w.friendship = Math.min(255, w.friendship + 1);

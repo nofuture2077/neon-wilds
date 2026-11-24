@@ -34,9 +34,10 @@ export const TRAINERS: Record<string, TrainerDefinition> = {
     npcId: 'npc-ashgrave',
     name: 'Corvin Ashgrave',
     party: [
-      { species: 'neonyx', level: 18 },
-      { species: 'gearhound', level: 19 },
-      { species: 'heistcoon', level: 21 },
+      { species: 'neonyx', level: 24 },
+      { species: 'gearhound', level: 25 },
+      { species: 'heistcoon', level: 26 },
+      { species: 'nightprowl', level: 27 },
     ],
     ai: 'skilled',
     items: { 'med-spray': 2 },
