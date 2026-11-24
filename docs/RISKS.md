@@ -12,13 +12,13 @@
 | R6 | **Content volume** (32 species, 6 districts, dialogue trees) exceeds art and writing capacity | 4 | 4 | Procedural placeholders, data-driven content, reusable building kit, mission templates; prioritise the Slums plus 2 districts for the slice | Active |
 | R7 | **Emergent systems produce incoherent outcomes** (generated missions that cannot be finished, faction death spirals) | 3 | 4 | Completability validation, invariants, week-long headless soak tests, clamps and recovery rules in the faction economy | Planned (M4) |
 | R8 | **Save corruption or migration bugs** lose progress | 2 | 5 | Versioned envelope, checksum, rotating backups, migration tests against fixture saves | Mitigated (M2) |
-| R9 | **Cloud-save conflicts and cheating** | 3 | 3 | Optimistic revisions, explicit conflict UI, server-side validation with the shared simulation, derived leaderboards | Planned (M6) |
+| R9 | **Losing local saves** (cleared site data, new browser) | 3 | 3 | Save export/import with checksums, rotating backups, a clear notice in the load menu | Mitigated (M6) |
 | R10 | **Auth security** | 2 | 5 | argon2id, short JWTs, rotating refresh tokens with reuse detection, rate limits, no custom crypto | Planned (M6) |
 | R11 | **React ↔ Phaser state desync** | 3 | 3 | Simulation is the single source of truth; UI only sends commands; one subscription point per concern | Mitigated |
 | R12 | **Readability of the ¾ projection** (characters hidden behind buildings, door visibility) | 2 | 3 | Footprint-bounded facades (no overhang); back sides face alleys; focus chevron on doors | Mitigated |
 | R13 | **Accidental AI dependency** (a contributor adds an LLM SDK) | 2 | 5 | `scripts/check-no-ai.mjs` in CI; rule in the README | Mitigated |
 | R14 | **Software-rendered or low-end GPUs** | 2 | 3 | Canvas fallback (`Phaser.AUTO`); lighting works without shaders; measured 60 FPS under SwiftShader at 1280×800 | Mitigated |
-| R15 | **Docker image not yet built in CI history** | 2 | 2 | CI docker job; the local daemon was unavailable during M1 | Open |
+| R15 | **Docker image not yet built in CI history** | 2 | 2 | Docker removed with the backend (ADR-026) | Closed |
 | R16 | **Procedural world feels generic or breaks story placements** | 3 | 4 | Authored anchors and overrides, validators (connectivity, interest curve, uniqueness budget), bake-and-pin tooling (WORLD_GEN.md) | In progress (v2 organic grid shipped; free-angle streets M4/M5) |
 | R17 | **Procedural music sounds aimless or tiring; Web Audio CPU cost** | 3 | 3 | Authored leitmotifs and phrase forms, anti-repetition, intensity setting, lookahead scheduler, < 3% CPU budget (AUDIO.md) | v1 shipped; needs listening tests |
 | R18 | **Traffic/police edge cases** (gridlock, routing loops around superblocks) | 3 | 2 | Junction reservation and hierarchical routing in M4; honk/stuck telemetry | Open |

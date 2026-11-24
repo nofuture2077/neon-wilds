@@ -9,7 +9,6 @@
 | Runs in desktop browsers at 60 FPS | Fixed-step simulation, cheap rendering, simulation LOD, spatial partitioning |
 | Fully playable offline | All gameplay is client-side; the game ships as a static site on GitHub Pages with no backend (ADR-026) |
 | Deterministic, testable world | The simulation is a pure TypeScript package with seeded RNG, no wall clock and no rendering dependencies |
-| Server-side save validation | The same simulation package runs in Node to validate and replay saves |
 | No runtime AI or inference | Conventional game AI only; enforced in CI (`scripts/check-no-ai.mjs`) |
 | Data-driven content | Districts, NPCs, dialogue, creatures and missions are typed data modules, separate from systems |
 | Replaceable art | Code refers to texture keys; the manifest maps keys to procedural or file sources |
@@ -30,10 +29,9 @@ neon-wilds/
 │  ├─ src/game/         Phaser: scenes, renderers, input mapping, procedural assets
 │  ├─ src/ui/           React screens and overlays (menus, HUD, dialogue, pause)
 │  └─ src/state/        Zustand store (UI state only; never the source of truth for the world)
-├─ apps/server/         @neon-wilds/server — Fastify (health + static client; retired in M6, ADR-026)
 ├─ docs/                design and architecture documents
 ├─ scripts/             repo tooling (no-AI guard)
-└─ Dockerfile, docker-compose.yml, .github/workflows/ci.yml
+└─ .github/workflows/ci.yml (checks), pages.yml (GitHub Pages deploy)
 ```
 
 npm workspaces, strict TypeScript everywhere (`strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, `verbatimModuleSyntax`).
@@ -144,7 +142,7 @@ Entities are promoted and demoted at radius boundaries with hysteresis, keeping 
 ## 7. Backend
 
 - Fastify 5, pino structured JSON logging, configuration validated at startup (`src/config.ts`), and graceful shutdown.
-- M1 ships `/api/v1/health` and serves the built client with an SPA fallback, so a single Docker image runs the whole game.
+- Hosting: GitHub Pages. `.github/workflows/pages.yml` runs the checks, builds with `BASE_PATH=/<repository>/` and deploys `apps/client/dist`. `public/sw.js` caches the build for offline play (network-first for the page, cache-first for hashed assets, one cache per build id); `public/manifest.webmanifest` makes it installable. The Fastify server and Docker setup were removed in M6 (ADR-026).
 - M6 (replanned, ADR-026): no backend. The client is built to static files and deployed to GitHub Pages by GitHub Actions; a service worker caches it for offline play. Accounts, cloud saves and leaderboards are dropped.
 - No WebSockets or other network services are planned.
 
@@ -154,12 +152,11 @@ Entities are promoted and demoted at radius boundaries with hysteresis, keeping 
 |---|---|---|
 | Simulation unit and property tests | vitest | RNG, A*, collision, generator invariants for several seeds, determinism, snapshot round-trip, interaction flows |
 | Client unit tests | vitest | Store logic (dialogue paging, HUD de-duplication) |
-| Server | vitest + `fastify.inject` | Health, static/SPA fallback, configuration validation |
 | Browser e2e smoke | `e2e/smoke.mjs` (playwright-core), CI job `e2e` | New game → mission → trainer battle → capture → save → continue; asserts no console errors and FPS |
 | Static | `tsc` strict, no-AI guard | — |
 
-CI (GitHub Actions) runs typecheck, tests, build, the no-AI guard and a Docker build.
+CI (GitHub Actions) runs typecheck, tests, build, the no-AI guard and the browser smoke test; the Pages workflow deploys.
 
 ## 9. Configuration and environments
 
-Environment variables (see `.env.example`): `NODE_ENV`, `HOST`, `PORT`, `LOG_LEVEL`, `CLIENT_DIST`, `APP_VERSION`; M6 adds `DATABASE_URL`, `JWT_SECRET` and `COOKIE_SECRET`. The client reads `import.meta.env.*` only for build-time flags. Dev-only helpers (`?quickstart`, `window.__NEON_WILDS__`) are guarded by `import.meta.env.DEV` and removed from production builds.
+Build-time setting: `BASE_PATH` (the site path, e.g. `/neon-wilds/`; default `/`). There are no runtime secrets or services. The client reads `import.meta.env.*` only for build-time flags. Dev-only helpers (`?quickstart`, `window.__NEON_WILDS__`) are guarded by `import.meta.env.DEV` and removed from production builds.

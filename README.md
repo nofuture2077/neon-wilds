@@ -2,13 +2,19 @@
 
 A browser-based, top-down open-world creature RPG: catch, raise and battle **Wildlings** while living on the edge of the law in **Vesper City**, a dense neon metropolis whose citizens, gangs and creatures all remember what you did.
 
-Built with TypeScript, Phaser 3, React, Zustand, Tailwind and Fastify.
+Built with TypeScript, Phaser 3, React, Zustand and Tailwind. It runs entirely in the browser: no server, no account, playable offline after the first visit.
 
 > **No runtime AI.** NEON WILDS uses no LLMs, generative AI or external inference. All NPC, faction, creature, battle and mission behaviour is conventional game AI: FSMs, hierarchical state machines, behaviour trees, utility AI, GOAP and A*. CI enforces this with `npm run lint:no-ai`.
 
 ## Status
 
-**Milestone 5 (part 1): the story is playable from start to finish.** Two districts (the Slums and Neon Downtown), three acts, branching choices about the Glitchling's fate, and four endings with an epilogue built from what you did. **Milestone 4, Traditional Game AI:** NPCs follow daily routines, remember and gossip about what you do, and react accordingly. Halcyon and the Gutter Saints plan operations you can see and disrupt. Weather and world events change the night, and a job board generates missions. On top of M3: Explore a procedurally laid-out neon Slums at night and play the opening mission *Last Run*. Bond with the Glitchling and catch 10 species of Wildlings in turn-based battles. Steal cars and drift through signal-controlled traffic. Outrun the Wardens, or get busted. Pick a side as the Gutter Saints and Halcyon fight over the blocks around you. The synthwave soundtrack is composed live by an algorithm. See [docs/ROADMAP.md](docs/ROADMAP.md) for what's next: M5 part 2 brings the remaining districts and faction arcs.
+**The full game is playable.** One seamless city with six districts (the Slums, Neon Downtown, the Harbor, the Industrial Zone, Old Town and the Outskirts), a three-act story with five endings (one secret), five faction questlines, character arcs, 36 Wildling species, 40 street scenes, and a first-time guide that explains the loop. Milestone 6 turns it into a static release on GitHub Pages; see [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## Play and deploy
+
+The game is a static site. Every push to `main` or `master` runs the [Pages workflow](.github/workflows/pages.yml): tests, a production build for the repository's path (`https://<user>.github.io/<repository>/`) and a deploy. One-time setup: **Settings → Pages → Source: GitHub Actions**.
+
+Saves live in the browser (IndexedDB, three slots plus an autosave, with backups). The load menu can export a save to a file and import it elsewhere. A service worker caches the game, so it keeps working offline.
 
 ## Quick start
 
@@ -24,13 +30,12 @@ Dev shortcut: `http://localhost:5173/?quickstart&seed=1337&time=22:30` skips the
 | Command | What it does |
 |---|---|
 | `npm run dev` | Client dev server (Vite, HMR) |
-| `npm run dev:server` | API server in watch mode (port 3000; Vite proxies `/api`) |
-| `npm test` | All unit tests (sim, client, server) |
+| `npm test` | All unit tests (sim and client) |
 | `npm run typecheck` | Strict TypeScript across all workspaces |
-| `npm run build` | Production build of client and server |
+| `npm run build` | Production build of the static site (`apps/client/dist`; set `BASE_PATH=/repo/` for a subpath) |
+| `npm run preview` | Serve the production build locally |
 | `npm run check` | Typecheck + tests + no-AI guard |
 | `npm run e2e` | Browser smoke test against a running dev server (`CHROME_PATH` optional) |
-| `docker compose up --build` | Full stack on http://localhost:3000 (server serves the built client) |
 
 Requires Node ≥ 22.
 
@@ -51,7 +56,6 @@ Requires Node ≥ 22.
 ```
 packages/sim   deterministic game simulation (rules, AI, content); no DOM, no Phaser
 apps/client    Phaser world rendering + React UI
-apps/server    Fastify static host (to be retired in M6: the game ships on GitHub Pages, no backend)
 docs/          design and architecture documents
 scripts/       tooling (no-AI guard)
 ```
@@ -62,14 +66,12 @@ scripts/       tooling (no-AI guard)
 |---|---|
 | [Game Design Document](docs/GDD.md) | Pillars, systems, creatures, combat, sandbox, progression |
 | [World Design](docs/WORLD.md) | Vesper City, districts, factions, characters, story, endings |
-| [Technical Architecture](docs/ARCHITECTURE.md) | Simulation/render split, determinism, LOD, persistence, backend |
+| [Technical Architecture](docs/ARCHITECTURE.md) | Simulation/render split, determinism, LOD, persistence, static hosting |
 | [Game AI Architecture](docs/AI.md) | Perception, memory, HSM + utility, BTs, GOAP factions, missions |
 | [Domain Model](docs/DOMAIN_MODEL.md) | Core types, implemented and planned |
-| [Database Schema](docs/DATABASE.md) | PostgreSQL schema and save conflict resolution |
-| [API Specification](docs/API.md) | REST endpoints |
 | [Asset Pipeline](docs/ASSET_PIPELINE.md) | Art direction, specs, manifest, replacement workflow |
 | [Roadmap](docs/ROADMAP.md) · [Risks](docs/RISKS.md) · [Decisions](docs/DECISIONS.md) | Planning and ADRs |
-| [World Generation](docs/WORLD_GEN.md) | Hybrid authored + procedural city (organic streets, vignettes) |
+| [World Generation](docs/WORLD_GEN.md) | Hybrid authored + procedural city (street plan, districts, vignettes) |
 | [Procedural Soundtrack](docs/AUDIO.md) | Algorithmic synthwave composer and Web Audio synths |
 | [M1](docs/reviews/M1.md) · [M2](docs/reviews/M2.md) · [M3](docs/reviews/M3.md) · [M4](docs/reviews/M4.md) · [M5](docs/reviews/M5.md) reviews | Test results, fixed bugs, known issues |
 
