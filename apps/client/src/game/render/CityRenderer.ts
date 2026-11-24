@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { TILE_SIZE, Tile, regionOf, type DistrictLayout, type Prop } from '@neon-wilds/sim';
 import { buildBuilding } from '../assets/buildings';
 import { TEXTURES, addCanvasTexture } from '../assets/manifest';
-import { visualTileIndex } from '../assets/tiles';
+import { type GroundLook, visualTileIndex } from '../assets/tiles';
 import { Depth } from './depth';
 import type { Lighting } from './lighting';
 
@@ -18,7 +18,7 @@ export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting
   renderGround(scene, layout);
   for (const b of layout.buildings) {
     const key = `building-${b.id}`;
-    const art = buildBuilding(b, b.region === 'downtown' || b.landmark, b.region === 'oldtown');
+    const art = buildBuilding(b, b.region === 'downtown' || b.landmark, b.region === 'oldtown' || b.region === 'outskirts');
     addCanvasTexture(scene, key, art.canvas);
     // Buildings turn with their street; rotated ones are filtered smoothly so the edges don't shimmer.
     if (b.angle !== 0) scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
@@ -59,11 +59,11 @@ export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting
 
 function renderGround(scene: Phaser.Scene, layout: DistrictLayout): void {
   const { map } = layout;
-  const oldIdx = layout.regions.findIndex((r) => r.style === 'oldtown');
+  const looks: GroundLook[] = layout.regions.map((r) => (r.style === 'oldtown' ? 'old' : r.style === 'outskirts' ? 'rural' : 'city'));
   const data: number[][] = [];
   for (let y = 0; y < map.height; y++) {
     const row: number[] = [];
-    for (let x = 0; x < map.width; x++) row.push(visualTileIndex(map, x, y, layout.regionMap[y * map.width + x] === oldIdx));
+    for (let x = 0; x < map.width; x++) row.push(visualTileIndex(map, x, y, looks[layout.regionMap[y * map.width + x]!] ?? 'city'));
     data.push(row);
   }
   const tilemap = scene.make.tilemap({ data, tileWidth: T, tileHeight: T });
@@ -87,7 +87,7 @@ function renderProp(scene: Phaser.Scene, p: Prop, lighting: Lighting, style: str
       scene.add.image(lx, ly, TEXTURES.lamp).setDepth(Depth.canopy);
       // Industrial streets burn sodium orange; elsewhere lamps mix warm white with neon tints.
       // Industrial streets burn sodium orange, Old Town has gas lamps; elsewhere warm white mixes with neon.
-      const tint = style === 'industrial' ? 0xff9a30 : style === 'oldtown' ? 0xffc46b : LAMP_TINTS[(p.x * 7 + p.y * 3) % LAMP_TINTS.length]!;
+      const tint = style === 'industrial' ? 0xff9a30 : style === 'oldtown' || style === 'outskirts' ? 0xffc46b : LAMP_TINTS[(p.x * 7 + p.y * 3) % LAMP_TINTS.length]!;
       lighting.add(lx, ly, tint, 0.7, 0.38, 0, 0, 'lamp');
       break;
     }

@@ -1,5 +1,18 @@
 import type { MissionDef } from '../missions/types';
 
+/** The founders' eight murals, by building (see `BuildingTemplate.mural`). */
+export const MURALS = [
+  'Bellfounders’ Tower',
+  'Drowned Arcade',
+  'Cistern Steps',
+  'The Drowned Lantern',
+  'Vesper Gazette',
+  'The Drowned Bell',
+  'Foundry No. 3',
+  'Old Marsh Chapel',
+] as const;
+export const MURAL_COUNT = MURALS.length;
+
 /** Handcrafted missions for Milestone 2 (WORLD.md §5, Act I opening). */
 export const MISSIONS: MissionDef[] = [
   {
@@ -589,6 +602,83 @@ export const MISSIONS: MissionDef[] = [
   },
 
   // ----------------------------------------------------------------------------------------------
+  // Secret: the Hollow (WORLD.md §5 endings). All eight founders' murals point to the grove.
+  {
+    id: 'the-hollow',
+    title: 'The Hollow',
+    summary: 'The eight founders’ murals form a map. It ends at an overgrown gatehouse in the Outskirts.',
+    requires: ['everyone-wants-it'],
+    requiresFlags: MURALS.map((m) => `mural:${m}`),
+    blockedByFlags: ['act1-sold'],
+    autoStart: true,
+    onStart: [
+      {
+        type: 'message',
+        speaker: 'The founders’ murals',
+        pages: [
+          'Laid out in your head, the eight murals line up like streets on a map: a stag, a bell, lamps with sleeping Wildlings, a lighthouse on a marsh.',
+          'Every road in them leads out of the city, to a gate swallowed by roots. The Glitchling has gone very still, listening.',
+        ],
+      },
+    ],
+    objectives: [
+      {
+        text: 'Find the Hollow Gate in the Outskirts',
+        kind: 'inspect',
+        target: 'The Hollow Gate',
+        onComplete: [
+          {
+            type: 'message',
+            speaker: 'The Hollow',
+            pages: [
+              'Past the gatehouse the trees close overhead and the neon glow of the city simply stops, as if someone drew a line.',
+              'Something huge moves between the trunks. Branches, not antlers. It has been waiting a very long time.',
+            ],
+          },
+          { type: 'spawn-quest-wildling', species: 'hollowstag', level: 32, tag: 'hollowstag' },
+        ],
+      },
+      {
+        text: 'Face Hollowstag in the grove',
+        kind: 'resolve-tag',
+        target: 'hollowstag',
+        onComplete: [
+          {
+            type: 'choice',
+            speaker: 'Hollowstag',
+            pages: ['The stag lowers its head to the Glitchling and begins to hum: a low, round note, the shape of a ring. The Glitchling answers, flickering in time.'],
+            options: [
+              {
+                id: 'sing',
+                label: 'Let the Glitchling sing with it.',
+                effects: [
+                  { type: 'evolve-wildling', from: 'glitchling', into: 'resonant', learn: 'harmonic-chord' },
+                  { type: 'set-flag', flag: 'hollow-song' },
+                  { type: 'reputation', faction: 'choir', delta: 10 },
+                  {
+                    type: 'message',
+                    speaker: 'The Hollow',
+                    pages: ['The two voices braid together. When the song ends, the Glitchling is gone, and in its place something steadier glows: the Resonant. It knows the marsh song now. So, somehow, do you.'],
+                  },
+                ],
+              },
+              {
+                id: 'silence',
+                label: 'Keep the Glitchling quiet. Some songs aren’t yours to sing.',
+                effects: [
+                  { type: 'set-flag', flag: 'hollow-refused' },
+                  { type: 'message', speaker: 'The Hollow', pages: ['The stag watches you for a long moment, then turns back into the trees. The hum fades. The city’s glow returns.'] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    rewards: [{ type: 'set-flag', flag: 'hollow-found' }],
+  },
+
+  // ----------------------------------------------------------------------------------------------
   // Act III — the Quiet.
   {
     id: 'the-quiet',
@@ -626,6 +716,12 @@ export const MISSIONS: MissionDef[] = [
                 label: 'Retune the grid with the Glitchling — let humans and Wildlings share the city.',
                 when: { notFlags: ['act1-sold'], anyOf: [{ flags: ['wren-turned'] }, { flags: ['pits-freed'] }, { flags: ['thorn-contained'] }, { minRep: { saints: 30 } }] },
                 effects: [{ type: 'ending', id: 'chorus' }],
+              },
+              {
+                id: 'the-hollow',
+                label: 'Let the Resonant sing the marsh song into the grid.',
+                when: { flags: ['hollow-song'] },
+                effects: [{ type: 'ending', id: 'the-hollow' }],
               },
               { id: 'lights-out', label: 'Smash the controller. Lights out — let everything run free.', effects: [{ type: 'ending', id: 'lights-out' }] },
               {

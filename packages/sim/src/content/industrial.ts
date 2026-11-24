@@ -33,7 +33,8 @@ export const INDUSTRIAL: DistrictDefinition = {
       description: 'Mountains of junk sorted by someone with a terrifying memory. "We buy coils. We sell coils. We are coils."',
     },
     { name: 'Rail Yard Canteen', kind: 'shop', neon: 0xff5d5d, description: 'Stew, coffee, and arguments about the pit card.' },
-    { name: 'Foundry No. 3', kind: 'warehouse', neon: 0xffb347, description: 'Still warm. A Kilnback sleeps against the furnace wall like it owns the place.' },
+    { name: 'Foundry No. 3', kind: 'warehouse', neon: 0xffb347, mural: 'Above the furnace, blackened by soot: founders casting the first lamp posts. Into each mould they pour molten iron, and a single sleeping Wildling.',
+      description: 'Still warm. A Kilnback sleeps against the furnace wall like it owns the place.' },
   ],
   residentialNames: ['Workers’ Terrace', 'Smelter Row Housing', 'Company Flats', 'Night-Shift Hostel'],
 };

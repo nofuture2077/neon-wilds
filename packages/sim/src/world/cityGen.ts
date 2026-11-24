@@ -26,7 +26,7 @@ import { Tile, isRoadKind, type TileKind } from './tiles';
 export interface RegionDefinition {
   id: string;
   name: string;
-  style: 'slums' | 'downtown' | 'harbor' | 'industrial' | 'oldtown';
+  style: 'slums' | 'downtown' | 'harbor' | 'industrial' | 'oldtown' | 'outskirts';
   /** Anchor in map fractions. */
   anchor: { x: number; y: number };
   /** Block size range, street centre to street centre (tiles). */
@@ -496,14 +496,14 @@ export function generateCity(def: CityDefinition, seed: number): DistrictLayout 
       if (r.style === 'downtown' || r.style === 'oldtown') {
         fillPlaza(map, rng, tiles, W, addProp);
         b.kind = 'square';
-      } else if (r.style === 'industrial' && rng.chance(0.5)) {
+      } else if (r.style === 'outskirts' || (r.style === 'industrial' && rng.chance(0.5))) {
         fillWild(map, rng, tiles, W, addProp);
         b.kind = 'wild';
       } else {
         fillPark(map, rng, tiles, W, addProp);
         b.kind = 'park';
       }
-    } else if (rng.chance(r.wildChance)) {
+    } else if (rng.chance(r.wildChance) && (r.style !== 'outskirts' || b.area < 900)) {
       fillWild(map, rng, tiles, W, addProp);
       b.kind = 'wild';
     } else if (b.area < 900 && rng.chance(r.parkChance)) {
@@ -593,6 +593,7 @@ export function generateCity(def: CityDefinition, seed: number): DistrictLayout 
       description: '',
       neon: null,
       service: null,
+      mural: null,
       style: rng.int(0, 5),
       door: { tx: dtx, ty: dty, facing },
       entrance: { tx: etx, ty: ety },
@@ -606,31 +607,46 @@ export function generateCity(def: CityDefinition, seed: number): DistrictLayout 
 
   // Street fronts: walk both sides of every street. Rows may be terraced (wall to wall) or loose,
   // and some buildings step back behind a forecourt.
-  graph.edges.forEach((e, id) => {
-    const g = edgeGeo[id]!;
-    const half = e.avenue ? SIDEWALK_TILES + 1 : SIDEWALK_TILES;
-    for (const side of [-1, 1] as const) {
-      const r = def.regions[regionAtXY(e.points[Math.floor(e.points.length / 2)]!.x, e.points[Math.floor(e.points.length / 2)]!.y)]!;
-      const terrace = rng.chance(r.terraces);
-      let t = g.from - half + rng.int(0, 2);
-      while (t < g.to + half) {
-        const baseLen = rng.int(r.buildingW[0], r.buildingW[1]);
-        const baseDepth = rng.int(r.buildingH[0], r.buildingH[1]);
-        const setback = rng.chance(r.setbacks) ? rng.int(1, 2) : 0;
-        let placed: Building | null = null;
-        let len = baseLen;
-        for (let attempt = 0; attempt < 4 && !placed; attempt++) {
-          len = Math.max(3, Math.round(baseLen * (1 - attempt * 0.22)));
-          const depth = Math.max(3, Math.round(baseDepth * (1 - attempt * 0.22)));
-          const near = half + 1 + setback;
-          const p0 = side > 0 ? g.c + near : g.c - near - depth + 1;
-          const facing: Facing = g.horiz ? (side > 0 ? 'north' : 'south') : side > 0 ? 'west' : 'east';
-          placed = g.horiz ? tryPlace(t, p0, len, depth, facing, terrace ? 0 : 1, null) : tryPlace(p0, t, depth, len, facing, terrace ? 0 : 1, null);
+  const frontage = (only: string | null) => {
+    graph.edges.forEach((e, id) => {
+      const g = edgeGeo[id]!;
+      const half = e.avenue ? SIDEWALK_TILES + 1 : SIDEWALK_TILES;
+      const mid = e.points[Math.floor(e.points.length / 2)]!;
+      const r = def.regions[regionAtXY(mid.x, mid.y)]!;
+      if (only !== null && r.id !== only) return;
+      // Out in the Outskirts, houses stand far apart along the lanes.
+      const rural = r.style === 'outskirts' && only === null;
+      for (const side of [-1, 1] as const) {
+        const terrace = rng.chance(r.terraces);
+        let t = g.from - half + rng.int(0, 2);
+        while (t < g.to + half) {
+          if (rural && rng.chance(0.5)) {
+            t += rng.int(4, 10);
+            continue;
+          }
+          const baseLen = rng.int(r.buildingW[0], r.buildingW[1]);
+          const baseDepth = rng.int(r.buildingH[0], r.buildingH[1]);
+          const setback = rng.chance(r.setbacks) ? rng.int(1, 2) : 0;
+          let placed: Building | null = null;
+          let len = baseLen;
+          for (let attempt = 0; attempt < 4 && !placed; attempt++) {
+            len = Math.max(3, Math.round(baseLen * (1 - attempt * 0.22)));
+            const depth = Math.max(3, Math.round(baseDepth * (1 - attempt * 0.22)));
+            const near = half + 1 + setback;
+            const p0 = side > 0 ? g.c + near : g.c - near - depth + 1;
+            const facing: Facing = g.horiz ? (side > 0 ? 'north' : 'south') : side > 0 ? 'west' : 'east';
+            placed = g.horiz ? tryPlace(t, p0, len, depth, facing, terrace ? 0 : 1, null) : tryPlace(p0, t, depth, len, facing, terrace ? 0 : 1, null);
+          }
+          t += placed ? len + (terrace ? 0 : rng.int(1, 2)) : 1;
         }
-        t += placed ? len + (terrace ? 0 : rng.int(1, 2)) : 1;
       }
-    }
-  });
+    });
+  };
+  frontage(null);
+  // Every district needs room for its named places: thin ones get a second, denser pass.
+  for (const r of def.regions) {
+    if (buildings.filter((b) => b.region === r.id).length < r.namedBuildings.length + 4) frontage(r.id);
+  }
 
   // Back lots: deep blocks get more buildings around their courtyard.
   blocks.forEach((b, bi) => {
@@ -638,6 +654,11 @@ export function generateCity(def: CityDefinition, seed: number): DistrictLayout 
     const tiles = blockTiles[bi]!;
     const r = regionDef(b.region);
     const free = tiles.filter((i) => map.tiles[i] === Tile.Void);
+    if (r.style === 'outskirts') {
+      // Behind the roadside houses, the forest takes over.
+      fillWild(map, rng, free, W, addProp);
+      return;
+    }
     if (free.length > 120) {
       const order = free.slice();
       for (let k = order.length - 1; k > 0; k--) {
@@ -955,6 +976,7 @@ function assignIdentities(buildings: Building[], def: CityDefinition, rng: Rng):
       b.description = t.description;
       b.neon = t.neon ?? null;
       b.service = t.service ?? null;
+      b.mural = t.mural ?? null;
       b.landmark = k === 0;
     });
     for (const b of own) {

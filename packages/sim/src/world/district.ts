@@ -15,6 +15,8 @@ export interface BuildingTemplate {
   description: string;
   /** Neon sign colour as 0xRRGGBB; omitted for unlit buildings. */
   neon?: number;
+  /** One of the founders' eight murals: shown when inspected, and counted toward the Hollow. */
+  mural?: string;
 }
 
 export interface Building {
@@ -34,6 +36,8 @@ export interface Building {
   kind: BuildingKind;
   description: string;
   neon: number | null;
+  /** Founders' mural text, if the building carries one. */
+  mural: string | null;
   service: BuildingService | null;
   /** Visual style index; the renderer maps it to a roof palette. */
   style: number;
@@ -88,7 +92,7 @@ export interface DistrictDefinition {
   /** Chance to merge neighbouring blocks into superblocks (0 = strict grid). */
   mergeChance?: number;
   /** Visual style hint for the renderer. */
-  style?: 'slums' | 'downtown' | 'harbor' | 'industrial' | 'oldtown';
+  style?: 'slums' | 'downtown' | 'harbor' | 'industrial' | 'oldtown' | 'outskirts';
   /** The southern block row becomes quays, piers and open water. */
   waterfront?: boolean;
   /** Road connections to other districts at the map edge. */
@@ -117,7 +121,7 @@ export interface CityBlock {
 export interface RegionInfo {
   id: string;
   name: string;
-  style: 'slums' | 'downtown' | 'harbor' | 'industrial' | 'oldtown';
+  style: 'slums' | 'downtown' | 'harbor' | 'industrial' | 'oldtown' | 'outskirts';
 }
 
 export interface DistrictLayout {
@@ -130,7 +134,7 @@ export interface DistrictLayout {
   /** Per tile: index into `blocks`, or -1 for roads and sidewalks. */
   blockMap: Int32Array;
   regions: RegionInfo[];
-  style: 'slums' | 'downtown' | 'harbor' | 'industrial' | 'oldtown';
+  style: 'slums' | 'downtown' | 'harbor' | 'industrial' | 'oldtown' | 'outskirts';
   exits: DistrictExit[];
   map: TileMap;
   blocks: CityBlock[];

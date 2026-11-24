@@ -14,6 +14,7 @@ export const SKILLS: Record<string, Skill> = Object.fromEntries(
     S({ id: 'arc-bolt', name: 'Arc Bolt', type: 'spark', category: 'focus', power: 70, accuracy: 95, status: { kind: 'shorted', chance: 20 }, description: 'A bolt arcs between user and target.' }),
     S({ id: 'static-field', name: 'Static Field', type: 'spark', category: 'status', power: 0, accuracy: 90, stages: { stat: 'speed', delta: -1, chance: 100, target: 'foe' }, description: 'Charged air slows the target.' }),
     S({ id: 'overcharge', name: 'Overcharge', type: 'spark', category: 'status', power: 0, accuracy: 100, target: 'self', stages: { stat: 'focus', delta: 2, chance: 100, target: 'self' }, description: 'Draws power from the grid. Sharply raises Focus.' }),
+    S({ id: 'harmonic-chord', name: 'Harmonic Chord', type: 'spark', category: 'focus', power: 95, accuracy: 100, description: 'Neon and marsh in one note. The Resonant’s own song.' }),
     // Blaze
     S({ id: 'ember-swipe', name: 'Ember Swipe', type: 'blaze', category: 'physical', power: 40, accuracy: 100, status: { kind: 'scorched', chance: 10 }, description: 'Hot claws. May scorch.' }),
     S({ id: 'smoulder', name: 'Smoulder', type: 'blaze', category: 'status', power: 0, accuracy: 85, status: { kind: 'scorched', chance: 100 }, description: 'Slow-burning embers scorch the target.' }),
@@ -28,6 +29,8 @@ export const SKILLS: Record<string, Skill> = Object.fromEntries(
     S({ id: 'sap-mend', name: 'Sap Mend', type: 'bloom', category: 'status', power: 0, accuracy: 100, target: 'self', heal: 0.5, description: 'Restores half of max HP.' }),
     S({ id: 'spore-burst', name: 'Spore Burst', type: 'bloom', category: 'focus', power: 60, accuracy: 100, status: { kind: 'dazed', chance: 20 }, description: 'A cloud of spores. May daze.' }),
     S({ id: 'ivy-lash', name: 'Ivy Lash', type: 'bloom', category: 'physical', power: 65, accuracy: 95, status: { kind: 'rooted', chance: 15 }, description: 'Old ivy whips out of the wall. May root the target.' }),
+    S({ id: 'marsh-song', name: 'Marsh Song', type: 'bloom', category: 'focus', power: 90, accuracy: 100, status: { kind: 'dazed', chance: 20 }, description: 'The oldest song in the city. May daze.' }),
+    S({ id: 'fern-dash', name: 'Fern Dash', type: 'bloom', category: 'physical', power: 40, accuracy: 100, priority: 1, description: 'A rustle, then a bite. Strikes first.' }),
     // Toxic
     S({ id: 'smog-puff', name: 'Smog Puff', type: 'toxic', category: 'focus', power: 40, accuracy: 100, status: { kind: 'poisoned', chance: 30 }, description: 'A lungful of exhaust. May poison.' }),
     S({ id: 'grime-peck', name: 'Grime Peck', type: 'toxic', category: 'physical', power: 50, accuracy: 100, status: { kind: 'poisoned', chance: 10 }, description: 'A filthy peck.' }),

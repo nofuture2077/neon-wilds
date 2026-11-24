@@ -76,6 +76,8 @@ Each district has a distinct visual palette, population, creature ecology, econo
 
 ### 2.6 The Outskirts
 
+> **Implemented (M5 part 2):** the western region of the map: big irregular blocks, dead-end lanes and forest, with houses scattered along patched country lanes and dirt verges. Marsh Lighthouse, the Hollow Gate, Hermit’s Trading Post, Choir Waystation, Halcyon Field Camp, Old Marsh Chapel and Squatters’ Mill; pilgrims, hermits and Halcyon field technicians. Fernfox → Grovevix, Asphalm, and Hollowstag (legendary, met only in the Hollow).
+
 - **Look:** abandoned suburbs, overgrown highways, a forest swallowing a theme park; almost no neon, so the stars are visible.
 - **Population:** hermits, Choir pilgrims, rare-Wildling hunters, squatters, lost Halcyon field teams.
 - **Wildlings:** Fernfox, Grovevix, Asphalm, Thicket species, Hollowstag (secret), and strong wild packs.
@@ -175,7 +177,7 @@ The old families behind the Lighting. Chairman **Corvin Ashgrave** is the centra
 
 ## 5. Main story
 
-> **Implemented (M5):** Act I in full; Act II with the Saints, Halcyon (+ *Loyal Employee* for the sold path), Compact (*Cargo*), Iron Chain (*The Pit*) and Choir (*The Founders' Vault*) arcs; Act III needs **three** fragments, and four of the five endings are implemented (The Hollow needs the Outskirts). Containing Thorn counts toward The Chorus. Content lives in `packages/sim/src/content/missions.ts`.
+> **Implemented (M5):** Act I in full; Act II with the Saints, Halcyon (+ *Loyal Employee* for the sold path), Compact (*Cargo*), Iron Chain (*The Pit*) and Choir (*The Founders' Vault*) arcs; Act III needs **three** fragments, and all five endings are implemented, including the secret **Hollow** ending. Containing Thorn counts toward The Chorus. Content lives in `packages/sim/src/content/missions.ts`.
 
 ### Act I — *The Package* (Slums)
 
@@ -207,7 +209,7 @@ The Trust triggers the upgrade early. Tethered Wildlings turn on districts and H
 | **Lights Out** | Destroy the grid (Choir path, or with no allies) | The neon dies and Wildlings reclaim the streets. A free but dangerous city; the Choir rises; the Slums suffer most at first |
 | **The Quiet** | Accept Ashgrave's offer or seize the grid yourself | Order. Wildlings are tethered and citizens docile. You run the city from the Spire; your friends remember |
 | **Varga's City** | Give LANTERN control to Halcyon after exposing the Trust | Corporate stewardship: safer, expensive, unequal |
-| **The Hollow** *(secret)* | All 8 murals, Hollowstag befriended, Glitchling evolved | Hollowstag sings the original marsh song; the Hush breaks gently and the forest returns to the Outskirts |
+| **The Hollow** *(secret)* | All 8 murals, Hollowstag befriended, Glitchling evolved — *implemented as mission* The Hollow: the eighth mural starts it, the Hollow Gate summons Hollowstag, and letting the Glitchling sing evolves it into the **Resonant** and unlocks the ending in the final choice | Hollowstag sings the original marsh song; the Hush breaks gently and the forest returns to the Outskirts |
 
 The epilogue is a slideshow per district and per main character, assembled from world state: faction territory, NPC memory (who you helped or hurt) and key choices.
 

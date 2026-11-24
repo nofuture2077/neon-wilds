@@ -392,6 +392,84 @@ const DRAW: Record<string, Draw> = {
     eye(g, 9.2, 5.6 + b, 0x7a5cff);
     g.p(8, 11 + b, 0x3d6b34);
   },
+  resonant(g, f) {
+    const hover = f ? -0.6 : 0;
+    g.e(8, 15, 3.4, 0.6, 0x000000);
+    g.r(5.2, 12 + hover, 0.9, 2.2, 0x1f2e3a);
+    g.r(10, 12 + hover, 0.9, 2.2, 0x1f2e3a);
+    // antler-like antennae with small leaves
+    g.r(5.6, 2.6 + hover, 0.6, 3, 0x2f5a2a);
+    g.r(10, 2.6 + hover, 0.6, 3, 0x2f5a2a);
+    g.p(5, 2.4 + hover, 0x9be89b);
+    g.p(10.6, 2.4 + hover, 0x9be89b);
+    g.eo(8, 8.8 + hover, 4.4, 4.2, 0x1c2438);
+    g.e(8, 8.8 + hover, 3, 2.8, 0x243a4a);
+    // steady rings instead of glitches
+    g.r(4.4, 10.6 + hover, 7.2, 0.5, 0x6fd36f);
+    g.r(5, 7 + hover, 6, 0.5, 0x00e5ff);
+    g.e(9.4, 8.6 + hover, 1.8, 1.8, 0x7ff6ff);
+    g.e(9.8, 8.6 + hover, 0.8, 0.9, EYE);
+    g.p(9, 7.8 + hover, SHINE);
+  },
+  hollowstag(g, f) {
+    const b = f ? 0.3 : 0;
+    g.e(8, 15.2, 5, 0.6, 0x000000);
+    legs(g, [4.4, 6.4, 9.6, 11.6], 12, 0x2a2420, f, 3.2);
+    g.eo(8, 10 + b, 5, 2.6, 0x3a3044);
+    g.r(4, 9 + b, 8, 0.6, 0x4f8f3f);
+    g.eo(12.6, 6.6 + b, 1.9, 2.2, 0x463a50);
+    // branch antlers
+    g.r(11.4, 1.6 + b, 0.6, 3.4, 0x5a4636);
+    g.r(13.8, 1.6 + b, 0.6, 3.4, 0x5a4636);
+    g.r(10.4, 2.2 + b, 1.2, 0.5, 0x5a4636);
+    g.r(14.2, 2.2 + b, 1.2, 0.5, 0x5a4636);
+    g.p(10.2, 1.8 + b, 0x6fd36f);
+    g.p(15.2, 1.8 + b, 0x6fd36f);
+    g.p(12, 1.2 + b, 0x9be89b);
+    eye(g, 13.2, 6.4 + b, 0x9be89b);
+  },
+  fernfox(g, f) {
+    const b = f ? 0.4 : 0;
+    g.eo(2.6, 9 + b, 2, 1.4, 0x8a5a2e);
+    g.p(1.2, 9 + b, 0xe8e0c8);
+    legs(g, [6, 10], 13.2, 0x5a3a1e, f);
+    g.eo(7.6, 11 + b, 4, 2.4, 0xb06a32);
+    g.e(8, 12 + b, 2.4, 1, 0xe8d8b8);
+    g.eo(12, 8.4 + b, 2.6, 2.3, 0xc07a3a);
+    // fern-frond ears
+    for (const x of [10.6, 13]) for (let k = 0; k < 3; k++) g.r(x + (k % 2) * 0.4, 4 + k * 0.9 + b, 1.2 - k * 0.2, 0.6, 0x4f8f3f);
+    eye(g, 12.8, 8.2 + b);
+    g.p(14.4, 9 + b, 0x0c0a12);
+  },
+  grovevix(g, f) {
+    const b = f ? 0.3 : 0;
+    for (const [y, c] of [[6.5, 0x6fd36f], [9, 0x7ff6ff]] as const) {
+      g.eo(2.6, y + b, 2.2, 1.2, 0x2f5a2a);
+      g.p(1.6, y + b, c);
+      g.p(3, y + b, c);
+    }
+    legs(g, [6, 10.4], 13.2, 0x24402a, f, 2.2);
+    g.eo(8, 10.8 + b, 4.4, 2.4, 0x2f5a2a);
+    g.r(5, 10 + b, 6, 0.5, 0x7ff6ff);
+    g.eo(12.4, 8 + b, 2.6, 2.3, 0x3d6b34);
+    g.r(11, 4.4 + b, 1.1, 2, 0x3d6b34);
+    g.r(13.4, 4.4 + b, 1.1, 2, 0x3d6b34);
+    g.p(11.2, 4.4 + b, 0x9be89b);
+    g.p(13.6, 4.4 + b, 0x9be89b);
+    eye(g, 13.2, 7.8 + b, 0x7ff6ff);
+  },
+  asphalm(g, f) {
+    const sway = f ? 0.5 : 0;
+    g.e(8, 15, 4.6, 0.7, 0x000000);
+    // asphalt slab lifted on roots
+    g.eo(8, 12.4, 5, 1.8, 0x2a2630);
+    g.r(4, 11.8, 8, 0.4, 0xb8902c);
+    for (const x of [4.6, 7.6, 10.6]) g.r(x, 13.4, 0.8, 1.8, 0x5a4636);
+    g.r(7.4, 5 + sway * 0.2, 1.2, 6.4, 0x6a5040);
+    for (const [dx, dy] of [[-4, 0], [4, 0], [-3, -2], [3, -2], [0, -3]] as const) g.eo(8 + dx * 0.9 + sway, 4.6 + dy * 0.6, 2.2, 0.9, 0x3d6b34);
+    eye(g, 7.2, 8.4);
+    eye(g, 9.2, 8.4);
+  },
   glitchling(g, f) {
     const hover = f ? -0.6 : 0;
     const glitch = f ? 1 : -1;

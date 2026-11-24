@@ -46,6 +46,7 @@ export const SLUMS: DistrictDefinition = {
       name: 'The Drowned Lantern',
       kind: 'bar',
       neon: 0xffb347,
+      mural: 'Behind the bar, under twenty coats of paint, a founders’ mural: a Fizzlet asleep inside a street lamp, smiling. Someone has carefully scraped the paint back from its face.',
       description:
         "Bass thumps through the door. A chalkboard lists tonight's pit fights, but every name has been scrubbed out with a wet thumb.",
     },

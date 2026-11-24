@@ -21,6 +21,7 @@ import {
 } from './constants';
 import { DISTRICTS, allArchetypes } from './content';
 import { ITEMS, SHOPS } from './content/items';
+import { MURAL_COUNT } from './content/missions';
 import { TRAINERS } from './content/trainers';
 import type { Appearance, Conversation, NpcArchetype } from './content/types';
 import { getSpecies } from './content/wildlings';
@@ -478,6 +479,22 @@ export class Simulation implements MissionHost {
           // Story hand-overs (the Glitchling) may take your last Wildling.
           if (i >= 0 && (p.party.length > 1 || effect.species === 'glitchling')) p.party.splice(i, 1);
         }
+        break;
+      }
+      case 'evolve-wildling': {
+        // Story evolutions (the Glitchling becoming the Resonant) keep level, skills and health ratio.
+        const w = p.party.find((x) => x.speciesId === effect.from) ?? p.storage.find((x) => x.speciesId === effect.from);
+        if (!w) break;
+        const ratio = w.hp / Math.max(1, maxHp(w));
+        w.speciesId = effect.into;
+        w.hp = Math.max(1, Math.round(maxHp(w) * ratio));
+        if (effect.learn && !w.skills.includes(effect.learn)) {
+          if (w.skills.length < 4) w.skills.push(effect.learn);
+          else w.skills[0] = effect.learn;
+        }
+        if (!p.index.caught.includes(effect.into)) p.index.caught.push(effect.into);
+        if (!p.index.seen.includes(effect.into)) p.index.seen.push(effect.into);
+        this.emit({ type: 'message', speaker: getSpecies(effect.into).name, pages: [`What? ${getSpecies(effect.from).name} evolved into ${getSpecies(effect.into).name}!`] });
         break;
       }
       case 'choice': {
@@ -1786,6 +1803,11 @@ export class Simulation implements MissionHost {
   }
 
   private inspectBuilding(b: Building): void {
+    // The founders' murals are remembered however the player finds them.
+    const muralFlag = b.mural ? `mural:${b.name}` : null;
+    const newMural = muralFlag !== null && !this.progression.flags[muralFlag];
+    if (muralFlag) this.progression.flags[muralFlag] = true;
+    if (newMural) this._progressVersion++;
     if (isObjective(this.progression, 'inspect', b.name)) {
       trigger(this, 'inspect', b.name);
       return;
@@ -1820,6 +1842,12 @@ export class Simulation implements MissionHost {
     }
     if (b.service?.kind === 'shop') {
       this.emit({ type: 'shop.opened', shopId: b.service.shopId });
+      return;
+    }
+    if (b.mural) {
+      const found = Object.keys(this.progression.flags).filter((f) => f.startsWith('mural:')).length;
+      this.emit({ type: 'message', speaker: `Founders’ mural (${found} of ${MURAL_COUNT})`, pages: [b.mural] });
+      if (newMural) checkAutoStart(this); // the eighth mural opens the way to the Hollow
       return;
     }
     this.events.push({ type: 'building.inspected', buildingId: b.id, name: b.name, text: b.description });

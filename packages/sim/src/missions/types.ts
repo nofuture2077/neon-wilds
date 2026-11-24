@@ -12,11 +12,12 @@ export type Effect =
   | { type: 'reputation'; faction: string; delta: number }
   | { type: 'remember'; npc: string; kind: 'helped' | 'saw-battle-win'; important: boolean }
   | { type: 'take-wildling'; species: string }
+  | { type: 'evolve-wildling'; from: string; into: string; learn?: string }
   | { type: 'choice'; speaker: string; pages: string[]; options: ChoiceOption[] }
   | { type: 'world-event'; id: 'blackout' | 'night-market' | 'recall-drive' | 'saints-procession' }
   | { type: 'ending'; id: EndingId };
 
-export type EndingId = 'chorus' | 'lights-out' | 'the-quiet' | 'vargas-city';
+export type EndingId = 'chorus' | 'lights-out' | 'the-quiet' | 'vargas-city' | 'the-hollow';
 
 /** A dialogue option. `when` gates it on flags/reputation; effects run when chosen. */
 export interface ChoiceOption {

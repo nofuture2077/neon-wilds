@@ -51,3 +51,4 @@ export * from './missions/epilogue';
 export * from './content/harbor';
 export * from './content/industrial';
 export * from './content/oldtown';
+export * from './content/outskirts';

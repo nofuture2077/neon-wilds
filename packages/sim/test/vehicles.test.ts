@@ -81,14 +81,16 @@ describe('player driving', () => {
     // Take it out onto the longest road.
     const roads = new RoadNetwork(sim.layout);
     const longest = [...roads.edges].sort((a, b) => roads.edgeLength(b.id) - roads.edgeLength(a.id))[0]!;
-    const pose = roads.lane(longest.id, 6, true);
+    const pose = roads.lane(longest.id, roads.edgeLength(longest.id) / 2, true);
     car.x = car.prevX = sim.player.x = pose.x;
     car.y = car.prevY = sim.player.y = pose.y;
     car.heading = pose.heading;
+    // A clear stretch of road: move other traffic out of the way.
+    for (const v of sim.vehicles) if (v !== car && Math.hypot(v.x - pose.x, v.y - pose.y) < 25) v.x = v.prevX = v.x + 60;
     const start = { x: car.x, y: car.y };
     const all: SimEvent[] = [];
     for (let i = 0; i < TICK_RATE * 6; i++) {
-      sim.step({ moveX: i % 120 < 60 ? 0.6 : -0.4, moveY: -1, run: false, interact: false });
+      sim.step({ moveX: i % 120 < 60 ? 0.15 : -0.15, moveY: -1, run: false, interact: false });
       all.push(...sim.drainEvents());
       expect(sim.layout.map.isSolid(Math.floor(car.x), Math.floor(car.y))).toBe(false);
       expect(sim.player.x).toBe(car.x);

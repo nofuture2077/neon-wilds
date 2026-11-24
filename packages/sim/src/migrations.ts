@@ -66,6 +66,8 @@ const STEPS: Record<number, (s: AnySnapshot) => AnySnapshot> = {
   10: (s) => rebuildWorld(s, 11),
   // v11 → v12: orthogonal street plan (world gen v4) and Old Town; the map changed under everyone's feet.
   11: (s) => rebuildWorld(s, 12),
+  // v12 → v13: the Outskirts widen the map.
+  12: (s) => rebuildWorld(s, 13),
 };
 
 /**

@@ -6,17 +6,23 @@ const T = TILE_SIZE;
 
 /**
  * Tileset layout: indices 0..15 = Tile kinds, 16..31 = sidewalk curb variants (mask N=1 E=2 S=4 W=8),
- * 32 = Old Town cobbled road, 33..48 = Old Town flagstone sidewalk curb variants.
+ * 32 = Old Town cobbled road, 33..48 = Old Town flagstone sidewalk curb variants,
+ * 49 = Outskirts patched lane, 50..65 = Outskirts dirt verge variants.
  */
 export const SIDEWALK_VARIANT_BASE = 16;
 const OLD_ROAD = 32;
 const OLD_SIDEWALK_BASE = 33;
-export const TILESET_COLUMNS = 49;
+const RURAL_ROAD = 49;
+const RURAL_VERGE_BASE = 50;
+export const TILESET_COLUMNS = 66;
 
-/** Map a ground tile to its tileset index, picking curb variants from neighbours. `old` streets are cobbled. */
-export function visualTileIndex(map: TileMap, x: number, y: number, old = false): number {
+/** Street surface by district: neon city, Old Town cobbles or Outskirts country lanes. */
+export type GroundLook = 'city' | 'old' | 'rural';
+
+/** Map a ground tile to its tileset index, picking curb variants from neighbours. */
+export function visualTileIndex(map: TileMap, x: number, y: number, look: GroundLook = 'city'): number {
   const kind = map.get(x, y);
-  if (old && (kind === Tile.Road || kind === Tile.RoadLineH || kind === Tile.RoadLineV)) return OLD_ROAD;
+  if (look !== 'city' && (kind === Tile.Road || kind === Tile.RoadLineH || kind === Tile.RoadLineV)) return look === 'old' ? OLD_ROAD : RURAL_ROAD;
   if (kind !== Tile.Sidewalk) return kind;
   const roadish = (k: TileKind) => k === Tile.Road || k === Tile.RoadLineH || k === Tile.RoadLineV || k === Tile.CrosswalkH || k === Tile.CrosswalkV;
   let mask = 0;
@@ -24,7 +30,7 @@ export function visualTileIndex(map: TileMap, x: number, y: number, old = false)
   if (roadish(map.get(x + 1, y))) mask |= 2;
   if (roadish(map.get(x, y + 1))) mask |= 4;
   if (roadish(map.get(x - 1, y))) mask |= 8;
-  return (old ? OLD_SIDEWALK_BASE : SIDEWALK_VARIANT_BASE) + mask;
+  return (look === 'old' ? OLD_SIDEWALK_BASE : look === 'rural' ? RURAL_VERGE_BASE : SIDEWALK_VARIANT_BASE) + mask;
 }
 
 function speckle(c: CanvasRenderingContext2D, ox: number, seed: number, base: number, light: number, dark: number, density = 0.12) {
@@ -134,6 +140,9 @@ export function buildTileset(): PixelCanvas {
 
   drawCobbles(c, at(OLD_ROAD));
   for (let mask = 0; mask < 16; mask++) drawFlagstones(c, at(OLD_SIDEWALK_BASE + mask), mask);
+
+  drawRuralLane(c, at(RURAL_ROAD));
+  for (let mask = 0; mask < 16; mask++) drawVerge(c, at(RURAL_VERGE_BASE + mask), mask);
   return pc;
 }
 
@@ -181,4 +190,30 @@ function drawFlagstones(c: CanvasRenderingContext2D, ox: number, mask: number) {
     rect(c, ox + T - 2, 0, 2, T, kerb);
     rect(c, ox + T - 3, 0, 1, T, 0x15121c, 0.6);
   }
+}
+
+/** Outskirts lane: old asphalt, patched and cracked, with weeds pushing through. */
+function drawRuralLane(c: CanvasRenderingContext2D, ox: number) {
+  speckle(c, ox, 23, 0x262230, 0x302b3a, 0x1c1924, 0.2);
+  for (let i = 0; i < 6; i++) px(c, ox + 3 + i, 4 + ((i * 3) % 5), 0x15121a);
+  rect(c, ox + 9, 9, 4, 3, 0x2c2836);
+  px(c, ox + 2, 12, 0x2f5a2a);
+  px(c, ox + 3, 11, 0x3d6b34);
+  px(c, ox + 13, 3, 0x2f5a2a);
+}
+
+/** Outskirts verge: packed dirt and tufts of grass, with a worn edge toward the lane. */
+function drawVerge(c: CanvasRenderingContext2D, ox: number, mask: number) {
+  speckle(c, ox, 29, 0x3a3128, 0x463c30, 0x2e271f, 0.18);
+  for (let i = 0; i < 5; i++) {
+    const x = Math.floor(hashNoise(i, 1, 31) * 14) + 1;
+    const y = Math.floor(hashNoise(i, 2, 31) * 14) + 1;
+    px(c, ox + x, y, 0x3d6b34);
+    px(c, ox + x + 1, y, 0x2f5a2a);
+  }
+  const edge = 0x221c16;
+  if (mask & 1) rect(c, ox, 0, T, 1, edge);
+  if (mask & 4) rect(c, ox, T - 1, T, 1, edge);
+  if (mask & 8) rect(c, ox, 0, 1, T, edge);
+  if (mask & 2) rect(c, ox + T - 1, 0, 1, T, edge);
 }

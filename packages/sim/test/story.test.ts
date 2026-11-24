@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_INPUT, Rng, SKILLS, Simulation, createWildling, effectiveness, getSpecies, healFully, type SimEvent } from '../src';
+import { MURALS, NO_INPUT, Rng, SKILLS, Simulation, createWildling, effectiveness, getSpecies, healFully, type SimEvent } from '../src';
 
 const APPEARANCE = { skin: 1, hair: 2, top: 3, bottom: 4 };
 
@@ -74,6 +74,9 @@ class Player {
     for (const w of this.sim.progression.party) healFully(w, true);
     for (let i = 0; i < 80 && this.sim.battle; i++) {
       const b = this.sim.battle;
+      // Keep the active Wildling topped up so story tests don't hinge on damage rolls.
+      const active = this.sim.progression.party[b.player.active];
+      if (active && active.hp > 0) healFully(active, false);
       const action =
         b.phase === 'force-switch'
           ? { kind: 'switch' as const, partyIndex: this.sim.progression.party.findIndex((w) => w.hp > 0) }
@@ -291,5 +294,43 @@ describe('Verdant Choir arc', () => {
     expect(pl.status('founders-vault')).toBe('completed');
     expect(sim.progression.flags['thorn-contained']).toBe(true);
     expect(sim.npcs.find((n) => n.id === 'npc-thorn')?.present ?? false).toBe(false);
+  }, 30000);
+});
+
+describe('The Hollow (secret ending)', () => {
+  it('places all eight founders’ murals, each in a building of the city', () => {
+    const sim = Simulation.create({ seed: 84, playerName: 'Nova', appearance: APPEARANCE });
+    for (const name of MURALS) {
+      const found = sim.layout.buildings.filter((b) => b.name === name);
+      expect(found, name).toHaveLength(1);
+      expect(found[0]!.mural, name).toBeTruthy();
+    }
+  });
+
+  it('follows the murals to the Hollow, evolves the Glitchling and unlocks the Hollow ending', () => {
+    const sim = Simulation.create({ seed: 85, playerName: 'Nova', appearance: APPEARANCE, startMinutes: 22 * 60 });
+    const pl = new Player(sim);
+    playActOne(pl, 'independent');
+    for (const mural of MURALS) pl.inspect(mural);
+    expect(Object.keys(sim.progression.flags).filter((f) => f.startsWith('mural:'))).toHaveLength(8);
+    pl.step(2);
+    expect(pl.status('the-hollow')).toBe('active');
+    pl.inspect('The Hollow Gate');
+    pl.resolveQuestWildling('hollowstag');
+    pl.choose('sing');
+    expect(pl.status('the-hollow')).toBe('completed');
+    expect(sim.progression.party.some((w) => w.speciesId === 'resonant')).toBe(true);
+    expect(sim.progression.party.some((w) => w.speciesId === 'glitchling')).toBe(false);
+    expect(sim.progression.party.find((w) => w.speciesId === 'resonant')!.skills).toContain('harmonic-chord');
+
+    // Act III: with the marsh song learned, the Hollow ending is on the table.
+    sim.progression.inventory['hush-fragment'] = 3;
+    for (let i = 0; i < 4000 && pl.status('the-quiet') !== 'active'; i++) pl.step(1); // checked on the hour
+    expect(pl.status('the-quiet')).toBe('active');
+    pl.talk('npc-ashgrave');
+    pl.winBattle();
+    pl.talk('npc-ashgrave');
+    pl.choose('the-hollow');
+    expect(pl.log.find((e) => e.type === 'game.ending')).toMatchObject({ ending: 'the-hollow', title: 'The Hollow' });
   }, 30000);
 });

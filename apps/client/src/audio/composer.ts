@@ -7,7 +7,7 @@ import { Rng, deriveSeed } from '@neon-wilds/sim';
  * only chooses between them. No generative AI.
  */
 export type Instrument = 'pad' | 'bass' | 'arp' | 'lead' | 'kick' | 'snare' | 'hat' | 'openhat';
-export type MoodId = 'title' | 'slums-night' | 'slums-day' | 'downtown' | 'harbor' | 'industrial' | 'oldtown' | 'battle' | 'chase';
+export type MoodId = 'title' | 'slums-night' | 'slums-day' | 'downtown' | 'harbor' | 'industrial' | 'oldtown' | 'outskirts' | 'battle' | 'chase';
 
 export interface NoteEvent {
   /** 16th-note step within the bar (0..15). */
@@ -55,6 +55,8 @@ export const MOODS: Record<MoodId, Mood> = {
   industrial: { id: 'industrial', bpm: 116, root: 50, scale: PHRYGIAN, energy: 2, progressions: [[0, 1, 0, 6], [0, 6, 5, 1], [0, 0, 1, 6]], lead: false },
   // Old Town: slow, modal, hymn-like.
   oldtown: { id: 'oldtown', bpm: 78, root: 55, scale: DORIAN, energy: 0, progressions: [[0, 3, 4, 0], [0, 6, 3, 4], [5, 3, 4, 0]], lead: true },
+  // Outskirts: sparse and open, mostly pad and bass.
+  outskirts: { id: 'outskirts', bpm: 70, root: 50, scale: MINOR, energy: 0, progressions: [[0, 5, 3, 0], [0, 6, 5, 0], [0, 3, 6, 4]], lead: false },
   battle: { id: 'battle', bpm: 128, root: 57, scale: MINOR, energy: 2, progressions: MINOR_PROGRESSIONS, lead: true },
   chase: { id: 'chase', bpm: 136, root: 52, scale: PHRYGIAN, energy: 2, progressions: [[0, 1, 0, 6], [0, 1, 5, 6], [0, 6, 5, 1]], lead: false },
 };

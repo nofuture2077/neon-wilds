@@ -184,6 +184,31 @@ export const ROUTINES: Record<string, Routine> = {
       { from: 18, to: 4, weights: { patrol: 2, wander: 1.2, socialize: 1 } },
     ],
   },
+  pilgrim: {
+    workplace: 'none',
+    sociability: 1.2,
+    blocks: [
+      { from: 22, to: 6, weights: { sleep: 4 } },
+      { from: 6, to: 22, weights: { wander: 2.5, socialize: 1.2, eat: 0.8 } },
+    ],
+  },
+  hermit: {
+    workplace: 'workshop',
+    sociability: 0.3,
+    blocks: [
+      { from: 21, to: 5, weights: { sleep: 4 } },
+      { from: 5, to: 21, weights: { work: 2, wander: 2, eat: 0.8 } },
+    ],
+  },
+  'field-tech': {
+    workplace: 'office',
+    sociability: 0.8,
+    blocks: [
+      { from: 23, to: 6, weights: { sleep: 4 } },
+      { from: 6, to: 18, weights: { work: 2.5, wander: 1.5, eat: 0.8 } },
+      { from: 18, to: 23, weights: { socialize: 2, eat: 1 } },
+    ],
+  },
   citizen: {
     workplace: 'none',
     sociability: 0.5,

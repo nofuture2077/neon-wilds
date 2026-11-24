@@ -23,6 +23,11 @@ const ENDINGS: Record<EndingId, { title: string; text: string; slums: string }> 
     text: 'You keep the controls. The upgrade goes live, and Vesper becomes the calmest city in the world. Nobody fights, nobody shouts, nobody runs. From the top of the Lumen Spire, it is very beautiful. From the street, it is very quiet.',
     slums: 'The Slums are orderly now. Halos glow behind every ear. Dez stopped arguing with anyone.',
   },
+  'the-hollow': {
+    title: 'The Hollow',
+    text: 'The Resonant sings the marsh song into the grid, the way the stag sang it first. The Hush does not break; it loosens, note by note, like a knot untied. Over the following years the Outskirts grow back toward the city, and nobody in Vesper is quite sure where the forest ends any more.',
+    slums: 'Moss grows over the Slums’ rooftops. Mother Rook swears the Fizzlets in the street lamps have started to hum along.',
+  },
   'vargas-city': {
     title: "Varga's City",
     text: 'Ilse Varga takes the controls and the Trust takes the fall. Halcyon promises stewardship, transparency, safety. Licences for every Wildling, clinics on every corner, and a price tag on all of it.',

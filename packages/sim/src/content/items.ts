@@ -26,5 +26,7 @@ export const SHOPS: Record<string, { name: string; items: string[] }> = {
   scrapyard: { name: 'Scrapyard Exchange', items: ['tin-snare', 'coil-snare', 'patch-kit', 'cleanse-tab'] },
   'choir-apothecary': { name: 'Choir Apothecary', items: ['patch-kit', 'med-spray', 'cleanse-tab', 'lull-snare'] },
   'gaslight-antiques': { name: 'Gaslight Antiques', items: ['tin-snare', 'lull-snare', 'coil-snare', 'cleanse-tab'] },
+  hermit: { name: 'Hermit’s Trading Post', items: ['tin-snare', 'lull-snare', 'patch-kit', 'cleanse-tab'] },
+  waystation: { name: 'Choir Waystation', items: ['patch-kit', 'med-spray', 'cleanse-tab'] },
   'night-market': { name: 'Night Market', items: ['black-market-snare', 'coil-snare', 'med-spray', 'cleanse-tab'] },
 };

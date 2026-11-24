@@ -3,6 +3,7 @@ import { DOWNTOWN, DOWNTOWN_ARCHETYPES, DOWNTOWN_NPCS } from './downtown';
 import { HARBOR, HARBOR_ARCHETYPES, HARBOR_NPCS } from './harbor';
 import { INDUSTRIAL, INDUSTRIAL_ARCHETYPES, INDUSTRIAL_NPCS } from './industrial';
 import { OLDTOWN, OLDTOWN_ARCHETYPES, OLDTOWN_NPCS } from './oldtown';
+import { OUTSKIRTS, OUTSKIRTS_ARCHETYPES, OUTSKIRTS_NPCS } from './outskirts';
 import { SLUMS, SLUMS_ARCHETYPES, SLUMS_NPCS } from './slums';
 import type { NpcArchetype, NpcDefinition } from './types';
 
@@ -19,6 +20,7 @@ export const DISTRICTS: Record<string, DistrictContent> = {
   harbor: { district: HARBOR, archetypes: HARBOR_ARCHETYPES, npcs: HARBOR_NPCS },
   industrial: { district: INDUSTRIAL, archetypes: INDUSTRIAL_ARCHETYPES, npcs: INDUSTRIAL_NPCS },
   oldtown: { district: OLDTOWN, archetypes: OLDTOWN_ARCHETYPES, npcs: OLDTOWN_NPCS },
+  outskirts: { district: OUTSKIRTS, archetypes: OUTSKIRTS_ARCHETYPES, npcs: OUTSKIRTS_NPCS },
 };
 
 /** Every NPC archetype across all districts (NPCs keep their archetype when the player travels). */
