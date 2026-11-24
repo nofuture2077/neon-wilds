@@ -42,6 +42,29 @@ export function JobBoard() {
             </button>
           </div>
         ))}
+        {board && board.shuttle.filter((d) => !d.here).length > 0 && (
+          <>
+            <h3 className="font-pixel text-[10px] text-neon-cyan">Co-op shuttle</h3>
+            <p className="font-term text-lg text-slate-400">A courier van runs to every district you have been to. {board.shuttle[0]!.fare}₵ a ride; not while the Wardens are after you.</p>
+            <div className="flex flex-wrap gap-2">
+              {board.shuttle
+                .filter((d) => !d.here)
+                .map((d) => (
+                  <button
+                    key={d.id}
+                    data-nav
+                    className="pixel-button !px-3 !py-2 !text-[10px]"
+                    onClick={() => {
+                      store.command({ type: 'shuttle', to: d.id });
+                      close();
+                    }}
+                  >
+                    {d.name}
+                  </button>
+                ))}
+            </div>
+          </>
+        )}
         <button data-nav data-nav-back className="pixel-button text-center" onClick={close}>
           Close (Esc)
         </button>

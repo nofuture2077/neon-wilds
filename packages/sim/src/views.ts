@@ -9,6 +9,8 @@ import { computeStats, displayName, maxHp, xpForLevel } from './creatures/wildli
 import { currentObjective, missionDef } from './missions/runtime';
 import { describeLocation } from './world/location';
 import type { Simulation } from './simulation';
+import { SHUTTLE_FARE } from './constants';
+import { regionOf } from './world/regions';
 
 /**
  * Read-only, UI-friendly projections of simulation state. The UI never needs
@@ -266,6 +268,8 @@ export function mapView(sim: Simulation): MapView {
 
 export interface BoardView {
   jobs: { id: string; title: string; summary: string; reward: string; deadline: string | null }[];
+  /** Co-op shuttle runs to districts already visited. */
+  shuttle: { id: string; name: string; fare: number; here: boolean }[];
 }
 
 /** Offers on the Courier Co-op job board. */
@@ -285,5 +289,8 @@ export function boardView(sim: Simulation): BoardView {
         reward: m.generated?.reward ?? '',
         deadline: m.generated?.deadlineMinutes != null ? clock(m.generated.deadlineMinutes) : null,
       })),
+    shuttle: VESPER.regions
+      .filter((r) => p.flags[`visited:${r.id}`])
+      .map((r) => ({ id: r.id, name: r.name, fare: SHUTTLE_FARE, here: regionOf(sim.layout, sim.player.x, sim.player.y).id === r.id })),
   };
 }

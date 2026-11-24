@@ -25,3 +25,6 @@ export const GRUDGE_TICKS = TICK_RATE * 180;
 export const ALARM_RADIUS = 7;
 /** Max A* searches per tick; NPCs that miss out simply wait one more tick. */
 export const PATH_BUDGET_PER_TICK = 4;
+
+/** What a Co-op shuttle run to another visited district costs. */
+export const SHUTTLE_FARE = 30;

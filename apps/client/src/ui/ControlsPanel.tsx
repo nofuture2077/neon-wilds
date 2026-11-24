@@ -44,7 +44,7 @@ export function ControlsPanel() {
           <span className="text-neon-cyan">Spend it:</span> Snares and medicine at shops (Paper Moon Pawn, Gaslight Antiques, the Night Market). Healing at Saint Ottilie Free Clinic is free.
         </li>
         <li>
-          <span className="text-neon-cyan">Get around:</span> cars are twice as fast as running. Express jobs need one. Stealing makes the Wardens look for you; a respray at Rustbucket Garage loses them.
+          <span className="text-neon-cyan">Get around:</span> cars are twice as fast as running, and Express jobs need one. The Co-op shuttle (at the job board) takes you to any district you have visited. Stealing makes the Wardens look for you; a respray at Rustbucket Garage loses them.
         </li>
         <li>
           <span className="text-neon-cyan">Push the story:</span> your active mission and its marker are always on screen. Factions that trust you offer their own jobs.

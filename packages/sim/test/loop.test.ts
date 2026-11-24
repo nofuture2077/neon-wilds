@@ -79,3 +79,22 @@ describe('reasons to drive and to catch', () => {
     expect(sim.drainEvents().some((e) => e.type === 'index.milestone')).toBe(false);
   });
 });
+
+describe('the Co-op shuttle', () => {
+  it('runs only to districts you have visited, for a fare', () => {
+    const sim = started(35);
+    run(sim, 40);
+    sim.progression.money = 100;
+    sim.enqueue({ type: 'shuttle', to: 'harbor' });
+    run(sim, 2);
+    expect(sim.districtId).not.toBe('harbor');
+    sim.travelTo('harbor');
+    run(sim, 40);
+    sim.travelTo('slums');
+    run(sim, 40);
+    sim.enqueue({ type: 'shuttle', to: 'harbor' });
+    run(sim, 2);
+    expect(sim.districtId).toBe('harbor');
+    expect(sim.progression.money).toBe(70);
+  });
+});

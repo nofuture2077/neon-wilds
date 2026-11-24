@@ -56,7 +56,7 @@ export function nextTip(s: GuideSituation): Tip | null {
       {
         id: 'job-board',
         title: 'Finding work',
-        text: 'Inspect the Vesper Courier Co-op for its job board: paid deliveries and requests. People and faction leaders across the city offer missions too. Your active mission and its marker are always on screen; the pause menu (Esc) lists the rest.',
+        text: 'Inspect the Vesper Courier Co-op for its job board: paid deliveries and requests, and a shuttle to districts you have visited. People and faction leaders across the city offer missions too. Your active mission and its marker are always on screen; the pause menu (Esc) lists the rest.',
       },
     ],
     [s.started && s.snares === 0, { id: 'snares-out', title: 'Out of Snares', text: 'Buy more at Paper Moon Pawn (Slums), Gaslight Antiques (Old Town) or the Night Market (Harbor District).' }],

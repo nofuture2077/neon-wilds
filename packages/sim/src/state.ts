@@ -93,6 +93,8 @@ export type SimCommand =
   | { type: 'shop.buy'; shopId: string; itemId: string; qty: number }
   | { type: 'market.sellWildling'; from: 'party' | 'storage'; index: number }
   | { type: 'mission.accept'; missionId: string }
+  /** Co-op courier shuttle to a district the player has visited. */
+  | { type: 'shuttle'; to: string }
   | { type: 'dialogue.choose'; optionId: string };
 
 export type Focus =

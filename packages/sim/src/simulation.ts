@@ -23,6 +23,7 @@ import { DISTRICTS, allArchetypes } from './content';
 import { ITEMS, SHOPS } from './content/items';
 import { MURAL_COUNT } from './content/missions';
 import { nextTip } from './guide';
+import { SHUTTLE_FARE } from './constants';
 import { TRAINERS } from './content/trainers';
 import type { Appearance, Conversation, NpcArchetype } from './content/types';
 import { getSpecies } from './content/wildlings';
@@ -596,6 +597,20 @@ export class Simulation implements MissionHost {
           this._progressVersion++;
           break;
         }
+        case 'shuttle': {
+          const p = this.progression;
+          const here = regionOf(this.layout, this.player.x, this.player.y).id;
+          if (!p.flags[`visited:${cmd.to}`] || cmd.to === here || this.player.vehicleId || this.law.stars > 0) break;
+          if (p.money < SHUTTLE_FARE) {
+            this.emit({ type: 'notice', text: `The shuttle costs ${SHUTTLE_FARE}\u20b5.` });
+            break;
+          }
+          p.money -= SHUTTLE_FARE;
+          this.travelTo(cmd.to);
+          this._progressVersion++;
+          this.emit({ type: 'notice', text: `The Co-op shuttle drops you off in ${regionOf(this.layout, this.player.x, this.player.y).name}.` });
+          break;
+        }
         case 'mission.accept': {
           const def = this.progression.generated.find((m) => m.id === cmd.missionId);
           if (def && !def.giver && this.progression.board.includes(def.id)) {
@@ -691,6 +706,11 @@ export class Simulation implements MissionHost {
   private updateGuide(inWildBattle: boolean): void {
     const p = this.progression;
     const pl = this.player;
+    const region = regionOf(this.layout, pl.x, pl.y).id;
+    if (!p.flags[`visited:${region}`]) {
+      p.flags[`visited:${region}`] = true;
+      this._progressVersion++;
+    }
     const tip = nextTip({
       flags: p.flags,
       started: p.party.length > 0 && p.missions.some((m) => m.id === 'last-run' && m.status === 'completed'),
@@ -700,7 +720,7 @@ export class Simulation implements MissionHost {
       partyHurt: p.party.some((w) => w.hp <= 0 || w.injuries > 0),
       inVehicle: pl.vehicleId !== null,
       wanted: this.law.stars > 0,
-      region: regionOf(this.layout, pl.x, pl.y).id,
+      region,
     });
     if (!tip) return;
     p.flags[`tip:${tip.id}`] = true;
