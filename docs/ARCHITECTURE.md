@@ -155,7 +155,7 @@ Entities are promoted and demoted at radius boundaries with hysteresis, keeping 
 | Browser e2e smoke | `e2e/smoke.mjs` (playwright-core), CI job `e2e` | New game → mission → trainer battle → capture → save → continue; asserts no console errors and FPS |
 | Static | `tsc` strict, no-AI guard | — |
 
-CI (GitHub Actions) runs typecheck, tests, build, the no-AI guard and the browser smoke test; the Pages workflow deploys.
+CI (GitHub Actions) runs typecheck, tests, build, the no-AI guard, the browser smoke test and the visual regression test (five frozen city views, `?quickstart&freeze`, compared pixel by pixel with committed baselines; more than 0.5% changed pixels fails and writes a diff image); the Pages workflow deploys.
 
 ## 9. Configuration and environments
 

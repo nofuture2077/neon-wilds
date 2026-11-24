@@ -17,7 +17,9 @@
     "check": "npm run typecheck && npm run test && node scripts/check-no-ai.mjs",
     "lint:no-ai": "node scripts/check-no-ai.mjs",
     "e2e": "node e2e/smoke.mjs",
-    "preview": "npm run preview -w @neon-wilds/client"
+    "preview": "npm run preview -w @neon-wilds/client",
+    "visual": "node e2e/visual.mjs",
+    "visual:update": "node e2e/visual.mjs --update"
   },
   "engines": {
     "node": ">=22"

@@ -71,6 +71,8 @@ export class WorldScene extends Phaser.Scene {
   private readonly npcViews = new Map<string, ActorView>();
   private readonly officerViews = new Map<string, ActorView>();
   private accumulator = 0;
+  /** Dev-only `?freeze`: the simulation does not advance (deterministic frames for visual tests). */
+  private readonly frozen = import.meta.env.DEV && new URLSearchParams(window.location.search).has('freeze');
   private pendingInteract = false;
   private hudElapsed = HUD_INTERVAL_MS;
   private lastProgressVersion = -1;
@@ -192,7 +194,7 @@ export class WorldScene extends Phaser.Scene {
       input = { moveX: frame.moveX, moveY: frame.moveY, run: frame.run, interact: false, action: false };
     }
 
-    this.accumulator += Math.min(deltaMs / 1000, MAX_FRAME_SECONDS);
+    this.accumulator += this.frozen ? 0 : Math.min(deltaMs / 1000, MAX_FRAME_SECONDS);
     while (this.accumulator >= DT) {
       this.sim.step({ ...input, interact: this.pendingInteract, action: this.pendingAction });
       this.pendingInteract = false;

@@ -36,6 +36,7 @@ Dev shortcut: `http://localhost:5173/?quickstart&seed=1337&time=22:30` skips the
 | `npm run preview` | Serve the production build locally |
 | `npm run check` | Typecheck + tests + no-AI guard |
 | `npm run e2e` | Browser smoke test against a running dev server (`CHROME_PATH` optional) |
+| `npm run visual` | Visual regression test: frozen city views compared with `e2e/visual-baselines/` (`npm run visual:update` after an intended change) |
 
 Requires Node ≥ 22.
 
