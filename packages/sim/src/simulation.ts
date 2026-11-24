@@ -23,6 +23,7 @@ import { DISTRICTS, allArchetypes } from './content';
 import { ITEMS, SHOPS } from './content/items';
 import { MURAL_COUNT } from './content/missions';
 import { nextTip } from './guide';
+import { type VignetteDef, vignetteActive, vignetteDef } from './world/vignettes';
 import { SHUTTLE_FARE } from './constants';
 import { TRAINERS } from './content/trainers';
 import type { Appearance, Conversation, NpcArchetype } from './content/types';
@@ -347,6 +348,7 @@ export class Simulation implements MissionHost {
     if (this._tick % 30 === 0) this.updateGuide(false);
     if (this.player.vehicleId && this._tick % 10 === 0) this.checkChopShop();
     if (this._tick % 60 === 0) {
+      this.manageVignettes();
       this.manageCrowd();
       checkDeadlines(this, this.now);
     }
@@ -700,6 +702,54 @@ export class Simulation implements MissionHost {
       intro: firstStrike ? `You crept up on a sleeping ${name}!` : `A wild ${name} appeared!`,
     });
     this.updateGuide(true);
+  }
+
+  /** A closer look at a street scene; some give a small one-time reward. */
+  private lookAtVignette(placementId: string): void {
+    const v = this.layout.vignettes.find((x) => x.id === placementId);
+    const def = v ? vignetteDef(v.def) : undefined;
+    if (!v || !def) return;
+    this.emit({ type: 'message', speaker: def.title, pages: def.look.map((x) => this.personalise(x)) });
+    const flag = `vig:${v.id}`;
+    if (def.reward && !this.progression.flags[flag]) {
+      this.progression.flags[flag] = true;
+      for (const e of def.reward) this.applyEffect(e);
+      this._progressVersion++;
+    }
+  }
+
+  /** Vignette extras appear while their scene is active and the player is near, and call out now and then. */
+  private manageVignettes(): void {
+    const p = this.player;
+    const hour = this.hour;
+    const wanted = new Map<string, { def: VignetteDef; x: number; y: number; k: number }>();
+    for (const v of this.layout.vignettes) {
+      if (Math.hypot(v.tx - p.x, v.ty - p.y) > 36) continue;
+      const def = vignetteDef(v.def);
+      if (!def || !vignetteActive(def, hour)) continue;
+      (def.extras ?? []).forEach((e, k) => wanted.set(`${v.id}-${k}`, { def, x: v.tx + e.dx + 0.5, y: v.ty + e.dy + 0.5, k }));
+    }
+    for (let i = this.npcs.length - 1; i >= 0; i--) {
+      const n = this.npcs[i]!;
+      if (n.id.startsWith('vig-') && !wanted.has(n.id) && n.mode !== 'talking') this.npcs.splice(i, 1);
+    }
+    for (const [id, w] of wanted) {
+      if (this.npcs.some((n) => n.id === id)) continue;
+      const extra = w.def.extras![w.k]!;
+      const npc = this.spawnCitizen(w.x, w.y, false);
+      npc.id = id;
+      npc.name = extra.name;
+      npc.archetypeId = extra.archetype;
+      npc.stationary = true;
+      npc.mode = 'stationary';
+      npc.agent = null;
+    }
+    // Now and then, someone in a nearby scene calls out.
+    const near = [...wanted.entries()].filter(([, w]) => w.def.barks?.length && Math.hypot(w.x - p.x, w.y - p.y) < 12);
+    if (near.length && this.rng.chance(0.3)) {
+      const [id, w] = this.rng.pick(near);
+      this.emit({ type: 'bark', actorId: id, text: this.rng.pick(w.def.barks!), emote: 'chatter' });
+    }
   }
 
   /** First-time tips: explain each part of the loop the first time it comes up. */
@@ -1101,7 +1151,7 @@ export class Simulation implements MissionHost {
     const h = this.hour;
     const base = h >= 23 || h < 5 ? 5 : h < 9 ? 14 : h < 17 ? 18 : 24;
     const desired = Math.round(base * (eventActive(this.world, 'night-market') ? 1.8 : 1) * (this.world.weather === 'storm' ? 0.4 : this.world.weather === 'rain' ? 0.7 : 1));
-    const count = this.npcs.filter((n) => n.transient && !n.id.startsWith('crew-')).length;
+    const count = this.npcs.filter((n) => n.transient && !n.id.startsWith('crew-') && !n.id.startsWith('vig-')).length;
     if (count >= desired) return;
     // Just out of view, on a sidewalk.
     const near = this.layout.pedestrianSpawns.filter((t) => {
@@ -1834,6 +1884,17 @@ export class Simulation implements MissionHost {
         best = { kind: 'building', id: b.id, label: b.name };
       }
     }
+    for (const v of this.layout.vignettes) {
+      const d = Math.hypot(v.tx + 0.5 - p.x, v.ty + 0.5 - p.y);
+      if (d > 1.7) continue;
+      const def = vignetteDef(v.def);
+      if (!def || !vignetteActive(def, this.hour)) continue;
+      const score = d + 0.4;
+      if (score < bestScore) {
+        bestScore = score;
+        best = { kind: 'spot', id: v.id, label: def.title };
+      }
+    }
     this._focus = best;
   }
 
@@ -1843,6 +1904,8 @@ export class Simulation implements MissionHost {
     if (focus.kind === 'npc') {
       const npc = this.npcs.find((n) => n.id === focus.id);
       if (npc) this.talkTo(npc);
+    } else if (focus.kind === 'spot') {
+      this.lookAtVignette(focus.id);
     } else {
       const b = this.layout.buildings.find((x) => x.id === focus.id);
       if (b) this.inspectBuilding(b);

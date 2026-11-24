@@ -2,6 +2,7 @@ import { Rng, deriveSeed } from '../core/rng';
 import type { Building, BuildingTemplate, CityBlock, DistrictLayout, Facing, Prop } from './district';
 import { TileMap } from './tilemap';
 import { Tile, isRoadKind, type TileKind } from './tiles';
+import { placeVignettes } from './vignettes';
 
 /**
  * World generation v4 — one seamless city on an orthogonal street plan (WORLD_GEN.md).
@@ -752,7 +753,7 @@ export function generateCity(def: CityDefinition, seed: number): DistrictLayout 
     if (map.tiles[i] === Tile.Sidewalk && reach[i]) pedestrianSpawns.push({ tx: i % W, ty: Math.floor(i / W) });
   }
 
-  return {
+  const layout: DistrictLayout = {
     id: def.id,
     name: def.name,
     style: 'slums',
@@ -768,7 +769,10 @@ export function generateCity(def: CityDefinition, seed: number): DistrictLayout 
     regions: def.regions.map((r) => ({ id: r.id, name: r.name, style: r.style })),
     playerSpawn: spawn,
     pedestrianSpawns,
+    vignettes: [],
   };
+  layout.vignettes = placeVignettes(layout, seed);
+  return layout;
 }
 
 // ---------------------------------------------------------------------------------------------

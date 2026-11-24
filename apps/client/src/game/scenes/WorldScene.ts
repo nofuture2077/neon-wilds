@@ -33,6 +33,7 @@ import { WildlingViews } from '../render/WildlingViews';
 import { SignalViews, VehicleViews } from '../render/VehicleViews';
 import { TerritoryViews } from '../render/TerritoryViews';
 import { WeatherViews } from '../render/WeatherViews';
+import { VignetteViews } from '../render/VignetteViews';
 
 /** Max simulation catch-up per frame (prevents a spiral of death after a tab stall). */
 const MAX_FRAME_SECONDS = 0.25;
@@ -53,6 +54,7 @@ export class WorldScene extends Phaser.Scene {
   private signals!: SignalViews;
   private territoryViews!: TerritoryViews;
   private weatherViews!: WeatherViews;
+  private vignetteViews!: VignetteViews;
   private cameraTarget!: Phaser.GameObjects.Zone;
   private baseZoom = 3;
   private pendingAction = false;
@@ -110,6 +112,8 @@ export class WorldScene extends Phaser.Scene {
     this.signals = new SignalViews(this, this.sim.roads);
     this.territoryViews = new TerritoryViews(this, this.sim.layout);
     this.weatherViews = new WeatherViews(this);
+    this.vignetteViews = new VignetteViews(this, layout, this.lighting);
+    this.vignetteViews.update(this.sim.hour);
     this.focusMarker = this.add.image(0, 0, TEXTURES.focus).setDepth(Depth.focus).setVisible(false);
     this.barks = new BarkLayer(this, textRes);
     this.controls = new InputMapper(this);
@@ -262,6 +266,7 @@ export class WorldScene extends Phaser.Scene {
     const gloom = weather === 'storm' ? 0.18 : weather === 'rain' ? 0.1 : weather === 'drizzle' ? 0.04 : 0;
     this.lighting.update(darkness, this.time.now, gloom, this.sim.world.event?.id === 'blackout');
     this.weatherViews.update(weather, deltaSeconds * 1000, this.time.now);
+    this.vignetteViews.update(this.sim.hour);
     this.barks.update((id) => {
       const view = id === 'player' ? this.player : this.npcViews.get(id);
       const v = view ?? this.officerViews.get(id);
@@ -572,7 +577,7 @@ export class WorldScene extends Phaser.Scene {
         promptKey = 'F';
       }
     } else if (focus) {
-      prompt = focus.kind === 'npc' ? `Talk to ${focus.label}` : `Visit ${focus.label}`;
+      prompt = focus.kind === 'npc' ? `Talk to ${focus.label}` : focus.kind === 'spot' ? `Look: ${focus.label}` : `Visit ${focus.label}`;
     } else {
       const car = sim.nearbyVehicle();
       if (car) {

@@ -99,7 +99,9 @@ export type SimCommand =
 
 export type Focus =
   | { kind: 'npc'; id: string; label: string }
-  | { kind: 'building'; id: string; label: string };
+  | { kind: 'building'; id: string; label: string }
+  /** A vignette (authored street scene) the player can look at. */
+  | { kind: 'spot'; id: string; label: string };
 
 export const SNAPSHOT_VERSION = 13;
 

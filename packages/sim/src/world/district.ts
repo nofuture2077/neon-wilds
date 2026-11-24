@@ -1,4 +1,5 @@
 import type { RoadGraph } from './cityGen';
+import type { VignettePlacement } from './vignettes';
 import type { TileMap } from './tilemap';
 
 export type Facing = 'north' | 'south' | 'east' | 'west';
@@ -143,6 +144,8 @@ export interface DistrictLayout {
   streets: Street[];
   playerSpawn: { x: number; y: number };
   pedestrianSpawns: { tx: number; ty: number }[];
+  /** Authored micro-scenes placed into the city (WORLD_GEN.md L6). */
+  vignettes: VignettePlacement[];
 }
 
 /** Whether a point (in tiles) lies inside a building's rotated footprint. */

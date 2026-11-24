@@ -1,6 +1,6 @@
 # NEON WILDS — Hybrid World Generation ("Authored Bones, Procedural Flesh")
 
-> Owners: World Designer and Technical Architect · Goal added after Milestone 1 · Status: **v4 seamless orthogonal city shipped in M5** (one map for all districts, irregular orthogonal street plan with per-district grammars, landmarks, parks, plazas, alleys, docks, pixel-tile streets). See §8 and §9. Next: Old Town and Outskirts regions, vignettes (L6)
+> Owners: World Designer and Technical Architect · Goal added after Milestone 1 · Status: **v4 seamless orthogonal city shipped in M5** (one map for all districts, irregular orthogonal street plan with per-district grammars, landmarks, parks, plazas, alleys, docks, pixel-tile streets). See §8 and §9. Old Town and Outskirts regions and vignettes (L6, §10) are in. Next: state dressing (L7)
 >
 > **Goal:** a Vesper City that feels **handmade, unique, non-repetitive, organic (not a square grid) and alive**. It combines preplanned, authored structure with deterministic procedural content. Everything is conventional, seeded procedural generation: no generative AI.
 
@@ -96,3 +96,11 @@ Player feedback on v3: *"graphics became trash since we moved away from the stri
 4. **Blocks.** Buildings are tile-exact rectangles (`angle` is always 0). Frontage rows are **terraced** (wall to wall) or loose per street side (`terraces`), and some buildings step back behind a forecourt (`setbacks`). Deep blocks get back-lot buildings around a courtyard, and some blocks are cut by a **pedestrian alley** from sidewalk to sidewalk (`alleys`). Other blocks become parks (at least one per district), plazas, docks, pockets or overgrown wasteland (`wildChance`). Outside the ring there is a wooded green belt. Each block belongs to a single district.
 
 Generation takes about 40 ms. `test/citygen.test.ts` also checks that every edge is axis-aligned, that T-junctions dominate, that dead ends and alleys exist, and that most blocks have a unique size.
+
+## 10. Vignettes as built (`world/vignettes.ts`)
+
+Forty authored micro-scenes, each a small record: title, allowed regions, active hours, ground (sidewalk, plaza, alley or grass), props (stalls, crates, fire barrels, speakers, easels, candles, graffiti, tents, carts, nests, tables, cages, flowers, toolboxes), optional extras (stationary NPCs of an existing archetype with their own barks), a closer look, and an optional one-time reward. Examples: the Saints' soup line (11:00–15:00), a busker with a Fizzlet in the evening, a dawn fish auction at the Harbor, dockers' dice by a brazier at night, a street choir in Old Town, a pilgrims' campfire and a Fernfox den in the Outskirts.
+
+- **Placement:** seeded per city: per region a weighted shuffle of the eligible scenes, up to nine per region with no repeats, each on a fitting ground tile with room for its props and extras, away from doors and at least 14 tiles from any other scene.
+- **Runtime:** a scene is "on" during its hours. Its props and lights show only then; its extras appear while the player is within ~36 tiles and call out lines now and then. Standing at a scene focuses it ("Look: Saints’ soup line"); looking shows its text and, the first time, its reward (a Patch Kit, a few coins, a Snare, a little reputation).
+- **Tests:** `test/vignettes.test.ts` checks the catalogue (unique ids, known archetypes and regions), at least five distinct scenes per district for several seeds, walkable anchors off doorways, determinism, extras spawning and the one-time reward.

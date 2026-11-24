@@ -27,6 +27,7 @@ import { SPECIES } from '@neon-wilds/sim';
  * an entry to `{ kind: 'file', url: '/assets/...' }` (and drop the PNG into
  * `public/assets`). Gameplay and rendering code only ever refer to the keys.
  */
+import { VIGNETTE_PROPS, buildVignetteProp, vignetteKey } from './vignetteProps';
 export type AssetSource =
   | { kind: 'procedural'; build: () => PixelCanvas; frameWidth?: number; frameHeight?: number }
   | { kind: 'file'; url: string; frameWidth?: number; frameHeight?: number };
@@ -51,6 +52,7 @@ export const TEXTURES = {
 } as const;
 
 export const MANIFEST: Record<string, AssetSource> = {
+  ...Object.fromEntries(VIGNETTE_PROPS.map((k) => [vignetteKey(k), { kind: 'procedural', build: () => buildVignetteProp(k) } satisfies AssetSource])),
   [TEXTURES.tileset]: { kind: 'procedural', build: buildTileset },
   [TEXTURES.lamp]: { kind: 'procedural', build: buildLamp },
   [TEXTURES.bench]: { kind: 'procedural', build: buildBench },

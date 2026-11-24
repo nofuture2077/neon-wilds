@@ -53,7 +53,8 @@ export class Lighting {
     this.overlay.setPosition(-width, -height).setSize(width * 3, height * 3);
   }
 
-  add(x: number, y: number, color: number, scale: number, strength: number, dayStrength = 0, flicker = 0, category: LightCategory = 'other'): void {
+  /** Adds a glow; the returned image can be hidden to switch the light off. */
+  add(x: number, y: number, color: number, scale: number, strength: number, dayStrength = 0, flicker = 0, category: LightCategory = 'other'): Phaser.GameObjects.Image {
     const image = this.scene.add
       .image(x, y, TEXTURES.glow)
       .setTint(color)
@@ -61,6 +62,7 @@ export class Lighting {
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(Depth.glow);
     this.lights.push({ category, image, strength, dayStrength, flicker, phase: (x * 13.7 + y * 7.3) % 100 });
+    return image;
   }
 
   /** `gloom` darkens for weather; during a blackout the grid (neon, lamps, most windows) goes dark. */
