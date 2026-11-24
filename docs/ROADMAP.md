@@ -9,7 +9,7 @@
 | 3 | Open-world sandbox | **Done** | Vehicles, traffic, police and wanted levels, factions, economy |
 | 4 | Traditional game AI | **Done** | Living world: HSM and utility NPCs, memory, relationships, Wildling BTs, faction GOAP, simulation LOD |
 | 5 | Story and content | **In progress**: core campaign playable start to finish ([review](reviews/M5.md)) | Playable campaign: Acts I–III, faction arcs, procedural missions, endings |
-| 6 | Backend and persistence | Planned | Accounts, cloud saves, sync, leaderboards |
+| 6 | Static release | Planned | No backend: the game ships as a static site on GitHub Pages, with local saves, save export and import, offline play |
 | 7 | Polish | Planned | Audio, animation, performance, UX, balancing, regression suite |
 
 ## M1 — Playable foundation ✅
@@ -75,9 +75,18 @@ First: the multi-district city graph and Downtown (carried over from M3/M4), the
 
 Acts I–III, five faction arcs, branching dialogue trees, procedural mission templates (≥ 12 categories), world events, Old Town / Harbor / Outskirts districts, the remaining 22 species, at least three endings plus the secret ending, and the epilogue builder.
 
-## M6 — Backend and persistence
+## M6 — Static release (GitHub Pages)
 
-Postgres + migrations, auth, account management, cloud saves with conflict resolution, offline queue and sync, statistics, leaderboards, OpenAPI docs, rate limiting, and Docker Compose with Postgres (and Redis only if justified).
+*Replanned (ADR-026): there is no backend. The game is hosted as a static site on GitHub Pages and everything runs in the browser.*
+
+- GitHub Actions workflow that builds the client and deploys it to GitHub Pages on every push to `main`; Vite `base` path for the repository subpath; hash-free deep links (`?seed=`, `?quickstart` keep working).
+- Saves stay local (IndexedDB, 3 slots, autosave, backups). Add **export and import of a save file** (JSON with a checksum) so players can move saves between browsers and back them up, plus a clear warning that clearing site data deletes saves.
+- Offline play: a service worker caches the built assets, so the game works without a connection after the first load (installable PWA).
+- Local statistics and an achievements screen instead of online leaderboards.
+- Remove `apps/server`, the Dockerfile, `docker-compose.yml` and the Docker CI job; mark `API.md` and `DATABASE.md` as retired.
+- Release checklist: bundle-size budget, cold-load time on a mid-range laptop, cross-browser smoke test (Chromium, Firefox, WebKit), license and credits page.
+
+**Exit:** a fresh visitor opens the GitHub Pages URL, plays, saves, reloads, exports the save, imports it in another browser and continues; the game loads and runs offline after the first visit.
 
 ## M7 — Polish
 
@@ -93,6 +102,6 @@ Audio (SFX, ambience, procedural music mixing and leitmotif variation), animatio
 | ≥ 2 factions operate independently and change influence | M4 ✅ (GOAP) |
 | Vehicles and traffic; police respond to crime | M3 ✅ |
 | ≥ 5 playable missions; deterministic dynamic missions | M4 ✅ (3 handcrafted + 5 templates) |
-| Save and reload | M2 ✅ (local) → M6 (cloud) |
-| Offline play without external services | M1 ✅ (by design) |
+| Save and reload | M2 ✅ (local) → M6 (save export and import) |
+| Offline play without external services | M1 ✅ (by design) → M6 (service worker, static hosting) |
 | Zero generative AI / LLM runtime dependencies | ✅ enforced in CI |

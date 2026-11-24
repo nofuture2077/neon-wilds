@@ -51,7 +51,7 @@ Requires Node ≥ 22.
 ```
 packages/sim   deterministic game simulation (rules, AI, content); no DOM, no Phaser
 apps/client    Phaser world rendering + React UI
-apps/server    Fastify backend (health now; accounts and cloud saves in M6)
+apps/server    Fastify static host (to be retired in M6: the game ships on GitHub Pages, no backend)
 docs/          design and architecture documents
 scripts/       tooling (no-AI guard)
 ```

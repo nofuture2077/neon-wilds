@@ -76,3 +76,6 @@ All districts are regions of one generated map (`generateCity(VESPER, seed)`), r
 
 ### ADR-025 — Orthogonal, irregular street plan (world gen v4)
 Free-angle streets (ADR-024) needed vector roads and rotated, smoothly filtered building sprites, and that broke the crisp pixel-art look. Streets are now axis-aligned, and variety comes from the plan instead: recursive subdivision that does not line up across neighbourhoods, per-district block sizes and regularity, superblocks, dead ends, merged blocks, avenues, alleys, terraces and setbacks. Everything renders from the tileset again. The seamless map, regions, the road graph used by traffic and the validation invariants are unchanged. `Building.angle` stays in the model (always 0) in case it is needed later.
+
+### ADR-026 — No backend; static hosting on GitHub Pages
+The game will be published as a static site on GitHub Pages. Milestone 6 changes from "backend and persistence" (Postgres, accounts, cloud saves, leaderboards) to a static release: saves stay in IndexedDB with export and import of save files, a service worker makes the game work offline, and statistics and achievements are local. The Fastify server, Docker setup and the API and database docs are retired in M6. This fits the existing design: the simulation is deterministic and runs entirely in the browser, and nothing at runtime needs a server.

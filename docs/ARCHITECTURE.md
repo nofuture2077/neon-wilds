@@ -7,7 +7,7 @@
 | Goal | Consequence |
 |---|---|
 | Runs in desktop browsers at 60 FPS | Fixed-step simulation, cheap rendering, simulation LOD, spatial partitioning |
-| Fully playable offline | All gameplay is client-side; the server is optional (accounts, cloud sync, leaderboards) |
+| Fully playable offline | All gameplay is client-side; the game ships as a static site on GitHub Pages with no backend (ADR-026) |
 | Deterministic, testable world | The simulation is a pure TypeScript package with seeded RNG, no wall clock and no rendering dependencies |
 | Server-side save validation | The same simulation package runs in Node to validate and replay saves |
 | No runtime AI or inference | Conventional game AI only; enforced in CI (`scripts/check-no-ai.mjs`) |
@@ -30,7 +30,7 @@ neon-wilds/
 │  ├─ src/game/         Phaser: scenes, renderers, input mapping, procedural assets
 │  ├─ src/ui/           React screens and overlays (menus, HUD, dialogue, pause)
 │  └─ src/state/        Zustand store (UI state only; never the source of truth for the world)
-├─ apps/server/         @neon-wilds/server — Fastify (M1: health + static client; M6: accounts and saves)
+├─ apps/server/         @neon-wilds/server — Fastify (health + static client; retired in M6, ADR-026)
 ├─ docs/                design and architecture documents
 ├─ scripts/             repo tooling (no-AI guard)
 └─ Dockerfile, docker-compose.yml, .github/workflows/ci.yml
@@ -138,15 +138,15 @@ Entities are promoted and demoted at radius boundaries with hysteresis, keeping 
 |---|---|---|---|
 | Local saves | M2 ✅ | IndexedDB (thin wrapper, no dependency) | Multiple slots, autosave on district change and every 5 minutes, `SimSnapshot` with `version`, CRC32 checksum, and the last 3 rotating backups for corruption recovery |
 | Save migrations | M2 ✅ | `migrations[v] → v+1` pure functions (`packages/sim/src/migrations.ts`) | Tested against fixture saves from every released version |
-| Cloud saves | M6 | Fastify + PostgreSQL | Optimistic concurrency via revisions; conflict resolution UI; server re-validates with the simulation package (DATABASE.md, API.md) |
-| Settings | M2 | `localStorage`, synced in M6 | — |
+| Save export and import | M6 | JSON file with checksum | Replaces cloud saves (ADR-026): players move and back up saves themselves |
+| Settings | M2 | `localStorage` | — |
 
 ## 7. Backend
 
 - Fastify 5, pino structured JSON logging, configuration validated at startup (`src/config.ts`), and graceful shutdown.
 - M1 ships `/api/v1/health` and serves the built client with an SPA fallback, so a single Docker image runs the whole game.
-- M6: authentication (argon2id + short-lived JWT access token + rotating refresh token in an httpOnly cookie), cloud saves, statistics, leaderboards, account management, OpenAPI generation from route JSON schemas (`@fastify/swagger`), SQL migrations, and rate limiting. Redis is introduced only if session revocation or leaderboard caching needs it (ADR-006).
-- WebSockets only when a feature needs push, such as future multiplayer or live events. Not planned before M6.
+- M6 (replanned, ADR-026): no backend. The client is built to static files and deployed to GitHub Pages by GitHub Actions; a service worker caches it for offline play. Accounts, cloud saves and leaderboards are dropped.
+- No WebSockets or other network services are planned.
 
 ## 8. Testing and quality
 
