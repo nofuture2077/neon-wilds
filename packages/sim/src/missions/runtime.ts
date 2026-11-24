@@ -35,6 +35,7 @@ function requirementsMet(p: ProgressionState, def: MissionDef): boolean {
     def.requires.every((r) => isCompleted(p, r)) &&
     (def.requiresFlags ?? []).every((f) => p.flags[f]) &&
     !(def.blockedByFlags ?? []).some((f) => p.flags[f]) &&
+    Object.entries(def.minRep ?? {}).every(([f, v]) => (p.reputation[f] ?? 0) >= v) &&
     Object.entries(def.requiresItems ?? {}).every(([item, n]) => (p.inventory[item] ?? 0) >= n)
   );
 }

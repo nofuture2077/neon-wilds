@@ -86,6 +86,8 @@ const S = [0xffdbac, 0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0x5c3a1e] as const;
 const s = (i: number) => S[i % S.length] as number;
 
 export const INDUSTRIAL_NPCS: NpcDefinition[] = [
+  { id: 'npc-strikebreaker', name: 'Contractor Voight', archetype: 'aegis-guard', spawn: 'mission', stationary: true, appearance: { skin: s(1), hair: 0x1a1a1a, top: 0xe8ecf4, bottom: 0x2b2f3a } },
+  { id: 'npc-bookie', name: 'Crane', archetype: 'socialite', spawn: 'mission', stationary: true, appearance: { skin: s(0), hair: 0x111111, top: 0x6b705c, bottom: 0x1f1f28 } },
   { id: 'npc-hale', name: 'Brannoc Hale', archetype: 'chain-enforcer', stationary: true, post: 'Iron Chain Union Hall', appearance: { skin: s(3), hair: 0x3a2412, top: 0xff6b35, bottom: 0x2b2b3a } },
   { id: 'npc-sarr', name: 'Ines "Ledger" Sarr', archetype: 'chain-enforcer', stationary: true, post: 'The Furnace Pits', appearance: { skin: s(4), hair: 0x111111, top: 0x6b705c, bottom: 0x1f1f28 } },
   { id: 'npc-pit1', name: 'Pit Fighter Grit', archetype: 'chain-enforcer', spawn: 'mission', stationary: true, appearance: { skin: s(2), hair: 0xc1440e, top: 0x3a3a3a, bottom: 0x1c1c24 } },

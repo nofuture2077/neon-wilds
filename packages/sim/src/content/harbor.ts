@@ -92,6 +92,8 @@ const S = [0xffdbac, 0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0x5c3a1e] as const;
 const s = (i: number) => S[i % S.length] as number;
 
 export const HARBOR_NPCS: NpcDefinition[] = [
+  { id: 'npc-customs', name: 'Officer Brack', archetype: 'office-worker', spawn: 'mission', stationary: true, appearance: { skin: s(3), hair: 0x1a1a1a, top: 0x4f7fff, bottom: 0x2b2f3a } },
+  { id: 'npc-bidder', name: 'Mr. Quill', archetype: 'socialite', spawn: 'mission', stationary: true, appearance: { skin: s(0), hair: 0xe8c66a, top: 0xf0f6ff, bottom: 0x1a1a24 } },
   { id: 'npc-danso', name: 'Captain Oriel Danso', archetype: 'smuggler', stationary: true, post: 'Compact Counting House', appearance: { skin: s(4), hair: 0xbbbbbb, top: 0x1f3b2f, bottom: 0x2b2b3a } },
   { id: 'npc-gilt', name: '"Gilt" Marlo', archetype: 'smuggler', stationary: true, post: 'Night Market', appearance: { skin: s(2), hair: 0xe8c66a, top: 0xd9b44a, bottom: 0x2b1d14 } },
   { id: 'npc-fen', name: 'Fen Halloway', archetype: 'smuggler', appearance: { skin: s(0), hair: 0x6b4a2a, top: 0x2f5856, bottom: 0x1a202c } },

@@ -48,6 +48,8 @@ export interface MissionDef {
   /** Story flags that must be set / must not be set. */
   requiresFlags?: string[];
   blockedByFlags?: string[];
+  /** Minimum standing with factions (faction questlines). */
+  minRep?: Record<string, number>;
   /** Items the player must hold (e.g. two Hush Fragments). */
   requiresItems?: Record<string, number>;
   /** Starts automatically when requirements are met; otherwise offered by `giver`. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MURALS, NO_INPUT, Rng, SKILLS, Simulation, createWildling, effectiveness, getSpecies, healFully, type SimEvent } from '../src';
+import { MISSIONS, MURALS, NO_INPUT, Rng, SKILLS, Simulation, createWildling, effectiveness, getSpecies, healFully, type SimEvent } from '../src';
 
 const APPEARANCE = { skin: 1, hair: 2, top: 3, bottom: 4 };
 
@@ -325,7 +325,11 @@ describe('The Hollow (secret ending)', () => {
 
     // Act III: with the marsh song learned, the Hollow ending is on the table.
     sim.progression.inventory['hush-fragment'] = 3;
-    for (let i = 0; i < 4000 && pl.status('the-quiet') !== 'active'; i++) pl.step(1); // checked on the hour
+    // Auto-start is checked on the hour; wild Wildlings may interrupt the wait.
+    for (let i = 0; i < 4000 && pl.status('the-quiet') !== 'active'; i++) {
+      if (sim.battle) pl.winBattle();
+      else pl.step(1);
+    }
     expect(pl.status('the-quiet')).toBe('active');
     pl.talk('npc-ashgrave');
     pl.winBattle();
@@ -416,5 +420,59 @@ describe('character arcs', () => {
     expect(pl.status('drowned-ferry')).toBe('completed');
     expect(sim.progression.flags['saltmaw-found']).toBe(true);
     expect(sim.progression.index.seen).toContain('saltmaw');
+  }, 30000);
+});
+
+describe('faction questlines', () => {
+  const LINES: Array<{ faction: string; after: string[]; giver: string; missions: string[]; champion: string }> = [
+    { faction: 'saints', after: ['tethered'], giver: 'npc-dez', missions: ['saints-soup-run', 'saints-grey-van', 'saints-hold-the-line'], champion: 'saints-champion' },
+    { faction: 'halcyon', after: ['recovered-asset'], giver: 'npc-dt-guard1', missions: ['halcyon-field-test', 'halcyon-rogue-asset', 'halcyon-audit'], champion: 'halcyon-champion' },
+    { faction: 'compact', after: ['cargo', 'drowned-ferry'], giver: 'npc-danso', missions: ['compact-tunnel-run', 'compact-customs', 'compact-auction'], champion: 'compact-champion' },
+    { faction: 'choir', after: ['founders-vault'], giver: 'npc-lark', missions: ['choir-pilgrimage', 'choir-open-cages', 'choir-canticle'], champion: 'choir-champion' },
+    { faction: 'iron-chain', after: ['the-pit'], giver: 'npc-hale', missions: ['chain-picket-line', 'chain-strikebreakers', 'chain-crooked-card'], champion: 'chain-champion' },
+  ];
+
+  /** Plays a mission by its own objective list: a content test that every step can be reached. */
+  function playMission(pl: Player, id: string) {
+    const def = MISSIONS.find((m) => m.id === id)!;
+    for (const [k, o] of def.objectives.entries()) {
+      expect(pl.sim.progression.missions.find((m) => m.id === id)?.objective, `${id} step ${k}`).toBe(k);
+      if (o.kind === 'inspect') pl.inspect(o.target);
+      else if (o.kind === 'talk') pl.talk(o.target);
+      else if (o.kind === 'defeat') {
+        pl.talk(o.target);
+        pl.winBattle();
+      } else if (o.kind === 'resolve-tag') pl.resolveQuestWildling(o.target);
+      if (pl.sim.pendingChoice) pl.choose(pl.sim.pendingChoice.options[0]!.id);
+    }
+  }
+
+  for (const line of LINES) {
+    it(`${line.faction}: three missions to champion`, () => {
+      const sim = Simulation.create({ seed: 95, playerName: 'Nova', appearance: APPEARANCE, startMinutes: 21 * 60 });
+      const pl = new Player(sim);
+      playActOne(pl, 'independent');
+      // Skip straight past the faction's Act II arc; this test is about the questline.
+      for (const id of line.after) sim.progression.missions.push({ id, status: 'completed', objective: 0 });
+      sim.progression.reputation[line.faction] = 40;
+      for (const id of line.missions) {
+        pl.talk(line.giver);
+        expect(pl.status(id), id).toBe('active');
+        playMission(pl, id);
+        expect(pl.status(id), id).toBe('completed');
+        sim.progression.reputation[line.faction] = Math.max(40, sim.progression.reputation[line.faction] ?? 0);
+      }
+      expect(sim.progression.flags[line.champion]).toBe(true);
+    }, 30000);
+  }
+
+  it('locks a questline until the faction trusts you', () => {
+    const sim = Simulation.create({ seed: 96, playerName: 'Nova', appearance: APPEARANCE });
+    const pl = new Player(sim);
+    playActOne(pl, 'independent');
+    sim.progression.missions.push({ id: 'cargo', status: 'completed', objective: 0 });
+    sim.progression.reputation.compact = 5;
+    pl.talk('npc-danso');
+    expect(pl.status('compact-tunnel-run')).toBeUndefined();
   }, 30000);
 });

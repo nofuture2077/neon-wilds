@@ -113,6 +113,7 @@ const S = [0xffdbac, 0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0x5c3a1e] as const;
 const s = (i: number) => S[i % S.length] as number;
 
 export const OLDTOWN_NPCS: NpcDefinition[] = [
+  { id: 'npc-raid-captain', name: 'Warden Captain Hollis', archetype: 'office-worker', spawn: 'mission', stationary: true, appearance: { skin: s(2), hair: 0x3a2412, top: 0x4f7fff, bottom: 0x2b2f3a } },
   { id: 'npc-cantor', name: 'Seraphine Vale, the Cantor', archetype: 'choir-acolyte', stationary: true, post: 'Cathedral of Saint Verity', appearance: { skin: s(1), hair: 0xd9d2c0, top: 0x2f6b3a, bottom: 0x1d2b22 } },
   { id: 'npc-lark', name: 'Brother Lark', archetype: 'choir-acolyte', stationary: true, post: 'Choir Apothecary', appearance: { skin: s(3), hair: 0x6b4a2a, top: 0x6fa36f, bottom: 0x3a4a3a } },
   { id: 'npc-thorn-acolyte', name: 'Thorn’s Acolyte', archetype: 'choir-acolyte', spawn: 'mission', stationary: true, appearance: { skin: s(0), hair: 0x2a1d10, top: 0x1f3d2c, bottom: 0x141c18 } },

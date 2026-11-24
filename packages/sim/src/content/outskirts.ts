@@ -135,6 +135,7 @@ const S = [0xffdbac, 0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0x5c3a1e] as const;
 const s = (i: number) => S[i % S.length] as number;
 
 export const OUTSKIRTS_NPCS: NpcDefinition[] = [
+  { id: 'npc-field-boss', name: 'Field Lead Okafor-Shaw', archetype: 'field-tech', spawn: 'mission', stationary: true, appearance: { skin: s(4), hair: 0x1a1a1a, top: 0xe8ecf4, bottom: 0x2b2f3a } },
   {
     id: 'npc-orla',
     name: 'Orla the Hermit',

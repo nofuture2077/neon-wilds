@@ -931,6 +931,329 @@ export const MISSIONS: MissionDef[] = [
   },
 
   // ----------------------------------------------------------------------------------------------
+  // Faction questlines (WORLD.md §6): three missions per faction after its Act II arc, for players
+  // the faction trusts, ending in a finale that makes the player one of its champions.
+
+  // Gutter Saints.
+  {
+    id: 'saints-soup-run',
+    title: 'Soup Run',
+    summary: 'Dez needs the Saints’ soup and medicine taken round the Slums before the night shift starts.',
+    requires: ['tethered'],
+    minRep: { saints: 20 },
+    giver: 'npc-dez',
+    offer: ['Family helps family, and family carries soup. Three stops, courier.', 'Rustbucket Garage, Paper Moon Pawn, and the clinic. Don’t spill.'],
+    objectives: [
+      { text: 'Drop soup at Rustbucket Garage', kind: 'inspect', target: 'Rustbucket Garage', onComplete: [{ type: 'message', speaker: 'Rustbucket Garage', pages: ['The mechanics cheer. Somebody’s Scrapup tries to drink straight from the pot.'] }] },
+      { text: 'Drop soup at Paper Moon Pawn', kind: 'inspect', target: 'Paper Moon Pawn', onComplete: [{ type: 'message', speaker: 'Paper Moon Pawn', pages: ['The pawnbroker pretends not to want any, then takes two bowls.'] }] },
+      { text: 'Bring the medicine to Saint Ottilie Free Clinic', kind: 'inspect', target: 'Saint Ottilie Free Clinic', onComplete: [{ type: 'message', speaker: 'Needle', pages: ['"Bandages, antiseptic, and... is this soup? Bless you."'] }] },
+      { text: 'Report back to Dez', kind: 'talk', target: 'npc-dez', pages: ['"Every stop fed. You know what that is, courier? That’s a neighbourhood."'], onComplete: [{ type: 'reputation', faction: 'saints', delta: 6 }] },
+    ],
+    rewards: [{ type: 'give-item', item: 'patch-kit', qty: 3 }],
+  },
+  {
+    id: 'saints-grey-van',
+    title: 'The Grey Van',
+    summary: 'A Halcyon capture van is cruising the Slums at night, scooping up strays. Dez wants it stopped.',
+    requires: ['saints-soup-run'],
+    minRep: { saints: 25 },
+    giver: 'npc-dez',
+    offer: ['Grey van, no plates, Halcyon tyres. It parks by the Outreach Kiosk and waits for strays.', 'Stop the driver, then calm whatever they caught before it bolts into traffic.'],
+    onStart: [{ type: 'spawn-npc', npc: 'npc-van-driver', near: 'Halcyon Outreach Kiosk' }],
+    objectives: [
+      {
+        text: 'Stop the van driver near the Halcyon Outreach Kiosk',
+        kind: 'defeat',
+        target: 'npc-van-driver',
+        onComplete: [
+          { type: 'despawn-npc', npc: 'npc-van-driver' },
+          { type: 'message', speaker: 'The grey van', pages: ['The back doors bang open. A terrified Cindertail bolts out, sparks flying from its tail.'] },
+          { type: 'spawn-quest-wildling', species: 'cindertail', level: 14, tag: 'van-stray' },
+        ],
+      },
+      { text: 'Calm the frightened Cindertail', kind: 'resolve-tag', target: 'van-stray' },
+      { text: 'Tell Dez the van is empty', kind: 'talk', target: 'npc-dez', pages: ['"One van down. They’ll send another. And we’ll be here."'], onComplete: [{ type: 'reputation', faction: 'saints', delta: 6 }, { type: 'reputation', faction: 'halcyon', delta: -6 }] },
+    ],
+    rewards: [{ type: 'give-money', amount: 250 }],
+  },
+  {
+    id: 'saints-hold-the-line',
+    title: 'Hold the Line',
+    summary: 'Halcyon is sending an Aegis squad to clear Mother Rook’s Kitchen. The Saints will not move.',
+    requires: ['saints-grey-van'],
+    minRep: { saints: 30 },
+    giver: 'npc-dez',
+    offer: ['They’re coming for the Kitchen, courier. Eviction notice, Aegis escort, the whole show.', 'Mother Rook won’t leave. So we stand in front of her.'],
+    onStart: [{ type: 'spawn-npc', npc: 'npc-aegis-captain', near: "Mother Rook's Kitchen" }, { type: 'spawn-npc', npc: 'npc-rook', near: "Mother Rook's Kitchen" }],
+    objectives: [
+      { text: 'Face the Aegis captain at Mother Rook’s Kitchen', kind: 'defeat', target: 'npc-aegis-captain', onComplete: [{ type: 'despawn-npc', npc: 'npc-aegis-captain' }] },
+      {
+        text: 'Talk to Mother Rook',
+        kind: 'talk',
+        target: 'npc-rook',
+        pages: ['Mother Rook ladles soup into a bowl and puts it in your hands. "Nobody’s coming to save us, {player}. So we saved each other. You were part of that."', '"There’s a seat at this table with your name scratched into it. That’s Saints’ law."'],
+        onComplete: [{ type: 'set-flag', flag: 'saints-champion' }, { type: 'reputation', faction: 'saints', delta: 15 }],
+      },
+    ],
+    rewards: [{ type: 'give-item', item: 'med-spray', qty: 3 }, { type: 'give-money', amount: 400 }],
+  },
+
+  // Halcyon Biotech.
+  {
+    id: 'halcyon-field-test',
+    title: 'Field Test',
+    summary: 'Halcyon wants sensor readings collected from its outposts across the city.',
+    requires: ['recovered-asset'],
+    minRep: { halcyon: 20 },
+    giver: 'npc-dt-guard1',
+    offer: ['Ms. Varga is pleased with you, courier. Routine work: sensor packs from three outposts.', 'The Field Camp in the Outskirts, Halcyon Shipping at the harbour, and Lab 7. Don’t open them.'],
+    objectives: [
+      { text: 'Collect the sensor pack at the Halcyon Field Camp (The Outskirts)', kind: 'inspect', target: 'Halcyon Field Camp' },
+      { text: 'Collect the sensor pack at Halcyon Shipping (Harbor District)', kind: 'inspect', target: 'Halcyon Shipping' },
+      { text: 'Collect the sensor pack at Halcyon Lab 7 (Industrial Zone)', kind: 'inspect', target: 'Halcyon Lab 7' },
+      { text: 'Deliver the sensor packs to Aegis Guard Park', kind: 'talk', target: 'npc-dt-guard1', pages: ['"All three, sealed. Good. You’d be surprised how many couriers get curious."'], onComplete: [{ type: 'reputation', faction: 'halcyon', delta: 6 }] },
+    ],
+    rewards: [{ type: 'give-money', amount: 350 }],
+  },
+  {
+    id: 'halcyon-rogue-asset',
+    title: 'Rogue Asset',
+    summary: 'A chipped Gearhound has slipped its tether. Halcyon wants it recovered before the Gazette notices.',
+    requires: ['halcyon-field-test'],
+    minRep: { halcyon: 25 },
+    giver: 'npc-dt-guard1',
+    offer: ['Asset GH-114 has gone off-network. Chipped Gearhound, very fast, very confused.', 'It was last seen near here. Bring it down gently. It’s company property, and it’s scared.'],
+    onStart: [{ type: 'spawn-quest-wildling', species: 'gearhound', level: 24, tag: 'rogue-asset' }],
+    objectives: [
+      { text: 'Recover the rogue Gearhound', kind: 'resolve-tag', target: 'rogue-asset' },
+      { text: 'Report to Aegis Guard Park', kind: 'talk', target: 'npc-dt-guard1', pages: ['"Recovered. Quietly. Ms. Varga wants to meet you in person, courier. That doesn’t happen often."'], onComplete: [{ type: 'reputation', faction: 'halcyon', delta: 6 }] },
+    ],
+    rewards: [{ type: 'give-item', item: 'coil-snare', qty: 3 }],
+  },
+  {
+    id: 'halcyon-audit',
+    title: 'Internal Audit',
+    summary: 'Ilse Varga suspects the Vesper Civic Trust has a man inside Halcyon. She wants you to find him.',
+    requires: ['halcyon-rogue-asset'],
+    minRep: { halcyon: 30 },
+    giver: 'npc-dt-guard1',
+    offer: ['Ms. Varga will see you at the Wellness Clinic. Go now.'],
+    onStart: [{ type: 'spawn-npc', npc: 'npc-varga', near: 'Halcyon Wellness Clinic' }, { type: 'spawn-npc', npc: 'npc-auditor', near: 'Halcyon Flagship Store' }],
+    objectives: [
+      {
+        text: 'Meet Ilse Varga at the Halcyon Wellness Clinic',
+        kind: 'talk',
+        target: 'npc-varga',
+        pages: ['"Someone has been rewriting LANTERN’s specifications at night. Not my engineers. An auditor the Trust insisted on: Mr. Pell."', '"He’s at the Flagship Store. Find out what he’s carrying."'],
+      },
+      { text: 'Confront the auditor at the Halcyon Flagship Store', kind: 'defeat', target: 'npc-auditor', onComplete: [{ type: 'despawn-npc', npc: 'npc-auditor' }, { type: 'message', speaker: 'Pell’s ledger', pages: ['Pages of changes to LANTERN, each signed V.C.T. The last line: "Phase two: Halo earpieces. Citizens, not Wildlings."'] }] },
+      {
+        text: 'Bring Pell’s ledger to Ilse Varga',
+        kind: 'talk',
+        target: 'npc-varga',
+        pages: ['Varga reads the last page twice. For a moment she looks very tired. "I built LANTERN to stop Wildling attacks. Not this."'],
+        onComplete: [
+          {
+            type: 'choice',
+            speaker: 'Ilse Varga',
+            pages: ['"I can bury this and keep Halcyon safe. Or I can stand against the Trust and lose everything. What would you do?"'],
+            options: [
+              {
+                id: 'stand',
+                label: 'Stand against the Trust. People will follow you.',
+                effects: [{ type: 'set-flag', flag: 'varga-turned' }, { type: 'set-flag', flag: 'halcyon-champion' }, { type: 'reputation', faction: 'halcyon', delta: 15 }, { type: 'message', speaker: 'Ilse Varga', pages: ['"Then I’ll need someone I trust at the Spire when it happens. That’s you, {player}."'] }],
+              },
+              {
+                id: 'bury',
+                label: 'Protect the company. Bury it.',
+                effects: [{ type: 'set-flag', flag: 'halcyon-champion' }, { type: 'reputation', faction: 'halcyon', delta: 10 }, { type: 'give-money', amount: 800 }, { type: 'message', speaker: 'Ilse Varga', pages: ['"Pragmatic." She locks the ledger in a drawer. "Halcyon remembers its friends."'] }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    rewards: [{ type: 'despawn-npc', npc: 'npc-varga' }],
+  },
+
+  // Tidewater Compact.
+  {
+    id: 'compact-tunnel-run',
+    title: 'Tunnel Run',
+    summary: 'Danso wants a package moved through the Old Town tunnels without the Wardens noticing.',
+    requires: ['cargo'],
+    minRep: { compact: 20 },
+    giver: 'npc-danso',
+    offer: ['A crate of medicine for the Choir, through the tunnels. The Wardens tax everything that moves above ground.', 'Pick it up at the Night Market, take it to the Tunnel Guides’ Guild in Old Town. No questions, no detours.'],
+    objectives: [
+      { text: 'Pick up the crate at the Night Market', kind: 'inspect', target: 'Night Market' },
+      { text: 'Deliver it to the Tunnel Guides’ Guild (Old Town)', kind: 'inspect', target: 'Tunnel Guides’ Guild', onComplete: [{ type: 'message', speaker: 'Tunnel Guides’ Guild', pages: ['A guide signs for the crate with an anchor and a wink. "Through the old cistern. Wardens never look down."'] }] },
+      { text: 'Report to Captain Danso', kind: 'talk', target: 'npc-danso', pages: ['"Clean run. The Choir owes us a favour now, and I collect favours."'], onComplete: [{ type: 'reputation', faction: 'compact', delta: 6 }, { type: 'reputation', faction: 'choir', delta: 3 }] },
+    ],
+    rewards: [{ type: 'give-money', amount: 300 }],
+  },
+  {
+    id: 'compact-customs',
+    title: 'Customs',
+    summary: 'A Warden customs officer has impounded a Compact boat at Halcyon’s berth. Danso wants it back.',
+    requires: ['compact-tunnel-run'],
+    minRep: { compact: 25 },
+    giver: 'npc-danso',
+    offer: ['Officer Brack impounded the Gull, berth four, outside Halcyon Shipping. Halcyon tipped him off.', 'Convince him otherwise. Firmly.'],
+    onStart: [{ type: 'spawn-npc', npc: 'npc-customs', near: 'Halcyon Shipping' }],
+    objectives: [
+      { text: 'Deal with Officer Brack at Halcyon Shipping', kind: 'defeat', target: 'npc-customs', onComplete: [{ type: 'despawn-npc', npc: 'npc-customs' }, { type: 'reputation', faction: 'wardens', delta: -5 }] },
+      { text: 'Tell Captain Danso the Gull is free', kind: 'talk', target: 'npc-danso', pages: ['"The Gull sails tonight. Halcyon will be furious. Good."'], onComplete: [{ type: 'reputation', faction: 'compact', delta: 6 }] },
+    ],
+    rewards: [{ type: 'give-money', amount: 400 }],
+  },
+  {
+    id: 'compact-auction',
+    title: 'The Midnight Auction',
+    summary: 'Halcyon’s buyer is bidding for a crate of tethered Wildlings at the Night Market. Outbid him the Compact way.',
+    requires: ['compact-customs'],
+    minRep: { compact: 30 },
+    giver: 'npc-danso',
+    offer: ['The Night Market auction is tonight. Halcyon sent a buyer for lot nine: twelve tethered Wildlings.', 'We don’t sell living things that can’t say no. Make sure he goes home empty-handed.'],
+    onStart: [{ type: 'world-event', id: 'night-market' }, { type: 'spawn-npc', npc: 'npc-bidder', near: 'Night Market' }],
+    objectives: [
+      { text: 'Beat Halcyon’s buyer at the Night Market', kind: 'defeat', target: 'npc-bidder', onComplete: [{ type: 'despawn-npc', npc: 'npc-bidder' }] },
+      {
+        text: 'Bring lot nine to Captain Danso',
+        kind: 'talk',
+        target: 'npc-danso',
+        pages: ['Danso cuts the tether chips out herself, one by one. "Twelve free Wildlings and one very angry corporation. Best night’s work in years."', '"You’re crew now, {player}. Compact crew. That means something on every dock from here to the marsh."'],
+        onComplete: [{ type: 'set-flag', flag: 'compact-champion' }, { type: 'reputation', faction: 'compact', delta: 15 }, { type: 'reputation', faction: 'halcyon', delta: -8 }],
+      },
+    ],
+    rewards: [{ type: 'give-money', amount: 800 }],
+  },
+
+  // Verdant Choir.
+  {
+    id: 'choir-pilgrimage',
+    title: 'Pilgrimage',
+    summary: 'Brother Lark asks you to walk the pilgrims’ road from the Cathedral to the marsh.',
+    requires: ['founders-vault'],
+    minRep: { choir: 20 },
+    giver: 'npc-lark',
+    offer: ['Every acolyte walks the road once: Cathedral, Waystation, Marsh Chapel. You’ve done more for us than most of them.', 'Walk it. Listen. Come back and tell me what you heard.'],
+    objectives: [
+      { text: 'Begin at the Cathedral of Saint Verity', kind: 'inspect', target: 'Cathedral of Saint Verity' },
+      { text: 'Rest at the Choir Waystation (The Outskirts)', kind: 'inspect', target: 'Choir Waystation' },
+      { text: 'End at the Old Marsh Chapel', kind: 'inspect', target: 'Old Marsh Chapel', onComplete: [{ type: 'message', speaker: 'Old Marsh Chapel', pages: ['No neon here. Just frogs, wind in the reeds, and under it all a low round note, like a bell that never stopped ringing.'] }] },
+      { text: 'Tell Brother Lark what you heard', kind: 'talk', target: 'npc-lark', pages: ['"A bell that never stopped. Yes." Lark smiles. "Most pilgrims only hear frogs."'], onComplete: [{ type: 'reputation', faction: 'choir', delta: 6 }] },
+    ],
+    rewards: [{ type: 'give-item', item: 'cleanse-tab', qty: 3 }],
+  },
+  {
+    id: 'choir-open-cages',
+    title: 'Open the Cages',
+    summary: 'Halcyon’s field team in the Outskirts has filled its cages. The Choir wants them empty.',
+    requires: ['choir-pilgrimage'],
+    minRep: { choir: 25 },
+    giver: 'npc-lark',
+    offer: ['The Field Camp caught a family of Fernfoxes this week. Cages, tags, chips.', 'No fire, no bombs — I am not Thorn. Just open the cages.'],
+    onStart: [{ type: 'spawn-npc', npc: 'npc-field-boss', near: 'Halcyon Field Camp' }],
+    objectives: [
+      { text: 'Get past the field team leader at the Halcyon Field Camp', kind: 'defeat', target: 'npc-field-boss', onComplete: [{ type: 'despawn-npc', npc: 'npc-field-boss' }] },
+      { text: 'Open the cages', kind: 'inspect', target: 'Halcyon Field Camp', onComplete: [{ type: 'message', speaker: 'Halcyon Field Camp', pages: ['The latches are stiff. The Fernfoxes are not. They are gone into the reeds before the last cage door stops swinging.'] }, { type: 'reputation', faction: 'halcyon', delta: -8 }] },
+      { text: 'Tell Brother Lark', kind: 'talk', target: 'npc-lark', pages: ['"Gently done. The Cantor will want to see you."'], onComplete: [{ type: 'reputation', faction: 'choir', delta: 6 }] },
+    ],
+    rewards: [{ type: 'give-money', amount: 300 }],
+  },
+  {
+    id: 'choir-canticle',
+    title: 'Canticle',
+    summary: 'The Wardens are raiding the Cathedral. The Cantor will not stop the service.',
+    requires: ['choir-open-cages'],
+    minRep: { choir: 30 },
+    giver: 'npc-lark',
+    offer: ['Wardens at the Cathedral doors. Commissioner Kord calls it a "crackdown on unlicensed gatherings".', 'The Cantor is still singing. Please, go.'],
+    onStart: [{ type: 'spawn-npc', npc: 'npc-raid-captain', near: 'Cathedral of Saint Verity' }],
+    objectives: [
+      { text: 'Turn back the Warden raid at the Cathedral', kind: 'defeat', target: 'npc-raid-captain', onComplete: [{ type: 'despawn-npc', npc: 'npc-raid-captain' }, { type: 'reputation', faction: 'wardens', delta: -6 }] },
+      {
+        text: 'Speak with the Cantor',
+        kind: 'talk',
+        target: 'npc-cantor',
+        pages: ['The Cantor finishes the verse before she turns around. "They will come back. They always do. But tonight the song was not interrupted."', '"Walk in green, {player}. You are one of the Choir now, whatever you believe."'],
+        onComplete: [{ type: 'set-flag', flag: 'choir-champion' }, { type: 'reputation', faction: 'choir', delta: 15 }],
+      },
+    ],
+    rewards: [{ type: 'give-item', item: 'lull-snare', qty: 3 }],
+  },
+
+  // Iron Chain.
+  {
+    id: 'chain-picket-line',
+    title: 'Picket Line',
+    summary: 'Halcyon wants to automate Foundry No. 3. Hale wants to know which way the workers lean.',
+    requires: ['the-pit'],
+    minRep: { 'iron-chain': 20 },
+    giver: 'npc-hale',
+    offer: ['Halcyon’s offering the foundry robots and the workers a payout. Some of them want to take it.', 'Talk to the canteen and the foundry floor. Then tell me if we strike.'],
+    objectives: [
+      { text: 'Listen at the Rail Yard Canteen', kind: 'inspect', target: 'Rail Yard Canteen', onComplete: [{ type: 'message', speaker: 'Rail Yard Canteen', pages: ['"Robots don’t pay rent in Workers’ Terrace," says one. "Payout pays my daughter’s clinic," says another. Nobody finishes their stew.'] }] },
+      { text: 'Walk the floor of Foundry No. 3', kind: 'inspect', target: 'Foundry No. 3', onComplete: [{ type: 'message', speaker: 'Foundry No. 3', pages: ['Under the furnace mural, the night shift has chalked a single word: STAY.'] }] },
+      {
+        text: 'Report to Brannoc Hale at the Union Hall',
+        kind: 'talk',
+        target: 'npc-hale',
+        pages: ['"Well? What does my foundry want?"'],
+        onComplete: [
+          {
+            type: 'choice',
+            speaker: 'Brannoc Hale',
+            pages: ['"Strike, and Halcyon brings in strikebreakers. Deal, and we keep half the jobs and lose the other half."'],
+            options: [
+              { id: 'strike', label: 'Strike. The floor wants to stay.', effects: [{ type: 'set-flag', flag: 'foundry-strike' }, { type: 'reputation', faction: 'iron-chain', delta: 8 }, { type: 'reputation', faction: 'halcyon', delta: -6 }] },
+              { id: 'deal', label: 'Take the deal. Keep the clinic money coming.', effects: [{ type: 'set-flag', flag: 'foundry-deal' }, { type: 'reputation', faction: 'iron-chain', delta: 4 }, { type: 'give-money', amount: 300 }] },
+            ],
+          },
+        ],
+      },
+    ],
+    rewards: [],
+  },
+  {
+    id: 'chain-strikebreakers',
+    title: 'Strikebreakers',
+    summary: 'Halcyon has hired contractors to clear the foundry gates. The Chain needs a fighter at the line.',
+    requires: ['chain-picket-line'],
+    minRep: { 'iron-chain': 25 },
+    giver: 'npc-hale',
+    offer: ['Contractors at the foundry gate, with Halcyon dogs. Strike or deal, they’re pushing.', 'Stand at the line with us.'],
+    onStart: [{ type: 'spawn-npc', npc: 'npc-strikebreaker', near: 'Foundry No. 3' }],
+    objectives: [
+      { text: 'Hold the gate of Foundry No. 3', kind: 'defeat', target: 'npc-strikebreaker', onComplete: [{ type: 'despawn-npc', npc: 'npc-strikebreaker' }] },
+      { text: 'Report to Brannoc Hale', kind: 'talk', target: 'npc-hale', pages: ['"The gate held. The Chain stood up, and the city saw it."'], onComplete: [{ type: 'reputation', faction: 'iron-chain', delta: 6 }, { type: 'reputation', faction: 'halcyon', delta: -5 }] },
+    ],
+    rewards: [{ type: 'give-money', amount: 350 }],
+  },
+  {
+    id: 'chain-crooked-card',
+    title: 'The Crooked Card',
+    summary: 'Somebody is fixing fights at the Furnace Pits. Ledger Sarr has a name: the bookie, Crane.',
+    requires: ['chain-strikebreakers'],
+    minRep: { 'iron-chain': 30 },
+    giver: 'npc-hale',
+    offer: ['Ledger says the numbers don’t add up. Fighters throwing bouts, money flowing to one bookie.', 'Crane works the Pits on fight nights. Beat his ringer, and bring me his book.'],
+    onStart: [{ type: 'spawn-npc', npc: 'npc-bookie', near: 'The Furnace Pits' }],
+    objectives: [
+      { text: 'Beat Crane’s ringer at the Furnace Pits', kind: 'defeat', target: 'npc-bookie', onComplete: [{ type: 'despawn-npc', npc: 'npc-bookie' }, { type: 'message', speaker: 'Crane’s book', pages: ['Every fixed bout is listed, with a payment beside it. The payer’s initials: V.C.T. The Trust has been buying the Pits for years.'] }] },
+      {
+        text: 'Bring the book to Brannoc Hale',
+        kind: 'talk',
+        target: 'npc-hale',
+        pages: ['Hale reads it and shuts it very gently. "Strength is the only honest currency. These people counterfeited it."', '"You fight clean, you stand at the line, you bring me the truth. You’re Chain, {player}. Wear it."'],
+        onComplete: [{ type: 'set-flag', flag: 'chain-champion' }, { type: 'reputation', faction: 'iron-chain', delta: 15 }],
+      },
+    ],
+    rewards: [{ type: 'give-money', amount: 700 }],
+  },
+
+  // ----------------------------------------------------------------------------------------------
   // Secret: the Hollow (WORLD.md §5 endings). All eight founders' murals point to the grove.
   {
     id: 'the-hollow',
@@ -1043,7 +1366,7 @@ export const MISSIONS: MissionDef[] = [
               {
                 id: 'chorus',
                 label: 'Retune the grid with the Glitchling — let humans and Wildlings share the city.',
-                when: { notFlags: ['act1-sold'], anyOf: [{ flags: ['wren-turned'] }, { flags: ['pits-freed'] }, { flags: ['thorn-contained'] }, { flags: ['vik-ally'] }, { flags: ['bram-fork'] }, { minRep: { saints: 30 } }] },
+                when: { notFlags: ['act1-sold'], anyOf: [{ flags: ['wren-turned'] }, { flags: ['pits-freed'] }, { flags: ['thorn-contained'] }, { flags: ['vik-ally'] }, { flags: ['bram-fork'] }, { flags: ['varga-turned'] }, { flags: ['compact-champion'] }, { flags: ['choir-champion'] }, { flags: ['chain-champion'] }, { minRep: { saints: 30 } }] },
                 effects: [{ type: 'ending', id: 'chorus' }],
               },
               {
