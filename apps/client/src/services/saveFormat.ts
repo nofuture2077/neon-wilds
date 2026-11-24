@@ -73,3 +73,21 @@ export function formatPlayTime(seconds: number): string {
   const m = Math.floor((seconds % 3600) / 60);
   return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
 }
+
+/** File name for an exported save, e.g. `neon-wilds-ash-slot1-2026-11-24.json`. */
+export function exportFileName(env: SaveEnvelope, slot: SlotId): string {
+  const who = env.summary.playerName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'courier';
+  return `neon-wilds-${who}-${slot}-${env.savedAt.slice(0, 10)}.json`;
+}
+
+/** Read an exported save file. Same checks as storage: format, checksum, migration. */
+export function parseSaveFile(text: string): { ok: true; envelope: SaveEnvelope; snapshot: SimSnapshot } | { ok: false; reason: string } {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return { ok: false, reason: 'not a save file' };
+  }
+  const res = openEnvelope(raw);
+  return res.ok ? { ok: true, envelope: raw as SaveEnvelope, snapshot: res.snapshot } : res;
+}

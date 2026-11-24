@@ -1,5 +1,5 @@
 import type { SimSnapshot } from '@neon-wilds/sim';
-import { type SaveEnvelope, type SlotId, SLOTS, makeEnvelope, openEnvelope } from './saveFormat';
+import { type SaveEnvelope, type SlotId, SLOTS, exportFileName, makeEnvelope, openEnvelope, parseSaveFile } from './saveFormat';
 
 /**
  * Local save games in IndexedDB. Each slot keeps the current save plus two
@@ -89,6 +89,30 @@ export async function listSaves(): Promise<SlotInfo[]> {
     });
   }
   return out;
+}
+
+/** Download a slot's save as a JSON file (the same envelope that is stored, checksum included). */
+export async function exportSave(slot: SlotId): Promise<boolean> {
+  const info = (await listSaves()).find((s) => s.slot === slot);
+  if (!info?.envelope) return false;
+  const blob = new Blob([JSON.stringify(info.envelope)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = exportFileName(info.envelope, slot);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return true;
+}
+
+/** Import an exported save file into a slot. Returns an error message, or null on success. */
+export async function importSave(slot: SlotId, text: string): Promise<string | null> {
+  const res = parseSaveFile(text);
+  if (!res.ok) return res.reason === 'checksum mismatch' ? 'That save file is damaged or was edited.' : 'That is not a NEON WILDS save file.';
+  await writeSave(slot, res.snapshot, res.envelope.summary.location);
+  return null;
 }
 
 export async function deleteSave(slot: SlotId): Promise<void> {
