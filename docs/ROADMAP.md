@@ -9,7 +9,7 @@
 | 3 | Open-world sandbox | **Done** | Vehicles, traffic, police and wanted levels, factions, economy |
 | 4 | Traditional game AI | **Done** | Living world: HSM and utility NPCs, memory, relationships, Wildling BTs, faction GOAP, simulation LOD |
 | 5 | Story and content | **Done** (stretch goals open): six districts, full campaign with five endings, faction and character arcs, full roster ([review](reviews/M5.md)) | Playable campaign: Acts I–III, faction arcs, procedural missions, endings |
-| 6 | Static release | Planned | No backend: the game ships as a static site on GitHub Pages, with local saves, save export and import, offline play |
+| 6 | Static release | **Done** (deploy waits for the first push) | No backend: the game ships as a static site on GitHub Pages, with local saves, save export and import, offline play |
 | 7 | Polish | Planned | Audio, animation, performance, UX, balancing, regression suite |
 
 ## M1 — Playable foundation ✅
@@ -75,16 +75,20 @@ First: the multi-district city graph and Downtown (carried over from M3/M4), the
 
 Acts I–III, five faction arcs, branching dialogue trees, procedural mission templates (≥ 12 categories), world events, Old Town / Harbor / Outskirts districts, the remaining 22 species, at least three endings plus the secret ending, and the epilogue builder.
 
-## M6 — Static release (GitHub Pages)
+## M6 — Static release (GitHub Pages) ✅
 
 *Replanned (ADR-026): there is no backend. The game is hosted as a static site on GitHub Pages and everything runs in the browser.*
 
-- GitHub Actions workflow that builds the client and deploys it to GitHub Pages on every push to `main`; Vite `base` path for the repository subpath; hash-free deep links (`?seed=`, `?quickstart` keep working).
-- Saves stay local (IndexedDB, 3 slots, autosave, backups). Add **export and import of a save file** (JSON with a checksum) so players can move saves between browsers and back them up, plus a clear warning that clearing site data deletes saves.
-- Offline play: a service worker caches the built assets, so the game works without a connection after the first load (installable PWA).
-- Local statistics and an achievements screen instead of online leaderboards.
-- Remove `apps/server`, the Dockerfile, `docker-compose.yml` and the Docker CI job; mark `API.md` and `DATABASE.md` as retired.
-- Release checklist: bundle-size budget, cold-load time on a mid-range laptop, cross-browser smoke test (Chromium, Firefox, WebKit), license and credits page.
+- [x] `.github/workflows/pages.yml`: checks, a production build for the repository path (`BASE_PATH=/<repository>/`, or `/` for a `<user>.github.io` site) and a deploy on every push to `main`/`master`. One-time setup: Settings → Pages → Source: GitHub Actions.
+- [x] Saves stay local (IndexedDB, three slots plus autosave, backups). **Export and import** of save files (JSON with a checksum) in the load menu, with a notice that saves live in the browser.
+- [x] Offline play: a service worker (network-first for the page, cache-first for hashed assets, one cache per build), a web app manifest and icons; verified by reloading the production build offline.
+- [x] Local statistics and 29 achievements in a Records tab, instead of online leaderboards.
+- [x] Removed `apps/server`, the Dockerfile, `docker-compose.yml`, the Docker CI job, `.env.example`, `API.md` and `DATABASE.md`.
+- [x] Credits screen with the font licences (SIL OFL 1.1, shipped under `licenses/`).
+- [ ] Cross-browser smoke test (Firefox, WebKit) — only Chromium is automated so far.
+- [ ] Choose a licence for the code and content (a project decision for the owner).
+
+Bundle: ~660 kB game code + ~1.2 MB Phaser (about 530 kB gzipped in total).
 
 **Exit:** a fresh visitor opens the GitHub Pages URL, plays, saves, reloads, exports the save, imports it in another browser and continues; the game loads and runs offline after the first visit.
 
