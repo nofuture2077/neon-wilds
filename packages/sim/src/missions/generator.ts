@@ -73,14 +73,16 @@ const delivery: Template = (ctx, id) => {
   const to = ctx.rng.pick(far);
   const dist =
     Math.abs(ctx.player.x - from.entrance.tx) + Math.abs(ctx.player.y - from.entrance.ty) + Math.abs(from.entrance.tx - to.entrance.tx) + Math.abs(from.entrance.ty - to.entrance.ty);
-  // Completability: generous deadline from walking time (1 tile ≈ 0.3 in-game minutes on foot) plus slack.
-  const deadline = Math.round(ctx.now + 25 + dist * 0.9);
-  const pay = 50 + Math.round(dist * 1.5);
+  // Completability: generous deadline from walking time plus slack. Express jobs are only
+  // realistic by car (about twice running speed) and pay double.
+  const express = dist > 90 && ctx.rng.chance(0.5);
+  const deadline = Math.round(ctx.now + (express ? 12 + dist * 0.32 : 25 + dist * 0.9));
+  const pay = Math.round((50 + dist * 1.5) * (express ? 2 : 1));
   const what = ctx.rng.pick(['a sealed envelope', 'a crate of bootleg coils', 'a box of medicine', 'a warm, buzzing parcel', 'a bag of Snares']);
   return {
     id,
-    title: `Courier: ${to.name}`,
-    summary: `Pick up ${what} at ${from.name} and get it to ${to.name} by ${clockText(deadline)}.`,
+    title: `${express ? 'Express' : 'Courier'}: ${to.name}`,
+    summary: `Pick up ${what} at ${from.name} and get it to ${to.name} by ${clockText(deadline)}.${express ? ' Tight deadline: you’ll want wheels.' : ''}`,
     requires: [],
     objectives: [
       { text: `Pick up the parcel at ${from.name}`, kind: 'inspect', target: from.name, onComplete: [{ type: 'message', speaker: from.name, pages: [`"Here — ${what}. Don't shake it." Deliver to ${to.name} by ${clockText(deadline)}.`] }] },

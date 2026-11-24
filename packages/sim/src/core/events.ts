@@ -18,6 +18,9 @@ export type SimEvent =
   | { type: 'message'; speaker: string; pages: string[]; choices?: { id: string; label: string }[] }
   | { type: 'game.ending'; ending: string; title: string; slides: { heading: string; text: string }[] }
   | { type: 'notice'; text: string }
+  | { type: 'tip'; id: string; title: string; text: string }
+  | { type: 'chop-shop'; vehicleId: string; payout: number }
+  | { type: 'index.milestone'; caught: number; money: number }
   | { type: 'mission.started'; missionId: string; title: string }
   | { type: 'mission.updated'; missionId: string; objective: string }
   | { type: 'mission.completed'; missionId: string; title: string }

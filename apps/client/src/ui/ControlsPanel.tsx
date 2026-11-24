@@ -32,6 +32,24 @@ export function ControlsPanel() {
           ))}
         </tbody>
       </table>
+      <h2 className="mb-2 mt-6 font-pixel text-sm text-neon-yellow">How to play</h2>
+      <ul className="list-disc space-y-1 pl-5 font-term text-lg text-slate-300">
+        <li>
+          <span className="text-neon-cyan">Catch Wildlings:</span> walk into a wild one to battle, weaken it with Fight, then use Snare. Each species lives in its own district, ground and time of day.
+        </li>
+        <li>
+          <span className="text-neon-cyan">Earn money:</span> the job board at the Vesper Courier Co-op, missions from people around the city, Index bounties for new species, and the Scrapyard Exchange for stolen cars.
+        </li>
+        <li>
+          <span className="text-neon-cyan">Spend it:</span> Snares and medicine at shops (Paper Moon Pawn, Gaslight Antiques, the Night Market). Healing at Saint Ottilie Free Clinic is free.
+        </li>
+        <li>
+          <span className="text-neon-cyan">Get around:</span> cars are twice as fast as running. Express jobs need one. Stealing makes the Wardens look for you; a respray at Rustbucket Garage loses them.
+        </li>
+        <li>
+          <span className="text-neon-cyan">Push the story:</span> your active mission and its marker are always on screen. Factions that trust you offer their own jobs.
+        </li>
+      </ul>
       <p className="mt-4 font-term text-lg text-slate-400">
         Walk (don't run) to sneak up on sleeping Wildlings for a free first strike. Sprinting into people knocks them aside — they will not forget it in a hurry.
       </p>

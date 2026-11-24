@@ -103,6 +103,8 @@ interface GameStore {
   dialogue: DialogueState | null;
   dialogueQueue: Omit<DialogueState, 'page'>[];
   toasts: Toast[];
+  /** First-time guide tips waiting to be shown (oldest first). */
+  tips: { id: string; title: string; text: string }[];
   progress: ProgressView | null;
   battle: BattleUiState | null;
   shopId: string | null;
@@ -128,6 +130,8 @@ interface GameStore {
   advanceDialogue(): DialogueState | null;
   chooseDialogue(optionId: string): void;
   pushToast(text: string, tone?: Toast['tone']): void;
+  pushTip(tip: { id: string; title: string; text: string }): void;
+  dismissTip(id: string): void;
   dismissToast(id: number): void;
   setProgress(p: ProgressView): void;
   setShop(shopId: string | null): void;
@@ -159,6 +163,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   dialogue: null,
   dialogueQueue: [],
   toasts: [],
+  tips: [],
   progress: null,
   battle: null,
   shopId: null,
@@ -180,6 +185,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       dialogue: null,
       dialogueQueue: [],
       toasts: [],
+      tips: [],
       battle: null,
       shopId: null,
       boardOpen: false,
@@ -238,6 +244,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ dialogue: { ...d, choices: [] } });
     get().advanceDialogue();
   },
+  pushTip: (tip) => set((s) => ({ tips: [...s.tips.filter((t) => t.id !== tip.id), tip] })),
+  dismissTip: (id) => set((s) => ({ tips: s.tips.filter((t) => t.id !== id) })),
   pushToast: (text, tone = 'info') => set((s) => ({ toasts: [...s.toasts.slice(-4), { id: toastSeq++, text, tone }] })),
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
   setProgress: (progress) => set({ progress }),

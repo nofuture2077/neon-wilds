@@ -383,6 +383,15 @@ export class WorldScene extends Phaser.Scene {
       case 'notice':
         store.pushToast(event.text, 'info');
         break;
+      case 'tip':
+        store.pushTip({ id: event.id, title: event.title, text: event.text });
+        break;
+      case 'chop-shop':
+        store.pushToast(`Sold for parts: +${event.payout}\u20b5. No questions asked.`, 'reward');
+        break;
+      case 'index.milestone':
+        store.pushToast(`Index bounty: ${event.caught} species caught! +${event.money}\u20b5 and 3 Snares from the Co-op.`, 'reward');
+        break;
       case 'mission.started':
         store.pushToast(`New mission: ${event.title}`, 'mission');
         break;

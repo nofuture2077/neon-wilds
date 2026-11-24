@@ -24,10 +24,10 @@ export interface VehicleClass {
 }
 
 export const VEHICLE_CLASSES: Record<VehicleClassId, VehicleClass> = {
-  compact: { id: 'compact', name: 'Kettle hatchback', maxSpeed: 8.5, accel: 6.5, brake: 13, turnRate: 3.4, grip: 7, length: 1.7, width: 0.86, hp: 80, mass: 1 },
-  sedan: { id: 'sedan', name: 'Vesper Civic', maxSpeed: 9.5, accel: 6, brake: 12, turnRate: 3.0, grip: 6.5, length: 1.8, width: 0.9, hp: 100, mass: 1.2 },
-  van: { id: 'van', name: 'Courier van', maxSpeed: 7.5, accel: 4.2, brake: 10, turnRate: 2.4, grip: 6, length: 2.1, width: 1.0, hp: 140, mass: 1.8 },
-  cruiser: { id: 'cruiser', name: 'Warden cruiser', maxSpeed: 10.5, accel: 7.5, brake: 14, turnRate: 3.2, grip: 7.5, length: 1.85, width: 0.9, hp: 130, mass: 1.4 },
+  compact: { id: 'compact', name: 'Kettle hatchback', maxSpeed: 11, accel: 6.5, brake: 13, turnRate: 3.4, grip: 7, length: 1.7, width: 0.86, hp: 80, mass: 1 },
+  sedan: { id: 'sedan', name: 'Vesper Civic', maxSpeed: 12.5, accel: 6, brake: 12, turnRate: 3.0, grip: 6.5, length: 1.8, width: 0.9, hp: 100, mass: 1.2 },
+  van: { id: 'van', name: 'Courier van', maxSpeed: 10, accel: 4.2, brake: 10, turnRate: 2.4, grip: 6, length: 2.1, width: 1.0, hp: 140, mass: 1.8 },
+  cruiser: { id: 'cruiser', name: 'Warden cruiser', maxSpeed: 13.5, accel: 7.5, brake: 14, turnRate: 3.2, grip: 7.5, length: 1.85, width: 0.9, hp: 130, mass: 1.4 },
 };
 
 export type DriverKind = 'none' | 'player' | 'ai' | 'police';

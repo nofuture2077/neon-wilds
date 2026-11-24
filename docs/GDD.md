@@ -47,6 +47,8 @@ All archetypes converge on the main story's final act through different routes (
 
 **Long-term loop (hours):** grow a team, raise faction standing, unlock districts, push the main story, shape the city's balance of power, reach one of the endings.
 
+**How the loops are taught and paid for (M5 loop pass).** A first-time guide (`packages/sim/src/guide.ts`) explains each piece the first time it comes up. Every activity feeds money or progress back in: catching pays Index bounties; jobs, missions and faction work pay money and reputation; cars make Express jobs possible and stolen ones sell at the chop shop; money buys Snares and medicine; reputation opens faction questlines.
+
 ## 5. Controls
 
 | Action | Keyboard | Controller |

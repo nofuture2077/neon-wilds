@@ -10,6 +10,7 @@ import { JobBoard } from './ui/JobBoard';
 import { EndingScreen } from './ui/EndingScreen';
 import { PauseMenu } from './ui/PauseMenu';
 import { ShopModal } from './ui/ShopModal';
+import { TipPanel } from './ui/TipPanel';
 
 export function App() {
   const screen = useGameStore((s) => s.screen);
@@ -30,6 +31,7 @@ export function App() {
       <ShopModal />
       <JobBoard />
       <PauseMenu />
+      <TipPanel />
       <EndingScreen />
     </div>
   );

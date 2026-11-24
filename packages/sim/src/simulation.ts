@@ -22,6 +22,7 @@ import {
 import { DISTRICTS, allArchetypes } from './content';
 import { ITEMS, SHOPS } from './content/items';
 import { MURAL_COUNT } from './content/missions';
+import { nextTip } from './guide';
 import { TRAINERS } from './content/trainers';
 import type { Appearance, Conversation, NpcArchetype } from './content/types';
 import { getSpecies } from './content/wildlings';
@@ -126,6 +127,11 @@ const ENCOUNTER_RADIUS = 0.62;
  * - Receives intent (input + commands), emits events. Rendering, UI and
  *   persistence observe state and events but never mutate state directly.
  */
+/** What the Scrapyard Exchange pays for an undamaged car of each class. */
+const CHOP_VALUE: Record<string, number> = { compact: 120, sedan: 180, van: 220, cruiser: 400 };
+/** Species caught at which the Co-op pays an Index bounty. */
+const INDEX_MILESTONES = [5, 10, 15, 20, 25, 30];
+
 export class Simulation implements MissionHost {
   layout!: DistrictLayout;
   private readonly archetypes: Map<string, NpcArchetype>;
@@ -337,6 +343,8 @@ export class Simulation implements MissionHost {
         npc.prevY = npc.y;
       }
     }
+    if (this._tick % 30 === 0) this.updateGuide(false);
+    if (this.player.vehicleId && this._tick % 10 === 0) this.checkChopShop();
     if (this._tick % 60 === 0) {
       this.manageCrowd();
       checkDeadlines(this, this.now);
@@ -676,6 +684,56 @@ export class Simulation implements MissionHost {
       kind: 'wild',
       intro: firstStrike ? `You crept up on a sleeping ${name}!` : `A wild ${name} appeared!`,
     });
+    this.updateGuide(true);
+  }
+
+  /** First-time tips: explain each part of the loop the first time it comes up. */
+  private updateGuide(inWildBattle: boolean): void {
+    const p = this.progression;
+    const pl = this.player;
+    const tip = nextTip({
+      flags: p.flags,
+      started: p.party.length > 0 && p.missions.some((m) => m.id === 'last-run' && m.status === 'completed'),
+      wildNearby: this.wildlings.some((w) => !w.questTag && Math.hypot(w.x - pl.x, w.y - pl.y) < 7),
+      inWildBattle,
+      snares: Object.entries(p.inventory).reduce((n, [id, q]) => n + (ITEMS[id]?.category === 'snare' ? q : 0), 0),
+      partyHurt: p.party.some((w) => w.hp <= 0 || w.injuries > 0),
+      inVehicle: pl.vehicleId !== null,
+      wanted: this.law.stars > 0,
+      region: regionOf(this.layout, pl.x, pl.y).id,
+    });
+    if (!tip) return;
+    p.flags[`tip:${tip.id}`] = true;
+    this.emit({ type: 'tip', ...tip });
+  }
+
+  /** Stolen cars sell for parts at the Scrapyard Exchange, if nobody is chasing you. */
+  private checkChopShop(): void {
+    const v = this.playerVehicle;
+    if (!v || !v.stolen || this.law.stars > 0 || Math.abs(v.speed) > 2.5) return;
+    const yard = this.layout.buildings.find((b) => b.name === 'Scrapyard Exchange');
+    if (!yard || Math.hypot(v.x - (yard.entrance.tx + 0.5), v.y - (yard.entrance.ty + 0.5)) > 3) return;
+    const c = vehicleClass(v);
+    const payout = Math.round((CHOP_VALUE[c.id] ?? 150) * Math.max(0.2, v.hp / c.hp));
+    this.toggleVehicleForce(v);
+    this.vehicles.splice(this.vehicles.indexOf(v), 1);
+    this.progression.money += payout;
+    this._progressVersion++;
+    this.emit({ type: 'chop-shop', vehicleId: v.id, payout });
+  }
+
+  /** The Co-op pays a bounty as the Index fills up. */
+  private checkIndexMilestone(): void {
+    const p = this.progression;
+    const caught = p.index.caught.length;
+    for (const n of INDEX_MILESTONES) {
+      if (caught < n || p.flags[`index:${n}`]) continue;
+      p.flags[`index:${n}`] = true;
+      const money = n * 30;
+      p.money += money;
+      addItem(p, n >= 20 ? 'coil-snare' : 'tin-snare', 3);
+      this.emit({ type: 'index.milestone', caught: n, money });
+    }
   }
 
   private startTrainerBattle(npcId: string): void {
@@ -770,6 +828,7 @@ export class Simulation implements MissionHost {
           caught.status = null;
           const where = receiveWildling(p, caught);
           this.emit({ type: 'wildling.received', speciesId: caught.speciesId, destination: where });
+          this.checkIndexMilestone();
         }
         if (entity) this.wildlings.splice(entityIndex, 1);
         break;
