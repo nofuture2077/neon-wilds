@@ -1,5 +1,6 @@
 import { MOODS, type MoodId, composeBar } from './composer';
 import { SynthRack } from './synth';
+import { sfx } from './sfx';
 
 const LOOKAHEAD_SECONDS = 0.12;
 const TICK_MS = 25;
@@ -39,6 +40,7 @@ export class MusicEngine {
     const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctor) return;
     this.ctx = new Ctor();
+    sfx.attach(this.ctx);
     this.rack = new SynthRack(this.ctx, this.stepSeconds());
     this.applyVolume();
     this.nextTime = this.ctx.currentTime + 0.1;

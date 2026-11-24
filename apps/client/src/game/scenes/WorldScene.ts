@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { getSettings, keyLabel } from '../../settings';
+import { playEventSfx } from '../../audio/eventSfx';
+import { sfx } from '../../audio/sfx';
 import { flash, shake } from '../cameraFx';
 import {
   DT,
@@ -58,6 +60,7 @@ export class WorldScene extends Phaser.Scene {
   private territoryViews!: TerritoryViews;
   private weatherViews!: WeatherViews;
   private vignetteViews!: VignetteViews;
+  private lastSiren = 0;
   private cameraTarget!: Phaser.GameObjects.Zone;
   private baseZoom = 3;
   private pendingAction = false;
@@ -116,6 +119,7 @@ export class WorldScene extends Phaser.Scene {
     this.territoryViews = new TerritoryViews(this, this.sim.layout);
     this.weatherViews = new WeatherViews(this);
     this.vignetteViews = new VignetteViews(this, layout, this.lighting);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => sfx.setEngine(null));
     this.vignetteViews.update(this.sim.hour);
     this.focusMarker = this.add.image(0, 0, TEXTURES.focus).setDepth(Depth.focus).setVisible(false);
     this.barks = new BarkLayer(this, textRes);
@@ -271,6 +275,11 @@ export class WorldScene extends Phaser.Scene {
     this.lighting.update(darkness, this.time.now, gloom, this.sim.world.event?.id === 'blackout');
     this.weatherViews.update(weather, deltaSeconds * 1000, this.time.now);
     this.vignetteViews.update(this.sim.hour);
+    sfx.setEngine(driving ? driving.speed : null);
+    if (this.sim.law.stars > 0 && this.time.now - this.lastSiren > 5000) {
+      this.lastSiren = this.time.now;
+      sfx.play('siren');
+    }
     this.barks.update((id) => {
       const view = id === 'player' ? this.player : this.npcViews.get(id);
       const v = view ?? this.officerViews.get(id);
@@ -282,6 +291,9 @@ export class WorldScene extends Phaser.Scene {
     if (focus?.kind === 'npc') {
       const view = this.npcViews.get(focus.id);
       if (view) this.focusMarker.setPosition(view.sprite.x, view.sprite.y - 12 + bob).setVisible(true);
+    } else if (focus?.kind === 'spot') {
+      const v = this.sim.layout.vignettes.find((x) => x.id === focus.id);
+      if (v) this.focusMarker.setPosition((v.tx + 0.5) * TILE_SIZE, (v.ty + 0.5) * TILE_SIZE - 10 + bob).setVisible(true);
     } else if (focus?.kind === 'building') {
       const b = this.sim.layout.buildings.find((x) => x.id === focus.id);
       if (b) this.focusMarker.setPosition((b.door.tx + 0.5) * TILE_SIZE, (b.door.ty + 0.5) * TILE_SIZE + bob).setVisible(true);
@@ -292,6 +304,7 @@ export class WorldScene extends Phaser.Scene {
 
   private handleEvent(event: SimEvent): void {
     const store = useGameStore.getState();
+    playEventSfx(event, this.sim.player.vehicleId);
     switch (event.type) {
       case 'dialogue.opened':
         store.openDialogue({ source: { kind: 'npc', npcId: event.npcId }, speaker: event.speaker, pages: event.pages });
@@ -435,6 +448,8 @@ export class WorldScene extends Phaser.Scene {
       case 'battle.started': {
         const view = battleView(this.sim);
         if (!view) break;
+        sfx.setEngine(null);
+        if (view.kind === 'wild') sfx.cry(view.enemy.speciesId);
         store.battleStart(event.battleId, event.intro, view);
         this.pendingInteract = false;
         this.scene.launch('battle');

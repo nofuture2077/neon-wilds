@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { getSettings } from '../settings';
+import { sfx } from '../audio/sfx';
 
 /**
  * Lets a controller drive menu screens: d-pad / left stick moves focus across
@@ -19,6 +20,7 @@ export function useGamepadNav(enabled = true): void {
       const i = items.indexOf(document.activeElement as HTMLElement);
       const next = items[(i + dir + items.length) % items.length] ?? items[0];
       next?.focus();
+      if (next && next !== items[i]) sfx.play('ui-move');
     };
 
     const tick = (t: number) => {

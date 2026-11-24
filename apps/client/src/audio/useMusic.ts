@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { sfx } from './sfx';
+import { getSettings, subscribeSettings } from '../settings';
 import { useGameStore } from '../state/gameStore';
 import type { MoodId } from './composer';
 import { music } from './engine';
@@ -40,19 +42,29 @@ export function useMusic(): void {
     useGameStore.setState({ musicVolume: loadMusicVolume() });
     const unlock = () => {
       music.start();
+      sfx.setVolume(getSettings().sfxVolume);
       music.setVolume(useGameStore.getState().musicVolume);
       music.setMood(moodFor(useGameStore.getState()));
     };
     window.addEventListener('pointerdown', unlock);
     window.addEventListener('keydown', unlock);
+    // Every menu button confirms with a blip.
+    const onClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement | null)?.closest('button')) sfx.play('ui-confirm');
+    };
+    document.addEventListener('click', onClick, true);
+    const unsubSettings = subscribeSettings(() => sfx.setVolume(getSettings().sfxVolume));
     const unsub = useGameStore.subscribe((s) => {
       music.setMood(moodFor(s));
       music.setVolume(s.musicVolume);
       music.setDucked(s.paused);
+      if (s.paused || s.battle || s.screen !== 'game') sfx.setEngine(null);
     });
     return () => {
       window.removeEventListener('pointerdown', unlock);
       window.removeEventListener('keydown', unlock);
+      document.removeEventListener('click', onClick, true);
+      unsubSettings();
       unsub();
     };
   }, []);

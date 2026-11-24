@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { playBattleSfx } from '../../audio/eventSfx';
 import { flash, shake } from '../cameraFx';
 import { ELEMENT_COLORS, type BattleLog, type ElementType, type StatusKind } from '@neon-wilds/sim';
 import { useGameStore } from '../../state/gameStore';
@@ -164,6 +165,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private fx(e: BattleLog): void {
+    playBattleSfx(e, useGameStore.getState().battle?.view.enemy.speciesId ?? null);
     switch (e.t) {
       case 'use': {
         const s = this.spriteOf(e.side);

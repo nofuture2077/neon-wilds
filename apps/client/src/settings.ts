@@ -49,10 +49,12 @@ export interface Settings {
   /** No screen flashes and no flickering lights. */
   reduceFlashing: boolean;
   screenShake: boolean;
+  /** Sound effects volume, 0..1. */
+  sfxVolume: number;
 }
 
 const KEY = 'neon-wilds-settings';
-const DEFAULTS: Settings = { bindings: { ...DEFAULT_BINDINGS }, textSize: 'normal', colourBlind: false, reduceFlashing: false, screenShake: true };
+const DEFAULTS: Settings = { bindings: { ...DEFAULT_BINDINGS }, textSize: 'normal', colourBlind: false, reduceFlashing: false, screenShake: true, sfxVolume: 0.7 };
 
 function load(): Settings {
   try {
@@ -80,6 +82,11 @@ export function updateSettings(patch: Partial<Settings>): void {
   }
   applyDocumentSettings();
   for (const l of listeners) l();
+}
+
+export function subscribeSettings(cb: () => void): () => void {
+  listeners.add(cb);
+  return () => listeners.delete(cb);
 }
 
 export function useSettings(): Settings {

@@ -4,6 +4,7 @@ import { type SlotInfo, listSaves, slotLabel, writeSave } from '../services/save
 import { SLOTS, type SlotId, formatPlayTime } from '../services/saveFormat';
 import { saveMusicVolume } from '../audio/useMusic';
 import { AccessibilityPanel } from './AccessibilityPanel';
+import { updateSettings, useSettings } from '../settings';
 import { ControlsPanel } from './ControlsPanel';
 import { FactionsTab } from './FactionsTab';
 import { RecordsTab } from './RecordsTab';
@@ -308,6 +309,7 @@ function SaveTab() {
 }
 
 function OptionsTab() {
+  const settings = useSettings();
   const volume = useGameStore((s) => s.musicVolume);
   const autoAdvance = useGameStore((s) => s.autoAdvance);
   const set = (v: number) => {
@@ -330,6 +332,19 @@ function OptionsTab() {
             className="w-64 accent-[#00e5ff]"
           />
           <span className="w-12 text-right">{Math.round(volume * 100)}%</span>
+        </label>
+        <label className="mt-2 flex items-center gap-4 font-term text-xl">
+          <span className="w-56">Sound effects</span>
+          <input
+            data-nav
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(settings.sfxVolume * 100)}
+            onChange={(e) => updateSettings({ sfxVolume: Number(e.target.value) / 100 })}
+            className="w-64 accent-[#ff3fa4]"
+          />
+          <span className="w-12 text-right">{Math.round(settings.sfxVolume * 100)}%</span>
         </label>
         <p className="mt-2 font-term text-lg text-slate-400">
           The soundtrack is composed live by a rule-based algorithm — it never plays the same night twice.

@@ -73,3 +73,7 @@ Weather and time modulate it: rain adds reverb, a low-pass filter and vinyl nois
 | M4 | Mood director (time, weather, wanted level), transitions and stingers |
 | M5 | Leitmotifs (main, Glitchling, 5 factions), district palettes for all six districts, story cues |
 | M7 | Mixing pass, lead motif variation engine, CPU profiling (< 3% main-thread budget), accessibility (mono, reduced intensity) |
+
+## Sound effects (M7)
+
+`apps/client/src/audio/sfx.ts` synthesises every effect on the fly from oscillators and filtered noise, on the same AudioContext as the music: UI blips (move, confirm), dialogue ticks, battle hits (stronger for critical and super-effective hits), misses, faints, the Snare throw, shakes and capture jingle, level-up and evolution arpeggios, coins, achievement and mission chimes, car doors, crashes scaled by impact, horns, the Warden siren (repeating while wanted), explosions, and a car engine hum that follows speed. Each Wildling has a short cry whose pitch and waveform come from a hash of its species id. `audio/eventSfx.ts` maps simulation events and battle log entries to sounds; a short per-sound cooldown stops bursts from stacking. Volume has its own slider in Options.
