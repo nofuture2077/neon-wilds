@@ -27,6 +27,7 @@ export const SKILLS: Record<string, Skill> = Object.fromEntries(
     S({ id: 'root-bind', name: 'Root Bind', type: 'bloom', category: 'status', power: 0, accuracy: 90, status: { kind: 'rooted', chance: 100 }, description: 'Roots crack the pavement and hold the target in place.' }),
     S({ id: 'sap-mend', name: 'Sap Mend', type: 'bloom', category: 'status', power: 0, accuracy: 100, target: 'self', heal: 0.5, description: 'Restores half of max HP.' }),
     S({ id: 'spore-burst', name: 'Spore Burst', type: 'bloom', category: 'focus', power: 60, accuracy: 100, status: { kind: 'dazed', chance: 20 }, description: 'A cloud of spores. May daze.' }),
+    S({ id: 'ivy-lash', name: 'Ivy Lash', type: 'bloom', category: 'physical', power: 65, accuracy: 95, status: { kind: 'rooted', chance: 15 }, description: 'Old ivy whips out of the wall. May root the target.' }),
     // Toxic
     S({ id: 'smog-puff', name: 'Smog Puff', type: 'toxic', category: 'focus', power: 40, accuracy: 100, status: { kind: 'poisoned', chance: 30 }, description: 'A lungful of exhaust. May poison.' }),
     S({ id: 'grime-peck', name: 'Grime Peck', type: 'toxic', category: 'physical', power: 50, accuracy: 100, status: { kind: 'poisoned', chance: 10 }, description: 'A filthy peck.' }),
@@ -42,9 +43,12 @@ export const SKILLS: Record<string, Skill> = Object.fromEntries(
     S({ id: 'spook', name: 'Spook', type: 'shade', category: 'status', power: 0, accuracy: 85, status: { kind: 'spooked', chance: 100 }, description: 'Something moves in the corner of the eye.' }),
     S({ id: 'night-lurk', name: 'Night Lurk', type: 'shade', category: 'focus', power: 70, accuracy: 100, description: 'Darkness itself bites.' }),
     S({ id: 'glitch-pulse', name: 'Glitch Pulse', type: 'shade', category: 'focus', power: 55, accuracy: 100, status: { kind: 'spooked', chance: 20 }, description: 'A wave of corrupted static. May spook.' }),
+    S({ id: 'nightfall-pounce', name: 'Nightfall Pounce', type: 'shade', category: 'physical', power: 80, accuracy: 90, description: 'Lands from nowhere, claws first.' }),
+    S({ id: 'still-watch', name: 'Still Watch', type: 'shade', category: 'status', power: 0, accuracy: 100, target: 'self', stages: { stat: 'resolve', delta: 2, chance: 100, target: 'self' }, description: 'Goes perfectly still. Sharply raises Resolve.' }),
     // Rubble
     S({ id: 'pebble-toss', name: 'Pebble Toss', type: 'rubble', category: 'physical', power: 40, accuracy: 100, description: 'Flings gravel.' }),
     S({ id: 'curl-up', name: 'Curl Up', type: 'rubble', category: 'status', power: 0, accuracy: 100, target: 'self', stages: { stat: 'defence', delta: 1, chance: 100, target: 'self' }, description: 'Rolls into a ball. Raises Defence.' }),
+    S({ id: 'gargoyle-drop', name: 'Gargoyle Drop', type: 'rubble', category: 'physical', power: 85, accuracy: 90, description: 'Drops off a ledge like a falling cornice.' }),
     S({ id: 'rubble-roll', name: 'Rubble Roll', type: 'rubble', category: 'physical', power: 70, accuracy: 90, description: 'Rolls into the target like a loose kerbstone.' }),
   ].map((s) => [s.id, s]),
 );

@@ -135,14 +135,19 @@ describe('Simulation', () => {
     it('sprinting into an NPC shoves them, they react and remember it', () => {
       const sim = newSim();
       const npc = sim.npcs.find((n) => n.archetypeId === 'night-worker')!; // timid
-      npc.x = sim.player.x + 1.2;
-      npc.y = sim.player.y;
+      // Sprint along whichever direction has open pavement ahead.
+      const p = sim.player;
+      const [dx, dy] = ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const).find(([ax, ay]) =>
+        [1, 2, 3, 4].every((k) => !sim.layout.map.isSolid(Math.floor(p.x + ax * k), Math.floor(p.y + ay * k))),
+      )!;
+      npc.x = p.x + dx * 1.2;
+      npc.y = p.y + dy * 1.2;
       npc.mode = 'idle';
       npc.timer = 100;
 
       const events: SimEvent[] = [];
       for (let i = 0; i < 30; i++) {
-        sim.step({ moveX: 1, moveY: 0, run: true, interact: false });
+        sim.step({ moveX: dx, moveY: dy, run: true, interact: false });
         events.push(...sim.drainEvents());
       }
       expect(events).toContainEqual({ type: 'npc.shoved', npcId: npc.id, byPlayer: true });

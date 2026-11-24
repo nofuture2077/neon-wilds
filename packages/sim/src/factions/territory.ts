@@ -58,6 +58,8 @@ export function newTerritory(layout: DistrictLayout): TerritoryState {
   const kiosk = outpost('Halcyon Outreach Kiosk');
   const shipping = outpost('Halcyon Shipping');
   const lab = outpost('Halcyon Lab 7');
+  const guild = outpost('Tunnel Guides’ Guild');
+  const substation = outpost('Old Town Substation');
   for (const b of layout.blocks) {
     let inf: Record<string, number>;
     switch (b.region) {
@@ -66,6 +68,9 @@ export function newTerritory(layout: DistrictLayout): TerritoryState {
         break;
       case 'harbor':
         inf = b.id === shipping ? { compact: 30, halcyon: 70 } : { compact: 85, halcyon: 10 };
+        break;
+      case 'oldtown':
+        inf = b.id === guild ? { compact: 58, choir: 38 } : b.id === substation ? { choir: 40, halcyon: 55 } : { choir: 80, compact: 12 };
         break;
       case 'industrial':
         inf = b.id === lab ? { 'iron-chain': 25, halcyon: 80 } : { 'iron-chain': 82, halcyon: 12 };

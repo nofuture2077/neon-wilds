@@ -231,13 +231,15 @@ function useSkill(ctx: BattleContext, side: Side, skill: Skill, log: BattleLog[]
     const crit = ctx.rng.chance(critChance);
     const roll = ctx.rng.range(0.85, 1);
     const amount = Math.max(1, Math.floor(damage * roll * (crit ? 1.5 : 1)));
+    const dealt = Math.min(target.hp, amount);
     target.hp = Math.max(0, target.hp - amount);
     log.push({ t: 'damage', side: targetSide, amount, hp: target.hp, max: maxHp(target), effectiveness: eff, crit });
     if (crit) log.push({ t: 'text', text: 'A critical hit!' });
     if (eff > 1) log.push({ t: 'text', text: "It's super effective!" });
     else if (eff < 1) log.push({ t: 'text', text: "It's not very effective..." });
     if (skill.recoil && user.hp > 0) {
-      const r = Math.max(1, Math.floor(amount * skill.recoil));
+      // Recoil follows the HP actually knocked off, not overkill.
+      const r = Math.max(1, Math.floor(dealt * skill.recoil));
       user.hp = Math.max(0, user.hp - r);
       log.push({ t: 'damage', side, amount: r, hp: user.hp, max: maxHp(user), effectiveness: 1, crit: false });
       log.push({ t: 'text', text: `${name} is hurt by the impact!` });

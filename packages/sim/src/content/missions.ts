@@ -492,6 +492,102 @@ export const MISSIONS: MissionDef[] = [
     rewards: [{ type: 'set-flag', flag: 'fragment-iron' }],
   },
 
+
+  {
+    id: 'founders-vault',
+    title: 'The Founders’ Vault',
+    summary: 'Brother Lark says the Old Town murals point to the Founders’ Vault — and that Thorn got there first.',
+    requires: ['everyone-wants-it'],
+    giver: 'npc-lark',
+    offer: [
+      'Peace, courier. Your Wildling sings in the right key. I can hear it from here.',
+      'Before the Lighting, the founders painted the Wildlings on these walls — maps, the Cantor says, to a vault under the Civic Hall. The blueprints for the Hush are inside.',
+      'But Thorn found the murals first. He wants more than the truth. Read the walls before he burns them.',
+    ],
+    onStart: [{ type: 'spawn-npc', npc: 'npc-thorn-acolyte', near: 'Founders’ Vault' }],
+    objectives: [
+      {
+        text: 'Read the mural at Bellfounders’ Tower (Old Town)',
+        kind: 'inspect',
+        target: 'Bellfounders’ Tower',
+        onComplete: [{ type: 'message', speaker: 'Mural', pages: ['A stag with branches for antlers stands in a marsh. Under it, a bell — and a waveform shaped like a ring.'] }],
+      },
+      {
+        text: 'Read the mural in the Drowned Arcade',
+        kind: 'inspect',
+        target: 'Drowned Arcade',
+        onComplete: [{ type: 'message', speaker: 'Mural', pages: ['Lamps on poles, each with a tiny Wildling curled asleep inside. The founders painted them smiling. Someone later scratched out the smiles.'] }],
+      },
+      {
+        text: 'Read the mural on the Cistern Steps',
+        kind: 'inspect',
+        target: 'Cistern Steps',
+        onComplete: [{ type: 'message', speaker: 'Mural', pages: ['Eight Wildlings in a circle, eyes pierced through the plaster. Through the holes: a draught, and the smell of old paper. "Under the Hall."'] }],
+      },
+      { text: 'Get past Thorn’s acolyte at the Founders’ Vault', kind: 'defeat', target: 'npc-thorn-acolyte', onComplete: [{ type: 'despawn-npc', npc: 'npc-thorn-acolyte' }] },
+      {
+        text: 'Open the Founders’ Vault',
+        kind: 'inspect',
+        target: 'Founders’ Vault',
+        onComplete: [
+          {
+            type: 'message',
+            speaker: 'Founders’ Vault',
+            pages: [
+              'Eight keyholes, eight carved Wildlings. The Glitchling hums at each one, and the bronze door sighs open.',
+              'Inside: the original Lighting charter. The Hush was never a side effect — it is in the specification, signed by the first Civic Trust.',
+              'On top of the dust, a fresh note in Thorn’s hand: "Substation 9. Midnight. Every lamp in Old Town and the Spire with it."',
+            ],
+          },
+          { type: 'give-item', item: 'hush-fragment', qty: 1 },
+          { type: 'spawn-npc', npc: 'npc-thorn', near: 'Old Town Substation' },
+        ],
+      },
+      { text: 'Stop Thorn at the Old Town Substation', kind: 'defeat', target: 'npc-thorn' },
+      {
+        text: 'Bring Thorn before the Cantor at the Cathedral of Saint Verity',
+        kind: 'talk',
+        target: 'npc-cantor',
+        pages: [
+          'Thorn. And the courier with the Glitchling. And the founders’ own charter.',
+          'So it is true. They built the cage on purpose. Three hundred years of lullabies.',
+        ],
+        onComplete: [
+          { type: 'despawn-npc', npc: 'npc-thorn' },
+          {
+            type: 'choice',
+            speaker: 'Seraphine Vale, the Cantor',
+            pages: ['Thorn would have burned the grid tonight, and half of Old Town with it. Some of the Choir say he was right. What do you say, courier?'],
+            options: [
+              {
+                id: 'restraint',
+                label: 'The Choir must sing, not burn. Keep Thorn here and his charges with me.',
+                effects: [
+                  { type: 'reputation', faction: 'choir', delta: 15 },
+                  { type: 'reputation', faction: 'wardens', delta: 5 },
+                  { type: 'set-flag', flag: 'thorn-contained' },
+                  { type: 'message', speaker: 'Seraphine Vale, the Cantor', pages: ['Then we sing. When the time comes to retune this city, the Choir will stand with you, {player}.'] },
+                ],
+              },
+              {
+                id: 'unleash',
+                label: 'Thorn is right. Let the grid burn — just not tonight, and not here.',
+                effects: [
+                  { type: 'reputation', faction: 'choir', delta: 8 },
+                  { type: 'reputation', faction: 'halcyon', delta: -10 },
+                  { type: 'reputation', faction: 'wardens', delta: -8 },
+                  { type: 'set-flag', flag: 'thorn-unleashed' },
+                  { type: 'message', speaker: 'Thorn', pages: ['Not tonight. But soon. When you smash that controller, courier, every acolyte in Old Town will be cheering.'] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    rewards: [{ type: 'set-flag', flag: 'fragment-choir' }],
+  },
+
   // ----------------------------------------------------------------------------------------------
   // Act III — the Quiet.
   {
@@ -528,7 +624,7 @@ export const MISSIONS: MissionDef[] = [
               {
                 id: 'chorus',
                 label: 'Retune the grid with the Glitchling — let humans and Wildlings share the city.',
-                when: { notFlags: ['act1-sold'], anyOf: [{ flags: ['wren-turned'] }, { flags: ['pits-freed'] }, { minRep: { saints: 30 } }] },
+                when: { notFlags: ['act1-sold'], anyOf: [{ flags: ['wren-turned'] }, { flags: ['pits-freed'] }, { flags: ['thorn-contained'] }, { minRep: { saints: 30 } }] },
                 effects: [{ type: 'ending', id: 'chorus' }],
               },
               { id: 'lights-out', label: 'Smash the controller. Lights out — let everything run free.', effects: [{ type: 'ending', id: 'lights-out' }] },

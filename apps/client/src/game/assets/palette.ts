@@ -40,6 +40,16 @@ export const ROOF_STYLES = [
   { base: 0x29203a, edge: 0x4b3a6b, dark: 0x1c1628, wall: 0x312546, wallDark: 0x1a1426 },
 ] as const;
 
+/** Old Town roofs and walls: slate, terracotta and moss over stone and brick. */
+export const OLD_STYLES = [
+  { base: 0x3a3440, edge: 0x5a5262, dark: 0x26222c, wall: 0x5a4c44, wallDark: 0x2e2620 },
+  { base: 0x5a2e26, edge: 0x7a4436, dark: 0x3a1c16, wall: 0x6a5446, wallDark: 0x342820 },
+  { base: 0x2e3a2e, edge: 0x46583f, dark: 0x1e281e, wall: 0x4e4a44, wallDark: 0x28241f },
+  { base: 0x463a44, edge: 0x665666, dark: 0x2e262e, wall: 0x5e4a3e, wallDark: 0x30241e },
+  { base: 0x4a2a22, edge: 0x6a3c30, dark: 0x301a14, wall: 0x54483e, wallDark: 0x2a221c },
+  { base: 0x303436, edge: 0x4c5254, dark: 0x202426, wall: 0x605448, wallDark: 0x322a22 },
+] as const;
+
 export const CAR_COLORS = [0xe0559a, 0x8fb4d9, 0xe8b830, 0x3a3346, 0xc9c4d6, 0xc0563a] as const;
 
 /** Character-creation choices. */

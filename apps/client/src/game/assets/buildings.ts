@@ -1,6 +1,6 @@
 import { TILE_SIZE, type Building } from '@neon-wilds/sim';
 import { createCanvas, ellipse, hashNoise, px, rect, shade, type PixelCanvas } from './canvas';
-import { NEON, ROOF_STYLES } from './palette';
+import { NEON, OLD_STYLES, ROOF_STYLES } from './palette';
 
 const T = TILE_SIZE;
 const FLOOR_H = 11;
@@ -31,14 +31,15 @@ export interface BuildingArt {
  * Everything is seeded from the building id, so the city looks identical
  * every session. Pure presentation: the simulation only knows the footprint.
  */
-export function buildBuilding(b: Building, tall = false): BuildingArt {
+export function buildBuilding(b: Building, tall = false, old = false): BuildingArt {
   const w = b.w * T;
   const h = b.h * T;
   const pc = createCanvas(w, h);
   const c = pc.ctx;
-  const base = ROOF_STYLES[b.style % ROOF_STYLES.length]!;
+  // Old Town: stone and brick under slate, terracotta and mossy roofs.
+  const base = old ? OLD_STYLES[b.style % OLD_STYLES.length]! : ROOF_STYLES[b.style % ROOF_STYLES.length]!;
   // Downtown towers: cool glass-and-steel walls instead of patched brick.
-  const style = tall ? { ...base, wall: [0x2c3a52, 0x263248, 0x30405a, 0x2a2f45][b.style % 4]!, wallDark: 0x1a2133 } : base;
+  const style = tall && !old ? { ...base, wall: [0x2c3a52, 0x263248, 0x30405a, 0x2a2f45][b.style % 4]!, wallDark: 0x1a2133 } : base;
   const seed = hashSeed(b.id);
   const rnd = (i: number) => hashNoise(i, i * 7 + 3, seed);
   const lights: BuildingLight[] = [];
@@ -49,15 +50,16 @@ export function buildBuilding(b: Building, tall = false): BuildingArt {
   const accent = b.neon ?? NEON[Math.floor(rnd(2) * NEON.length)]!;
   const doorFront = b.door.facing === 'south';
 
-  drawRoof(c, w, roofH, style, seed, rnd);
+  if (old) drawTiledRoof(c, w, roofH, style, seed, rnd, lights, tall);
+  else drawRoof(c, w, roofH, style, seed, rnd);
   // Neon trim along the roof lip on some buildings.
-  if (rnd(12) < 0.4) {
+  if (!old && rnd(12) < 0.4) {
     const trim = NEON[Math.floor(rnd(13) * NEON.length)]!;
     rect(c, 1, roofH - 2, w - 2, 1, trim);
     rect(c, 1, roofH - 1, w - 2, 1, shade(trim, 0.5));
     for (let lx = 8; lx < w; lx += 24) lights.push({ x: lx, y: roofH - 2, color: trim, scale: 0.35, day: 0.15, flicker: false });
   }
-  drawFacade(c, b, w, roofH, wallH, style, accent, doorFront, rnd, lights, tall);
+  drawFacade(c, b, w, roofH, wallH, style, accent, doorFront, rnd, lights, tall && !old, old);
 
   // Signage.
   if (b.neon !== null) {
@@ -75,15 +77,15 @@ export function buildBuilding(b: Building, tall = false): BuildingArt {
     }
   }
   // Vertical blade sign on many buildings, like the dense signage of the reference art.
-  if (rnd(4) < (b.neon !== null ? 0.8 : 0.45) && wallH >= 30) {
+  if (rnd(4) < (old ? 0.15 : b.neon !== null ? 0.8 : 0.45) && wallH >= 30) {
     const bx = rnd(5) < 0.5 ? 2 : w - 9;
     const bh = Math.min(wallH - 6, 28);
-    const color = NEON[Math.floor(rnd(6) * NEON.length)]!;
+    const color = old ? (rnd(6) < 0.5 ? 0xffc46b : 0x6fd36f) : NEON[Math.floor(rnd(6) * NEON.length)]!;
     drawSign(c, bx, roofH + 2, 7, bh, color, seed + 11, true);
     lights.push({ x: bx + 3.5, y: roofH + 2 + bh / 2, color, scale: 0.55, day: 0.2, flicker: rnd(7) < 0.2 });
   }
   // Rooftop billboard on larger buildings.
-  if (b.w >= 4 && rnd(8) < 0.45 && roofH >= 30) {
+  if (!old && b.w >= 4 && rnd(8) < 0.45 && roofH >= 30) {
     const bw = Math.min(w - 16, 30);
     const bx = 6 + Math.floor(rnd(9) * Math.max(1, w - 12 - bw));
     const by = doorFront ? 5 : roofH - 18;
@@ -190,6 +192,7 @@ function drawFacade(
   rnd: (i: number) => number,
   lights: BuildingLight[],
   tall = false,
+  old = false,
 ) {
   rect(c, 0, top, w, wallH, style.wall);
   // vertical shading at the edges for depth
@@ -200,7 +203,8 @@ function drawFacade(
 
   // upper floors with windows
   const groundTop = top + wallH - GROUND_H;
-  const windowColors = tall ? [0x9fe8ff, 0xd8f4ff, 0x7ff6ff, 0xfff1d6] : [0x7ff6ff, 0xff8fd0, 0xffc46b, 0xfff1d6, 0xc7a8ff];
+  // Old Town windows burn with candle and gaslight, not neon.
+  const windowColors = old ? [0xffc46b, 0xffd890, 0xffb050, 0xfff1d6] : tall ? [0x9fe8ff, 0xd8f4ff, 0x7ff6ff, 0xfff1d6] : [0x7ff6ff, 0xff8fd0, 0xffc46b, 0xfff1d6, 0xc7a8ff];
   let wi = 0;
   for (let fy = groundTop - FLOOR_H; fy >= top + 1; fy -= FLOOR_H) {
     rect(c, 2, fy + FLOOR_H - 1, w - 4, 1, style.wallDark);
@@ -220,8 +224,21 @@ function drawFacade(
     }
   }
 
+  if (old) {
+    // Stone courses and ivy climbing from the ground.
+    for (let y = top + 4; y < groundTop; y += 5) rect(c, 3, y, w - 6, 1, shade(style.wall, 0.88), 0.5);
+    const ivyX = Math.floor(rnd(40) * Math.max(1, w - 14));
+    const ivyH = Math.floor((wallH - 4) * (0.4 + rnd(41) * 0.6));
+    for (let y = 0; y < ivyH; y++) {
+      for (let x = 0; x < 12; x++) {
+        const n = hashNoise(ivyX + x, y, 77);
+        if (n < 0.45 - y / (ivyH * 3)) px(c, ivyX + x, top + wallH - 2 - y, n < 0.12 ? 0x4f8f3f : 0x2f5a2a);
+      }
+    }
+  }
+
   // fire escape zig-zag on residential facades
-  if (b.kind === 'residential' && w >= 48 && groundTop - top > FLOOR_H) {
+  if (!old && b.kind === 'residential' && w >= 48 && groundTop - top > FLOOR_H) {
     const fx = Math.floor(w * 0.55);
     for (let fy = top + 3, i = 0; fy + 8 < groundTop; fy += FLOOR_H, i++) {
       rect(c, fx - 6, fy + 8, 14, 1, 0x6b6580);
@@ -306,4 +323,43 @@ function hashSeed(id: string): number {
   let h = 2166136261;
   for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619) >>> 0;
   return h;
+}
+
+/** Old Town roof: rows of tiles or slate, a ridge, chimneys, and spires on the tallest buildings. */
+function drawTiledRoof(c: CanvasRenderingContext2D, w: number, roofH: number, style: Style, seed: number, rnd: (i: number) => number, lights: BuildingLight[], spire: boolean) {
+  rect(c, 0, 0, w, roofH, style.base);
+  for (let y = 1; y < roofH; y += 3) {
+    rect(c, 0, y + 2, w, 1, style.dark);
+    for (let x = (y % 2) * 2; x < w; x += 4) {
+      px(c, x, y + 2, shade(style.dark, 0.8));
+      if (hashNoise(x, y, seed) > 0.9) px(c, x + 1, y, style.edge);
+    }
+  }
+  // Moss creeping over the tiles.
+  for (let y = 0; y < roofH; y++) {
+    for (let x = 0; x < w; x++) if (hashNoise(x >> 1, y >> 1, seed + 5) < 0.05) px(c, x, y, 0x3d6b34, 0.7);
+  }
+  // Ridge line and eaves.
+  const ridge = Math.floor(roofH * 0.42);
+  rect(c, 0, ridge, w, 2, shade(style.edge, 1.15));
+  rect(c, 0, ridge + 2, w, 1, style.dark);
+  rect(c, 0, 0, w, 1, shade(style.edge, 0.8));
+  rect(c, 0, roofH - 2, w, 2, shade(style.edge, 1.2));
+  // Chimneys.
+  const chimneys = 1 + Math.floor(rnd(60) * Math.max(1, w / 40));
+  for (let i = 0; i < chimneys; i++) {
+    const x = 4 + Math.floor(rnd(61 + i) * Math.max(1, w - 12));
+    const y = Math.max(1, ridge - 7);
+    rect(c, x + 1, y + 2, 5, 7, 0x000000, 0.4);
+    rect(c, x, y, 5, 7, 0x5a3a2e);
+    rect(c, x, y, 5, 1, 0x7a5040);
+    rect(c, x + 1, y + 1, 3, 1, 0x1a1210);
+  }
+  if (spire) {
+    // Cathedral spire with a green lantern at the top.
+    const sx = Math.floor(w / 2);
+    for (let k = 0; k < 10; k++) rect(c, sx - 5 + Math.floor(k / 2), ridge - k * 2 - 2, 10 - k, 2, shade(style.edge, 1 - k * 0.04));
+    px(c, sx, Math.max(0, ridge - 22), 0x9be89b);
+    lights.push({ x: sx, y: Math.max(0, ridge - 22), color: 0x6fd36f, scale: 0.9, day: 0.15, flicker: false });
+  }
 }

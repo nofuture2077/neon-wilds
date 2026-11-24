@@ -62,11 +62,20 @@ const STEPS: Record<number, (s: AnySnapshot) => AnySnapshot> = {
   8: (s) => ({ ...s, version: 9, away: {} }),
   // v9 → v10: story choices.
   9: (s) => ({ ...s, version: 10, pendingChoice: null }),
-  // v10 → v11: one seamless organic city replaces the district grids. Progression, story,
-  // reputation and the clock carry over; the world (positions, NPCs, cars, territory) is rebuilt.
-  10: (s) => ({
+  // v10 → v11: one seamless organic city replaces the district grids.
+  10: (s) => rebuildWorld(s, 11),
+  // v11 → v12: orthogonal street plan (world gen v4) and Old Town; the map changed under everyone's feet.
+  11: (s) => rebuildWorld(s, 12),
+};
+
+/**
+ * The city layout changed: progression, story, reputation and the clock carry over; the world
+ * (positions, NPCs, cars, territory) is rebuilt around the player at the spawn point.
+ */
+function rebuildWorld(s: AnySnapshot, version: number): AnySnapshot {
+  return {
     ...s,
-    version: 11,
+    version,
     districtId: 'vesper',
     player: { ...(s.player as Record<string, unknown>), x: -1, y: -1, prevX: -1, prevY: -1, vehicleId: null, conversationWith: null },
     npcs: [],
@@ -78,8 +87,8 @@ const STEPS: Record<number, (s: AnySnapshot) => AnySnapshot> = {
     pendingChoice: null,
     away: {},
     law: newLawState(),
-  }),
-};
+  };
+}
 
 export function migrateSnapshot(raw: unknown): SimSnapshot {
   if (!raw || typeof raw !== 'object' || typeof (raw as AnySnapshot).version !== 'number') {

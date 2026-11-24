@@ -54,6 +54,8 @@ Each district has a distinct visual palette, population, creature ecology, econo
 
 ### 2.4 Old Town
 
+> **Implemented (M5 part 2):** a region of the seamless map north-west of the Slums with its own street grammar (small crooked blocks, alleys, terraces), cobbled streets, flagstone pavements, gas lamps and stone buildings under tiled roofs. Nine named places, Choir acolytes, antiquarians and tunnel guides with routines; Mossling → Ivyclad, Gloomkit → Nightprowl and Gargrin. The Choir holds most blocks; the Compact holds the Tunnel Guides' Guild and Halcyon the substation.
+
 - **Look:** cobblestones, gas lamps, cathedral spires, collapsed arcades, ivy; dim amber and green; the least neon in the city.
 - **Population:** antiquarians, Verdant Choir acolytes, tunnel guides, artists, the very old.
 - **Wildlings:** Mossling, Ivyclad, Gloomkit, Nightprowl, Gargrin.
@@ -173,7 +175,7 @@ The old families behind the Lighting. Chairman **Corvin Ashgrave** is the centra
 
 ## 5. Main story
 
-> **Implemented (M5 part 1):** Act I in full; Act II with the Saints and Halcyon arcs (+ *Loyal Employee* for the sold path); Act III needs **two** fragments for now, and four of the five endings are implemented (The Hollow needs the Outskirts). Content lives in `packages/sim/src/content/missions.ts`.
+> **Implemented (M5):** Act I in full; Act II with the Saints, Halcyon (+ *Loyal Employee* for the sold path), Compact (*Cargo*), Iron Chain (*The Pit*) and Choir (*The Founders' Vault*) arcs; Act III needs **three** fragments, and four of the five endings are implemented (The Hollow needs the Outskirts). Containing Thorn counts toward The Chorus. Content lives in `packages/sim/src/content/missions.ts`.
 
 ### Act I — *The Package* (Slums)
 

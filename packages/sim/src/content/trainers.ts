@@ -61,6 +61,36 @@ export const TRAINERS: Record<string, TrainerDefinition> = {
     challenge: ['Container 7 is Halcyon property under maritime licence. You are trespassing.', 'Hask. Halcyon Shipping security. Leave now, or leave wet.'],
     defeated: ['Take the manifest. They don’t pay me enough to drown for it.'],
   },
+  'npc-thorn-acolyte': {
+    npcId: 'npc-thorn-acolyte',
+    name: 'Thorn’s Acolyte',
+    party: [
+      { species: 'mossling', level: 17 },
+      { species: 'gloomkit', level: 18 },
+    ],
+    ai: 'skilled',
+    items: { 'patch-kit': 1 },
+    reward: 240,
+    challenge: ['The Vault is sealed by order of Thorn. Not the Cantor — Thorn.', 'Turn back, courier. The murals aren’t for tourists.'],
+    defeated: ['Go on, then. You’ll see what he’s planning. You’ll understand.'],
+  },
+  'npc-thorn': {
+    npcId: 'npc-thorn',
+    name: 'Thorn',
+    party: [
+      { species: 'gargrin', level: 20 },
+      { species: 'ivyclad', level: 21 },
+      { species: 'nightprowl', level: 22 },
+    ],
+    ai: 'skilled',
+    items: { 'med-spray': 1 },
+    reward: 520,
+    challenge: [
+      'Substation 9 feeds every lamp from here to the Spire. Tonight it goes dark. All of it.',
+      'Some people will get hurt. The Wildlings have been getting hurt for three hundred years. Stand aside — or stand and fight.',
+    ],
+    defeated: ['...Fine. Take me to the Cantor. Let her decide what I am.'],
+  },
   'npc-pit1': {
     npcId: 'npc-pit1',
     name: 'Pit Fighter Grit',

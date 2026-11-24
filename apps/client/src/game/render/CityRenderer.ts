@@ -18,7 +18,7 @@ export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting
   renderGround(scene, layout);
   for (const b of layout.buildings) {
     const key = `building-${b.id}`;
-    const art = buildBuilding(b, b.region === 'downtown' || b.landmark);
+    const art = buildBuilding(b, b.region === 'downtown' || b.landmark, b.region === 'oldtown');
     addCanvasTexture(scene, key, art.canvas);
     // Buildings turn with their street; rotated ones are filtered smoothly so the edges don't shimmer.
     if (b.angle !== 0) scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
@@ -59,10 +59,11 @@ export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting
 
 function renderGround(scene: Phaser.Scene, layout: DistrictLayout): void {
   const { map } = layout;
+  const oldIdx = layout.regions.findIndex((r) => r.style === 'oldtown');
   const data: number[][] = [];
   for (let y = 0; y < map.height; y++) {
     const row: number[] = [];
-    for (let x = 0; x < map.width; x++) row.push(visualTileIndex(map, x, y));
+    for (let x = 0; x < map.width; x++) row.push(visualTileIndex(map, x, y, layout.regionMap[y * map.width + x] === oldIdx));
     data.push(row);
   }
   const tilemap = scene.make.tilemap({ data, tileWidth: T, tileHeight: T });
@@ -85,7 +86,8 @@ function renderProp(scene: Phaser.Scene, p: Prop, lighting: Lighting, style: str
       const ly = cy + (off?.[1] ?? 0);
       scene.add.image(lx, ly, TEXTURES.lamp).setDepth(Depth.canopy);
       // Industrial streets burn sodium orange; elsewhere lamps mix warm white with neon tints.
-      const tint = style === 'industrial' ? 0xff9a30 : LAMP_TINTS[(p.x * 7 + p.y * 3) % LAMP_TINTS.length]!;
+      // Industrial streets burn sodium orange, Old Town has gas lamps; elsewhere warm white mixes with neon.
+      const tint = style === 'industrial' ? 0xff9a30 : style === 'oldtown' ? 0xffc46b : LAMP_TINTS[(p.x * 7 + p.y * 3) % LAMP_TINTS.length]!;
       lighting.add(lx, ly, tint, 0.7, 0.38, 0, 0, 'lamp');
       break;
     }

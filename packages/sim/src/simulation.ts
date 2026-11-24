@@ -1013,8 +1013,11 @@ export class Simulation implements MissionHost {
       return d >= 16 && d <= 30;
     });
     if (near.length === 0) return;
-    const t = this.rng.pick(near);
-    this.spawnCitizen(t.tx + 0.5, t.ty + 0.5, false);
+    // Catch up quickly when the street is much emptier than it should be.
+    for (let k = Math.min(3, Math.ceil((desired - count) / 4)); k > 0; k--) {
+      const t = this.rng.pick(near);
+      this.spawnCitizen(t.tx + 0.5, t.ty + 0.5, false);
+    }
   }
 
   private spawnCitizen(x: number, y: number, fleeing: boolean): NpcState {

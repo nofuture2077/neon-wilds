@@ -4,13 +4,19 @@ import { PALETTE as P } from './palette';
 
 const T = TILE_SIZE;
 
-/** Tileset layout: indices 0..15 = Tile kinds, 16..31 = sidewalk curb variants (mask N=1 E=2 S=4 W=8). */
+/**
+ * Tileset layout: indices 0..15 = Tile kinds, 16..31 = sidewalk curb variants (mask N=1 E=2 S=4 W=8),
+ * 32 = Old Town cobbled road, 33..48 = Old Town flagstone sidewalk curb variants.
+ */
 export const SIDEWALK_VARIANT_BASE = 16;
-export const TILESET_COLUMNS = 32;
+const OLD_ROAD = 32;
+const OLD_SIDEWALK_BASE = 33;
+export const TILESET_COLUMNS = 49;
 
-/** Map a ground tile to its tileset index, picking curb variants from neighbours. */
-export function visualTileIndex(map: TileMap, x: number, y: number): number {
+/** Map a ground tile to its tileset index, picking curb variants from neighbours. `old` streets are cobbled. */
+export function visualTileIndex(map: TileMap, x: number, y: number, old = false): number {
   const kind = map.get(x, y);
+  if (old && (kind === Tile.Road || kind === Tile.RoadLineH || kind === Tile.RoadLineV)) return OLD_ROAD;
   if (kind !== Tile.Sidewalk) return kind;
   const roadish = (k: TileKind) => k === Tile.Road || k === Tile.RoadLineH || k === Tile.RoadLineV || k === Tile.CrosswalkH || k === Tile.CrosswalkV;
   let mask = 0;
@@ -18,7 +24,7 @@ export function visualTileIndex(map: TileMap, x: number, y: number): number {
   if (roadish(map.get(x + 1, y))) mask |= 2;
   if (roadish(map.get(x, y + 1))) mask |= 4;
   if (roadish(map.get(x - 1, y))) mask |= 8;
-  return SIDEWALK_VARIANT_BASE + mask;
+  return (old ? OLD_SIDEWALK_BASE : SIDEWALK_VARIANT_BASE) + mask;
 }
 
 function speckle(c: CanvasRenderingContext2D, ox: number, seed: number, base: number, light: number, dark: number, density = 0.12) {
@@ -125,5 +131,54 @@ export function buildTileset(): PixelCanvas {
   }
 
   for (let mask = 0; mask < 16; mask++) drawSidewalk(c, at(SIDEWALK_VARIANT_BASE + mask), mask);
+
+  drawCobbles(c, at(OLD_ROAD));
+  for (let mask = 0; mask < 16; mask++) drawFlagstones(c, at(OLD_SIDEWALK_BASE + mask), mask);
   return pc;
+}
+
+/** Old Town road: rounded setts in staggered rows. */
+function drawCobbles(c: CanvasRenderingContext2D, ox: number) {
+  rect(c, ox, 0, T, T, 0x1c1820);
+  for (let row = 0; row < 4; row++) {
+    const y = row * 4;
+    const off = row % 2 === 0 ? 0 : 2;
+    for (let x = -off; x < T; x += 4) {
+      const n = hashNoise(x + 20, y, 41);
+      const col = n < 0.33 ? 0x3a3340 : n < 0.66 ? 0x342e3a : 0x40384a;
+      const x0 = Math.max(0, x);
+      const w = Math.min(x + 3, T) - x0;
+      if (w <= 0) continue;
+      rect(c, ox + x0, y, w, 3, col);
+      if (x0 === x) px(c, ox + x0, y, 0x544a5e);
+    }
+  }
+}
+
+/** Old Town pavement: big worn flagstones with a stone kerb toward the road. */
+function drawFlagstones(c: CanvasRenderingContext2D, ox: number, mask: number) {
+  speckle(c, ox, 17, 0x4a4248, 0x564c52, 0x3c353b, 0.08);
+  for (let i = 0; i < T; i++) {
+    px(c, ox + i, 0, 0x2e282e);
+    px(c, ox, i, 0x2e282e);
+    if (i < 10) px(c, ox + 10, i, 0x342e34, 0.8);
+    if (i > 5) px(c, ox + i, 10, 0x342e34, 0.8);
+  }
+  const kerb = 0x8a7a68;
+  if (mask & 1) {
+    rect(c, ox, 0, T, 2, kerb);
+    rect(c, ox, 2, T, 1, 0x15121c, 0.6);
+  }
+  if (mask & 4) {
+    rect(c, ox, T - 2, T, 2, kerb);
+    rect(c, ox, T - 3, T, 1, 0x15121c, 0.6);
+  }
+  if (mask & 8) {
+    rect(c, ox, 0, 2, T, kerb);
+    rect(c, ox + 2, 0, 1, T, 0x15121c, 0.6);
+  }
+  if (mask & 2) {
+    rect(c, ox + T - 2, 0, 2, T, kerb);
+    rect(c, ox + T - 3, 0, 1, T, 0x15121c, 0.6);
+  }
 }

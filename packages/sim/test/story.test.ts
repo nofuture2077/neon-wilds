@@ -44,10 +44,16 @@ class Player {
       npc.mode = 'idle';
       npc.path = [];
     }
-    this.sim.player.x = this.sim.player.prevX = npc.x;
-    this.sim.player.y = this.sim.player.prevY = npc.y - 0.9;
-    this.sim.player.heading = Math.PI / 2;
-    this.clearArea(npcId);
+    // Stand next to them, on whichever side makes them (not a nearby door) the focus.
+    const p = this.sim.player;
+    for (const [dx, dy] of [[0, -0.9], [0, 0.9], [-0.9, 0], [0.9, 0]] as const) {
+      p.x = p.prevX = npc.x + dx;
+      p.y = p.prevY = npc.y + dy;
+      p.heading = Math.atan2(-dy, -dx);
+      this.clearArea(npcId);
+      this.step(1);
+      if (this.sim.focus?.id === npcId) break;
+    }
     this.step(1, { ...NO_INPUT, interact: true });
     this.closeDialogue();
   }
@@ -259,5 +265,31 @@ describe('Iron Chain arc', () => {
     expect(pl.status('the-pit')).toBe('completed');
     expect(sim.progression.flags['pits-freed']).toBe(true);
     expect(sim.progression.inventory['hush-fragment']).toBe(1);
+  }, 30000);
+});
+
+describe('Verdant Choir arc', () => {
+  it('reads the murals, opens the Founders’ Vault, stops Thorn and earns a fragment', () => {
+    const sim = Simulation.create({ seed: 83, playerName: 'Nova', appearance: APPEARANCE, startMinutes: 21 * 60 });
+    const pl = new Player(sim);
+    playActOne(pl, 'independent');
+    sim.travelTo('oldtown');
+    pl.step(2);
+    expect(sim.districtId).toBe('oldtown');
+    pl.talk('npc-lark');
+    expect(pl.status('founders-vault')).toBe('active');
+    for (const mural of ['Bellfounders’ Tower', 'Drowned Arcade', 'Cistern Steps']) pl.inspect(mural);
+    pl.talk('npc-thorn-acolyte');
+    pl.winBattle();
+    pl.inspect('Founders’ Vault');
+    expect(sim.progression.inventory['hush-fragment']).toBe(1);
+    pl.talk('npc-thorn');
+    pl.winBattle();
+    expect(sim.progression.defeatedTrainers).toContain('npc-thorn');
+    pl.talk('npc-cantor');
+    pl.choose('restraint');
+    expect(pl.status('founders-vault')).toBe('completed');
+    expect(sim.progression.flags['thorn-contained']).toBe(true);
+    expect(sim.npcs.find((n) => n.id === 'npc-thorn')?.present ?? false).toBe(false);
   }, 30000);
 });

@@ -7,7 +7,7 @@ import { Rng, deriveSeed } from '@neon-wilds/sim';
  * only chooses between them. No generative AI.
  */
 export type Instrument = 'pad' | 'bass' | 'arp' | 'lead' | 'kick' | 'snare' | 'hat' | 'openhat';
-export type MoodId = 'title' | 'slums-night' | 'slums-day' | 'downtown' | 'harbor' | 'industrial' | 'battle' | 'chase';
+export type MoodId = 'title' | 'slums-night' | 'slums-day' | 'downtown' | 'harbor' | 'industrial' | 'oldtown' | 'battle' | 'chase';
 
 export interface NoteEvent {
   /** 16th-note step within the bar (0..15). */
@@ -53,6 +53,8 @@ export const MOODS: Record<MoodId, Mood> = {
   downtown: { id: 'downtown', bpm: 112, root: 54, scale: DORIAN, energy: 1, progressions: [[0, 3, 4, 3], [0, 5, 3, 4], [5, 3, 0, 4], [0, 2, 3, 4]], lead: true },
   harbor: { id: 'harbor', bpm: 96, root: 48, scale: MINOR, energy: 1, progressions: [[0, 5, 6, 0], [0, 3, 6, 5], [0, 6, 5, 4]], lead: false },
   industrial: { id: 'industrial', bpm: 116, root: 50, scale: PHRYGIAN, energy: 2, progressions: [[0, 1, 0, 6], [0, 6, 5, 1], [0, 0, 1, 6]], lead: false },
+  // Old Town: slow, modal, hymn-like.
+  oldtown: { id: 'oldtown', bpm: 78, root: 55, scale: DORIAN, energy: 0, progressions: [[0, 3, 4, 0], [0, 6, 3, 4], [5, 3, 4, 0]], lead: true },
   battle: { id: 'battle', bpm: 128, root: 57, scale: MINOR, energy: 2, progressions: MINOR_PROGRESSIONS, lead: true },
   chase: { id: 'chase', bpm: 136, root: 52, scale: PHRYGIAN, energy: 2, progressions: [[0, 1, 0, 6], [0, 1, 5, 6], [0, 6, 5, 1]], lead: false },
 };

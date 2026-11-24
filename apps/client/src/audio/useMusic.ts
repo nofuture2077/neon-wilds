@@ -30,6 +30,7 @@ export function moodFor(s: { screen: string; battle: unknown; hud: { stars: numb
   if (s.hud.district === 'Neon Downtown') return 'downtown';
   if (s.hud.district === 'Harbor District') return 'harbor';
   if (s.hud.district === 'Industrial Zone') return 'industrial';
+  if (s.hud.district === 'Old Town') return 'oldtown';
   return s.hud.isNight ? 'slums-night' : 'slums-day';
 }
 

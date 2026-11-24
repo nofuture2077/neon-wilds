@@ -67,7 +67,7 @@ Perception, memory records and gossip, relationship graph, needs and emotion, HS
 
 ## M5 — Story and content (part 1 ✅, part 2 next)
 
-Part 1 delivered: city graph and Downtown; branching choices; Acts I–III (7 story missions); Saints and Halcyon arcs; four endings with a state-built epilogue. Since then: Harbor and the Compact arc, the Industrial Zone and the Iron Chain arc, keyboard-only battles with auto-advancing text, and **world generation v4**: one seamless city on an irregular orthogonal street plan, with landmarks, avenues, alleys, plazas, parks and docks ([WORLD_GEN.md §8–9](WORLD_GEN.md)). Part 2: Old Town and Outskirts; the Compact, Choir and Iron Chain arcs; side character arcs; the secret ending; the remaining species; vignettes.
+Part 1 delivered: city graph and Downtown; branching choices; Acts I–III (7 story missions); Saints and Halcyon arcs; four endings with a state-built epilogue. Since then: Harbor and the Compact arc, the Industrial Zone and the Iron Chain arc, keyboard-only battles with auto-advancing text, and **world generation v4**: one seamless city on an irregular orthogonal street plan, with landmarks, avenues, alleys, plazas, parks and docks ([WORLD_GEN.md §8–9](WORLD_GEN.md)). Part 2 so far: **Old Town** and the **Verdant Choir arc** (*The Founders' Vault*: murals, the Vault, Thorn's sabotage, the Cantor's choice), five Old Town species, and an Old Town look and music mood. Still to do: the Outskirts and the Hollow (secret ending, Hollowstag), the Choir's and Compact's follow-up questlines, side character arcs, the last 7 species (Arcmoth, Asphalm, Scrapjaw, Spirewing, Kilnback, Fernfox, Grovevix) and vignettes.
 
 
 First: the multi-district city graph and Downtown (carried over from M3/M4), then the narrative.
@@ -90,7 +90,7 @@ Acts I–III, five faction arcs, branching dialogue trees, procedural mission te
 
 ## M7 — Polish
 
-Audio (SFX, ambience, procedural music mixing and leitmotif variation), animation passes, battle VFX, weather FX, accessibility (rebinding, colour-blind-safe UI, text size), performance profiling and pooling, regression and visual tests, balancing, and the replacement art pipeline.
+Audio (SFX, ambience, procedural music mixing and leitmotif variation), animation passes, battle VFX, weather FX, balancing, and the replacement art pipeline.
 
 ## Vertical-slice acceptance mapping
 

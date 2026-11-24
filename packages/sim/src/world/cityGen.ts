@@ -26,7 +26,7 @@ import { Tile, isRoadKind, type TileKind } from './tiles';
 export interface RegionDefinition {
   id: string;
   name: string;
-  style: 'slums' | 'downtown' | 'harbor' | 'industrial';
+  style: 'slums' | 'downtown' | 'harbor' | 'industrial' | 'oldtown';
   /** Anchor in map fractions. */
   anchor: { x: number; y: number };
   /** Block size range, street centre to street centre (tiles). */
@@ -493,7 +493,7 @@ export function generateCity(def: CityDefinition, seed: number): DistrictLayout 
       b.kind = 'docks';
     } else if (inSuper(b)) {
       // Superblocks: a plaza Downtown, a brownfield or a park elsewhere.
-      if (r.style === 'downtown') {
+      if (r.style === 'downtown' || r.style === 'oldtown') {
         fillPlaza(map, rng, tiles, W, addProp);
         b.kind = 'square';
       } else if (r.style === 'industrial' && rng.chance(0.5)) {
@@ -690,6 +690,14 @@ export function generateCity(def: CityDefinition, seed: number): DistrictLayout 
       map.tiles[i] = Tile.Lot;
       map.blocked[i] = 1;
     }
+  }
+  // Props stranded in fenced-off yards go with them.
+  for (let k = props.length - 1; k >= 0; k--) {
+    const p = props[k]!;
+    if (p.solid) continue;
+    let stranded = false;
+    for (let ty = p.y; ty < p.y + p.h; ty++) for (let tx = p.x; tx < p.x + p.w; tx++) if (map.get(tx, ty) === Tile.Lot) stranded = true;
+    if (stranded) props.splice(k, 1);
   }
   // Buildings whose door opens onto a cut-off pocket are fenced off as yards too.
   for (let k = buildings.length - 1; k >= 0; k--) {
