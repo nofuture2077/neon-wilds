@@ -1,4 +1,4 @@
-import { Tile, type TileMap, TILE_SIZE } from '@neon-wilds/sim';
+import { Tile, type TileKind, type TileMap, TILE_SIZE } from '@neon-wilds/sim';
 import { createCanvas, hashNoise, px, rect, type PixelCanvas } from './canvas';
 import { PALETTE as P } from './palette';
 
@@ -8,16 +8,17 @@ const T = TILE_SIZE;
 export const SIDEWALK_VARIANT_BASE = 16;
 export const TILESET_COLUMNS = 32;
 
-/**
- * Map a ground tile to its tileset index. Streets are drawn as smooth vectors on
- * top (RoadRenderer); underneath, plain paving fills the tile corners.
- */
+/** Map a ground tile to its tileset index, picking curb variants from neighbours. */
 export function visualTileIndex(map: TileMap, x: number, y: number): number {
   const kind = map.get(x, y);
-  if (kind === Tile.Sidewalk || kind === Tile.Road || kind === Tile.RoadLineH || kind === Tile.RoadLineV || kind === Tile.CrosswalkH || kind === Tile.CrosswalkV) return SIDEWALK_VARIANT_BASE;
-  // Buildings are sprites turned to their street; underneath, yard paving hides the tile staircase at their corners.
-  if (kind === Tile.Building) return Tile.Plaza;
-  return kind;
+  if (kind !== Tile.Sidewalk) return kind;
+  const roadish = (k: TileKind) => k === Tile.Road || k === Tile.RoadLineH || k === Tile.RoadLineV || k === Tile.CrosswalkH || k === Tile.CrosswalkV;
+  let mask = 0;
+  if (roadish(map.get(x, y - 1))) mask |= 1;
+  if (roadish(map.get(x + 1, y))) mask |= 2;
+  if (roadish(map.get(x, y + 1))) mask |= 4;
+  if (roadish(map.get(x - 1, y))) mask |= 8;
+  return SIDEWALK_VARIANT_BASE + mask;
 }
 
 function speckle(c: CanvasRenderingContext2D, ox: number, seed: number, base: number, light: number, dark: number, density = 0.12) {

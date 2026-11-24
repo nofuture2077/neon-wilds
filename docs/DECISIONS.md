@@ -71,5 +71,8 @@ Only the player's district runs at full fidelity. Others keep their named NPCs, 
 ### ADR-023 — Story gating by flags, items and reputation; endings by explicit conditions
 Missions use `requires`/`requiresFlags`/`blockedByFlags`/`requiresItems`; dialogue options use `when` (flags, notFlags, minRep, anyOf). Every story path is covered by a playthrough test so content changes can't silently strand a player.
 
-### ADR-024 — One seamless city map (world gen v3)
+### ADR-024 — One seamless city map (world gen v3; street geometry superseded by ADR-025)
 All districts are regions of one generated map (`generateCity(VESPER, seed)`), replacing separate district grids and the scene restart on district change. Roads are a planar graph (Gabriel graph + MST + loops, Bézier edges) rasterised to tiles for collision and pathfinding, and drawn as vectors for looks. The layout is regenerated from the seed, never saved; saves from earlier versions migrate by rebuilding the world around the player (story and progression are kept). The cost is a larger simulation, handled with LOD for far NPCs, weighted A* with a retry cooldown, nearby homes and workplaces, and spawning traffic, police and crowds only in a distance band around the player.
+
+### ADR-025 — Orthogonal, irregular street plan (world gen v4)
+Free-angle streets (ADR-024) needed vector roads and rotated, smoothly filtered building sprites, and that broke the crisp pixel-art look. Streets are now axis-aligned, and variety comes from the plan instead: recursive subdivision that does not line up across neighbourhoods, per-district block sizes and regularity, superblocks, dead ends, merged blocks, avenues, alleys, terraces and setbacks. Everything renders from the tileset again. The seamless map, regions, the road graph used by traffic and the validation invariants are unchanged. `Building.angle` stays in the model (always 0) in case it is needed later.

@@ -106,7 +106,13 @@ describe('player driving', () => {
     const sim = newSim(22);
     const { car } = enterNearestParked(sim);
     // Line up with a building front across the street and floor it.
-    const b = sim.layout.buildings.find((x) => x.w >= 5 && x.h >= 5)!;
+    const open = (x: (typeof sim.layout.buildings)[number]) => {
+      const ddx = x.entrance.tx - x.door.tx;
+      const ddy = x.entrance.ty - x.door.ty;
+      for (let k = 0; k <= 7; k++) if (sim.layout.map.isSolid(x.entrance.tx + ddx * k, x.entrance.ty + ddy * k)) return false;
+      return true;
+    };
+    const b = sim.layout.buildings.find((x) => x.w >= 5 && x.h >= 5 && open(x))!;
     const dx = b.entrance.tx - b.door.tx;
     const dy = b.entrance.ty - b.door.ty;
     car.x = car.prevX = sim.player.x = b.entrance.tx + 0.5 + dx * 6;

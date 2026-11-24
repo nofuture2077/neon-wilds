@@ -24,24 +24,31 @@ function flood(map: TileMap, start: number, ok: (x: number, y: number) => boolea
 
 const drivable = (t: number) => t === Tile.Road || t === Tile.CrosswalkH || t === Tile.CrosswalkV;
 
-describe('organic city generator (world gen v3)', () => {
+describe('city generator (world gen v4)', () => {
   for (const seed of [1, 2, 1337]) {
     describe(`seed ${seed}`, () => {
       const city = generateCity(VESPER, seed);
       const { map } = city;
 
-      it('has a connected road network that is not a grid (curved, non-axis-aligned edges)', () => {
+      it('has a connected, orthogonal but irregular street network', () => {
         const start = map.tiles.findIndex((t) => drivable(t));
         const seen = flood(map, start, (x, y) => drivable(map.get(x, y)));
         for (let i = 0; i < map.tiles.length; i++) if (drivable(map.tiles[i]!)) expect(seen[i], `road tile ${i}`).toBe(1);
-        expect(city.graph.edges.length).toBeGreaterThan(40);
-        const diagonal = city.graph.edges.filter((e) => {
+        expect(city.graph.edges.length).toBeGreaterThan(60);
+        // Every street is axis-aligned...
+        for (const e of city.graph.edges) {
           const a = e.points[0]!;
           const b = e.points[e.points.length - 1]!;
-          const ang = Math.abs(Math.atan2(b.y - a.y, b.x - a.x)) % (Math.PI / 2);
-          return ang > 0.2 && ang < Math.PI / 2 - 0.2;
-        });
-        expect(diagonal.length).toBeGreaterThan(city.graph.edges.length / 4);
+          expect(a.x === b.x || a.y === b.y, `edge ${e.id}`).toBe(true);
+        }
+        // ...but not a regular grid: mostly T-junctions, some dead ends, and blocks of many sizes.
+        const deg = (k: number) => city.graph.nodes.filter((n) => n.edges.length === k).length;
+        expect(deg(3)).toBeGreaterThan(deg(4) * 3);
+        expect(deg(1)).toBeGreaterThan(2);
+        const lots = city.blocks.filter((b) => b.kind === 'lots');
+        expect(new Set(lots.map((b) => `${b.w}x${b.h}`)).size).toBeGreaterThan(lots.length * 0.7);
+        expect(city.graph.edges.some((e) => e.avenue)).toBe(true);
+        expect(map.tiles.some((t) => t === Tile.Alley)).toBe(true);
       });
 
       it('connects every pedestrian tile into one network', () => {

@@ -4,7 +4,6 @@ import { buildBuilding } from '../assets/buildings';
 import { TEXTURES, addCanvasTexture } from '../assets/manifest';
 import { visualTileIndex } from '../assets/tiles';
 import { Depth } from './depth';
-import { renderRoads } from './RoadRenderer';
 import type { Lighting } from './lighting';
 
 const T = TILE_SIZE;
@@ -17,7 +16,6 @@ const LAMP_TINTS = [0xffb070, 0xff6fc0, 0x6fe8ff, 0xffb070] as const;
  */
 export function renderCity(scene: Phaser.Scene, layout: DistrictLayout, lighting: Lighting): void {
   renderGround(scene, layout);
-  renderRoads(scene, layout);
   for (const b of layout.buildings) {
     const key = `building-${b.id}`;
     const art = buildBuilding(b, b.region === 'downtown' || b.landmark);

@@ -24,10 +24,11 @@ const region = (d: DistrictDefinition, r: Omit<RegionDefinition, 'id' | 'name' |
 });
 
 /**
- * Vesper City as one seamless map (world generation v3). Each district is a
- * region with its own street grammar: Industrial wide and straight, the Slums
- * winding and tangled, Downtown a rotated near-grid, the Harbor following
- * the coast.
+ * Vesper City as one seamless map (world generation v4). Each district is a
+ * region with its own street grammar on a shared orthogonal plan: Industrial
+ * big yards and brownfields, the Slums small crooked blocks full of dead ends
+ * and alleys, Downtown a near-regular grid with plazas, the Harbor in between
+ * and down to the docks.
  */
 export const VESPER: CityDefinition = {
   id: 'vesper',
@@ -36,9 +37,9 @@ export const VESPER: CityDefinition = {
   height: 170,
   spawnRegion: 'slums',
   regions: [
-    region(INDUSTRIAL, { anchor: { x: 0.16, y: 0.45 }, spacing: 30, jitter: 0.12, angle: 0.12, curviness: 0.15, loops: 0.35, buildingW: [7, 12], buildingH: [6, 9], parkChance: 0.04 }, 'The Furnace Pits'),
-    region(SLUMS, { anchor: { x: 0.4, y: 0.56 }, spacing: 22, jitter: 0.3, angle: -0.35, curviness: 0.5, loops: 0.55, buildingW: [3, 6], buildingH: [3, 5], parkChance: 0.1 }, 'Vesper Courier Co-op'),
-    region(DOWNTOWN, { anchor: { x: 0.63, y: 0.32 }, spacing: 26, jitter: 0.06, angle: 0.42, curviness: 0.04, loops: 0.9, buildingW: [6, 10], buildingH: [5, 8], parkChance: 0.07 }, 'Lumen Spire'),
-    region(HARBOR, { anchor: { x: 0.8, y: 0.66 }, spacing: 24, jitter: 0.2, angle: 0.85, curviness: 0.3, loops: 0.5, buildingW: [5, 8], buildingH: [4, 6], parkChance: 0.04 }, 'Night Market'),
+    region(INDUSTRIAL, { anchor: { x: 0.16, y: 0.45 }, blockSize: [24, 42], regularity: 0.5, merges: 0.15, superblocks: 0.2, deadEnds: 0.35, alleys: 0.15, setbacks: 0.45, terraces: 0.15, wildChance: 0.08, buildingW: [7, 12], buildingH: [6, 9], parkChance: 0.04 }, 'The Furnace Pits'),
+    region(SLUMS, { anchor: { x: 0.4, y: 0.56 }, blockSize: [16, 27], regularity: 0.05, merges: 0.2, superblocks: 0.08, deadEnds: 0.45, alleys: 0.55, setbacks: 0.2, terraces: 0.55, wildChance: 0.06, buildingW: [3, 6], buildingH: [3, 5], parkChance: 0.1 }, 'Vesper Courier Co-op'),
+    region(DOWNTOWN, { anchor: { x: 0.63, y: 0.32 }, blockSize: [19, 30], regularity: 0.7, merges: 0.08, superblocks: 0.15, deadEnds: 0.05, alleys: 0.35, setbacks: 0.12, terraces: 0.7, wildChance: 0, buildingW: [6, 10], buildingH: [5, 8], parkChance: 0.05 }, 'Lumen Spire'),
+    region(HARBOR, { anchor: { x: 0.8, y: 0.66 }, blockSize: [18, 32], regularity: 0.3, merges: 0.15, superblocks: 0.1, deadEnds: 0.35, alleys: 0.3, setbacks: 0.25, terraces: 0.35, wildChance: 0.03, buildingW: [5, 8], buildingH: [4, 6], parkChance: 0.04 }, 'Night Market'),
   ],
 };
