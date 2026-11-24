@@ -20,6 +20,7 @@ export const SKILLS: Record<string, Skill> = Object.fromEntries(
     S({ id: 'smoulder', name: 'Smoulder', type: 'blaze', category: 'status', power: 0, accuracy: 85, status: { kind: 'scorched', chance: 100 }, description: 'Slow-burning embers scorch the target.' }),
     S({ id: 'flare-burst', name: 'Flare Burst', type: 'blaze', category: 'focus', power: 70, accuracy: 95, status: { kind: 'scorched', chance: 15 }, description: 'A burst of flame.' }),
     // Tide
+    S({ id: 'tidal-crush', name: 'Tidal Crush', type: 'tide', category: 'physical', power: 95, accuracy: 90, description: 'The whole harbour leans on the target.' }),
     S({ id: 'splash-jab', name: 'Splash Jab', type: 'tide', category: 'physical', power: 40, accuracy: 100, description: 'A quick wet strike.' }),
     S({ id: 'drain-surge', name: 'Drain Surge', type: 'tide', category: 'focus', power: 60, accuracy: 100, status: { kind: 'soaked', chance: 30 }, description: 'Storm-drain water floods the target. May soak.' }),
     S({ id: 'hydrant-blast', name: 'Hydrant Blast', type: 'tide', category: 'focus', power: 90, accuracy: 85, description: 'High-pressure water. Hard to aim.' }),

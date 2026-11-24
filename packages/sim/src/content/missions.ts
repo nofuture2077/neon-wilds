@@ -502,7 +502,10 @@ export const MISSIONS: MissionDef[] = [
         ],
       },
     ],
-    rewards: [{ type: 'set-flag', flag: 'fragment-iron' }],
+    rewards: [
+      { type: 'set-flag', flag: 'fragment-iron' },
+      { type: 'spawn-npc', npc: 'npc-vik3', near: 'Glow Noodle' },
+    ],
   },
 
 
@@ -599,6 +602,332 @@ export const MISSIONS: MissionDef[] = [
       },
     ],
     rewards: [{ type: 'set-flag', flag: 'fragment-choir' }],
+  },
+
+  // ----------------------------------------------------------------------------------------------
+  // Character arcs (WORLD.md §6).
+
+  // Vik's rivalry: five battles in all, from rival to friend or bitter foe.
+  {
+    id: 'vik-noodles',
+    title: 'Noodles, As Promised',
+    summary: 'Vik is at Glow Noodle, pretending he isn’t waiting for you.',
+    requires: ['the-pit'],
+    giver: 'npc-vik3',
+    offer: ['Oh. It’s you. I wasn’t waiting. I just like this stool.', 'Eat first, fight after. House rules. My house. Well, Mrs. Lin’s house.'],
+    objectives: [
+      { text: 'Spar with Vik outside Glow Noodle', kind: 'defeat', target: 'npc-vik3' },
+      {
+        text: 'Finish the noodles with Vik',
+        kind: 'talk',
+        target: 'npc-vik3',
+        pages: [
+          'Vik slurps loudly and doesn’t look at you. "Everyone at the Pits wants something from me. Hale wants a champion. The crowd wants blood."',
+          '"You just... fight. And then you eat noodles. It’s weird. I like it."',
+        ],
+        onComplete: [
+          {
+            type: 'choice',
+            speaker: 'Vik Torrance',
+            pages: ['"So. Same time next week?"'],
+            options: [
+              {
+                id: 'friend',
+                label: 'Same time next week. Bring a better team.',
+                effects: [
+                  { type: 'set-flag', flag: 'vik-friend' },
+                  { type: 'remember', npc: 'npc-vik3', kind: 'helped', important: true },
+                  { type: 'message', speaker: 'Vik Torrance', pages: ['"...Yeah. Okay. Yeah." He grins like someone who has not done it in a while.'] },
+                ],
+              },
+              {
+                id: 'rival',
+                label: 'Don’t get comfortable. I’m still better than you.',
+                effects: [
+                  { type: 'set-flag', flag: 'vik-rival' },
+                  { type: 'message', speaker: 'Vik Torrance', pages: ['"Ha! There it is." He pays for both bowls and leaves without saying goodbye.'] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    rewards: [{ type: 'give-money', amount: 150 }],
+  },
+  {
+    id: 'vik-high-ground',
+    title: 'High Ground',
+    summary: 'Vik wants a rematch on the Lumen Spire plaza. He says he has a sponsor now.',
+    requires: ['vik-noodles'],
+    giver: 'npc-vik3',
+    offer: ['Downtown. Lumen Spire plaza. Tonight. I’ve got new gear, courier — a sponsor.', 'Don’t make that face. Everybody’s got a sponsor.'],
+    onStart: [{ type: 'spawn-npc', npc: 'npc-vik4', near: 'Lumen Spire' }],
+    objectives: [
+      { text: 'Meet Vik on the Lumen Spire plaza (Downtown)', kind: 'defeat', target: 'npc-vik4' },
+      {
+        text: 'Ask Vik about his sponsor',
+        kind: 'talk',
+        target: 'npc-vik4',
+        pages: [
+          '"Halcyon. Lab 7. They want me in a commercial. And they want my team... upgraded. Little chips. Behind the ear."',
+          '"They say the Wildlings won’t feel a thing. They say I’d never lose again."',
+        ],
+        onComplete: [
+          {
+            type: 'choice',
+            speaker: 'Vik Torrance',
+            pages: ['"Tell me I’m an idiot. Or don’t."'],
+            options: [
+              {
+                id: 'talk-down',
+                label: 'You saw the tethered fighters in the Pits. Don’t do that to your team.',
+                when: { flags: ['vik-friend'] },
+                effects: [
+                  { type: 'set-flag', flag: 'vik-clean' },
+                  { type: 'reputation', faction: 'halcyon', delta: -5 },
+                  { type: 'message', speaker: 'Vik Torrance', pages: ['He’s quiet for a long time. Then he tears the Halcyon contract in half. "Hale’s going to love this."'] },
+                ],
+              },
+              {
+                id: 'let-him',
+                label: 'Your team, your call.',
+                effects: [
+                  { type: 'set-flag', flag: 'vik-sponsored' },
+                  { type: 'message', speaker: 'Vik Torrance', pages: ['"Right. My call." He pockets the contract. He doesn’t look happy about it.'] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    rewards: [{ type: 'despawn-npc', npc: 'npc-vik4' }],
+  },
+  {
+    id: 'vik-title',
+    title: 'Title Night',
+    summary: 'The Furnace Pits championship: you against Vik, for the belt and for whatever comes after.',
+    requires: ['vik-high-ground'],
+    giver: 'npc-vik3',
+    offer: ['Title night at the Pits. Hale says the winner keeps the belt.', 'Last time, courier. Everything I’ve got.'],
+    onStart: [{ type: 'spawn-npc', npc: 'npc-vik5', near: 'The Furnace Pits' }],
+    objectives: [
+      { text: 'Fight Vik for the title at the Furnace Pits (Industrial Zone)', kind: 'defeat', target: 'npc-vik5' },
+      {
+        text: 'Talk to Vik after the fight',
+        kind: 'talk',
+        target: 'npc-vik5',
+        pages: ['The crowd is still roaring. Vik sits on the edge of the pit with his team curled around him.'],
+        onComplete: [
+          {
+            type: 'choice',
+            speaker: 'Vik Torrance',
+            pages: ['He looks up at you.'],
+            options: [
+              {
+                id: 'friends',
+                label: 'Good fight, partner.',
+                when: { flags: ['vik-clean'] },
+                effects: [
+                  { type: 'set-flag', flag: 'vik-ally' },
+                  { type: 'reputation', faction: 'iron-chain', delta: 10 },
+                  { type: 'remember', npc: 'npc-vik5', kind: 'helped', important: true },
+                  { type: 'message', speaker: 'Vik Torrance', pages: ['"Partner. Huh." He laughs. "When you go up against whoever’s behind those chips, I’m coming. Don’t argue."'] },
+                ],
+              },
+              {
+                id: 'bitter',
+                label: 'Your chips didn’t help.',
+                when: { notFlags: ['vik-clean'] },
+                effects: [
+                  { type: 'set-flag', flag: 'vik-bitter' },
+                  { type: 'message', speaker: 'Vik Torrance', pages: ['"No. They didn’t." He doesn’t look at you, or at his team. "Get out of my pit."'] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    rewards: [{ type: 'give-money', amount: 600 }],
+  },
+
+  // Juno's courage.
+  {
+    id: 'juno-stray',
+    title: 'Knock Knock',
+    summary: 'Juno Park is hiding a stray Fizzlet, and Halcyon’s recall agents are going door to door.',
+    requires: ['everyone-wants-it'],
+    giver: 'npc-juno',
+    offer: [
+      'Please don’t tell anyone. There’s a Fizzlet in my kitchen. It was hurt, and it’s so small, and I...',
+      'Halcyon is doing a "recall drive". An agent is working down the street toward my door. I can’t talk to people like that. Can you?',
+    ],
+    onStart: [{ type: 'spawn-npc', npc: 'npc-recall', near: 'Halcyon Outreach Kiosk' }],
+    objectives: [
+      { text: 'Stop the Halcyon recall agent near the Outreach Kiosk', kind: 'defeat', target: 'npc-recall' },
+      {
+        text: 'Tell Juno the street is clear',
+        kind: 'talk',
+        target: 'npc-juno',
+        pages: ['Juno opens the door a crack. The Fizzlet is asleep in a teacup on her shoulder, sparking softly.', '"Is it over? What do I do now?"'],
+        onComplete: [
+          { type: 'despawn-npc', npc: 'npc-recall' },
+          {
+            type: 'choice',
+            speaker: 'Juno Park',
+            pages: ['"I could keep it. Or the Saints could take it somewhere safe. Or... I could just hand it in, before someone gets hurt."'],
+            options: [
+              {
+                id: 'keep',
+                label: 'Keep it. You’re braver than you think.',
+                effects: [
+                  { type: 'set-flag', flag: 'juno-brave' },
+                  { type: 'reputation', faction: 'saints', delta: 6 },
+                  { type: 'reputation', faction: 'halcyon', delta: -5 },
+                  { type: 'remember', npc: 'npc-juno', kind: 'helped', important: true },
+                  { type: 'message', speaker: 'Juno Park', pages: ['"Braver than I think." She tries the words out. "Okay. Okay! Its name is Teacup."'] },
+                ],
+              },
+              {
+                id: 'saints',
+                label: 'Let the Saints take it somewhere safe.',
+                effects: [
+                  { type: 'set-flag', flag: 'juno-safe' },
+                  { type: 'reputation', faction: 'saints', delta: 4 },
+                  { type: 'remember', npc: 'npc-juno', kind: 'helped', important: true },
+                  { type: 'message', speaker: 'Juno Park', pages: ['"That’s... sensible. Thank you." She looks relieved and a little sad.'] },
+                ],
+              },
+              {
+                id: 'surrender',
+                label: 'Hand it in before you get hurt.',
+                effects: [
+                  { type: 'set-flag', flag: 'juno-afraid' },
+                  { type: 'reputation', faction: 'halcyon', delta: 5 },
+                  { type: 'message', speaker: 'Juno Park', pages: ['"Right. Of course." She closes the door very quietly.'] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    rewards: [],
+  },
+
+  // Bram's experiments.
+  {
+    id: 'bram-readings',
+    title: 'Field Readings',
+    summary: 'Bram Kestrel wants the hum measured at three very different places, to build something.',
+    requires: ['everyone-wants-it'],
+    giver: 'npc-bram',
+    offer: [
+      'The hum has a shape, courier. If I can measure it in three places — new grid, old grid, no grid — I can build its opposite.',
+      'The Outreach Kiosk here, the old substation in Old Town, and that lighthouse out in the marsh. Hold the Glitchling up to each. It’ll know what to do.',
+    ],
+    objectives: [
+      {
+        text: 'Take a reading at the Halcyon Outreach Kiosk (The Slums)',
+        kind: 'inspect',
+        target: 'Halcyon Outreach Kiosk',
+        onComplete: [{ type: 'message', speaker: 'Reading', pages: ['The Glitchling flickers in a tight, anxious rhythm. New grid: loud, clean, relentless.'] }],
+      },
+      {
+        text: 'Take a reading at the Old Town Substation',
+        kind: 'inspect',
+        target: 'Old Town Substation',
+        onComplete: [{ type: 'message', speaker: 'Reading', pages: ['Here the hum is older and slower, like something that has been singing so long it forgot the words.'] }],
+      },
+      {
+        text: 'Take a reading at the Marsh Lighthouse (The Outskirts)',
+        kind: 'inspect',
+        target: 'Marsh Lighthouse',
+        onComplete: [
+          {
+            type: 'message',
+            speaker: 'Reading',
+            pages: ['The Glitchling goes quiet, then hums a note of its own. Up the lighthouse wall, the fresh V.C.T. cable buzzes back at it — a backup transmitter, hidden out here.'],
+          },
+        ],
+      },
+      {
+        text: 'Bring the readings to Bram Kestrel (The Slums)',
+        kind: 'talk',
+        target: 'npc-bram',
+        pages: [
+          'Bram spreads the readings across his workbench and laughs out loud. "It’s a ring. A closed loop. And every loop has a counter-note."',
+          'He hands you a tuning fork made from a bent street-lamp bracket. "Strike it near the grid controller. Not to break it — to retune it."',
+        ],
+        onComplete: [
+          { type: 'give-item', item: 'tuning-fork', qty: 1 },
+          { type: 'set-flag', flag: 'bram-fork' },
+          { type: 'remember', npc: 'npc-bram', kind: 'helped', important: true },
+        ],
+      },
+    ],
+    rewards: [{ type: 'give-money', amount: 200 }],
+  },
+
+  // The Harbor legend.
+  {
+    id: 'drowned-ferry',
+    title: 'The Drowned Ferry',
+    summary: 'Captain Danso has heard Saltmaw is real, and asleep in a ferry that sank at the old berths.',
+    requires: ['cargo'],
+    giver: 'npc-danso',
+    offer: [
+      'Every sailor in the Drowned Bell swears they’ve seen Saltmaw. Usually around the fourth drink.',
+      'But my divers came back white as paper last week. Something huge, asleep in the old ferry wreck. Find out what. Quietly.',
+    ],
+    objectives: [
+      {
+        text: 'Ask around Fishmonger Row (Harbor District)',
+        kind: 'inspect',
+        target: 'Fishmonger Row',
+        onComplete: [{ type: 'message', speaker: 'Old fishmonger', pages: ['"The Marisol? Sank at berth nine before the Lighting. Nets still come up torn there. Torn from the inside."'] }],
+      },
+      {
+        text: 'Find the Marisol in the Compact’s ledgers',
+        kind: 'inspect',
+        target: 'Compact Counting House',
+        onComplete: [{ type: 'message', speaker: 'Compact ledger', pages: ['"Ferry MARISOL — lost at berth 9, all hands safe. Cargo: none. Note in the margin, older ink: ‘Do not dredge. It is sleeping.’"'] }],
+      },
+      {
+        text: 'Go down to berth nine behind the Container Yard Office',
+        kind: 'inspect',
+        target: 'Container Yard Office',
+        onComplete: [
+          { type: 'message', speaker: 'Berth nine', pages: ['The water at berth nine is very still. Then it isn’t. A shape like a sunken hull lifts out of the harbour — and opens its eyes.'] },
+          { type: 'spawn-quest-wildling', species: 'saltmaw', level: 36, tag: 'saltmaw' },
+        ],
+      },
+      {
+        text: 'Face Saltmaw',
+        kind: 'resolve-tag',
+        target: 'saltmaw',
+        onComplete: [
+          {
+            type: 'message',
+            speaker: 'Saltmaw',
+            pages: ['Saltmaw sinks back beneath the surface, slow and unhurried, as if it has seen everything it needed to see. A ring of bubbles spreads across the harbour.'],
+          },
+        ],
+      },
+      {
+        text: 'Report to Captain Danso',
+        kind: 'talk',
+        target: 'npc-danso',
+        pages: ['"Real. It’s real." Danso closes her ledger very gently. "Then the harbour has a guardian, and nobody — not Halcyon, not us — dredges berth nine. Ever."'],
+        onComplete: [
+          { type: 'reputation', faction: 'compact', delta: 12 },
+          { type: 'set-flag', flag: 'saltmaw-found' },
+        ],
+      },
+    ],
+    rewards: [{ type: 'give-money', amount: 500 }],
   },
 
   // ----------------------------------------------------------------------------------------------
@@ -714,7 +1043,7 @@ export const MISSIONS: MissionDef[] = [
               {
                 id: 'chorus',
                 label: 'Retune the grid with the Glitchling — let humans and Wildlings share the city.',
-                when: { notFlags: ['act1-sold'], anyOf: [{ flags: ['wren-turned'] }, { flags: ['pits-freed'] }, { flags: ['thorn-contained'] }, { minRep: { saints: 30 } }] },
+                when: { notFlags: ['act1-sold'], anyOf: [{ flags: ['wren-turned'] }, { flags: ['pits-freed'] }, { flags: ['thorn-contained'] }, { flags: ['vik-ally'] }, { flags: ['bram-fork'] }, { minRep: { saints: 30 } }] },
                 effects: [{ type: 'ending', id: 'chorus' }],
               },
               {

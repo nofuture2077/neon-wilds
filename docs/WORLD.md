@@ -217,6 +217,8 @@ The epilogue is a slideshow per district and per main character, assembled from 
 
 - **Faction questlines:** 6–8 missions per faction beyond the Act II arc, ending in a faction rank-5 finale.
 - **Character arcs:** Vik's rivalry (5 battles, from enemy to friend or bitter foe); Juno's courage (protect her or not); Bram's experiments; the Wren confession.
+
+> **Implemented (M5 part 2):** Vik (*Noodles, As Promised*, *High Ground*, *Title Night*: a friend who joins the finale, or a bitter foe on Halcyon chips), Juno (*Knock Knock*: keep the stray, give it to the Saints, or hand it in), Bram (*Field Readings*: the tuning fork, which counts toward The Chorus), and the Harbor legend (*The Drowned Ferry*: Saltmaw at berth nine). The Wren confession is part of Act II.
 - **Procedural activities:** see GDD §9 and AI.md §8.
 - **World events:** rain floods (Tide surge), blackouts (Spark frenzy, crime spike), Halcyon recall drives, pit tournaments, Night Market auctions, Choir processions, Warden crackdowns, faction raids.
 - **Secrets:** 8 murals, 12 hidden Wildling nests, tunnel maps, the "VESPER WELCOMES YOU" sign, Kit's secret door, Pell's ledger.

@@ -90,6 +90,7 @@ export const INDUSTRIAL_NPCS: NpcDefinition[] = [
   { id: 'npc-sarr', name: 'Ines "Ledger" Sarr', archetype: 'chain-enforcer', stationary: true, post: 'The Furnace Pits', appearance: { skin: s(4), hair: 0x111111, top: 0x6b705c, bottom: 0x1f1f28 } },
   { id: 'npc-pit1', name: 'Pit Fighter Grit', archetype: 'chain-enforcer', spawn: 'mission', stationary: true, appearance: { skin: s(2), hair: 0xc1440e, top: 0x3a3a3a, bottom: 0x1c1c24 } },
   { id: 'npc-pit2', name: 'Pit Fighter Mags', archetype: 'chain-enforcer', spawn: 'mission', stationary: true, appearance: { skin: s(0), hair: 0xd7d7d7, top: 0x7d1f2c, bottom: 0x1c1c24 } },
+  { id: 'npc-vik5', name: 'Vik Torrance', archetype: 'rival-trainer', spawn: 'mission', stationary: true, appearance: { skin: s(2), hair: 0xff6b35, top: 0x7d1f2c, bottom: 0x1c1c24 } },
   { id: 'npc-vik2', name: 'Vik Torrance', archetype: 'rival-trainer', spawn: 'mission', stationary: true, appearance: { skin: s(2), hair: 0xff6b35, top: 0x3a3a3a, bottom: 0x1c1c24 } },
   { id: 'npc-in-dale', name: 'Dale Okonkwo', archetype: 'factory-worker', appearance: { skin: s(4), hair: 0x111111, top: 0x5c7a99, bottom: 0x2f3e46 } },
   { id: 'npc-in-petra', name: 'Petra Novak', archetype: 'factory-worker', appearance: { skin: s(0), hair: 0xa0522d, top: 0x8d6e63, bottom: 0x22333b } },

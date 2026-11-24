@@ -528,6 +528,19 @@ const DRAW: Record<string, Draw> = {
     g.r(9.6, 4.6 + b, 1.4, 2.2, 0x5a3a2e);
     g.p(9.8, 3.8 + b, 0x8a8a96);
   },
+  saltmaw(g, f) {
+    const b = f ? 0.3 : 0;
+    g.e(8, 15, 6.4, 0.8, 0x000000);
+    g.eo(8, 10.4 + b, 6.6, 4, 0x2a4a5a);
+    // a living reef: barnacles, weed and a hull plank
+    g.r(2.6, 8 + b, 10, 0.8, 0x5a4636);
+    for (const [x, y] of [[3.6, 10], [6, 12], [10.4, 11.6], [12.4, 9.4], [8.4, 9]] as const) g.e(x, y + b, 0.8, 0.6, 0xd8d0c0);
+    for (const x of [4, 7, 11]) g.r(x, 6.4 + b, 0.6, 2, 0x3d6b34);
+    g.e(8, 12.8 + b, 3.2, 0.9, 0x10202a);
+    for (const x of [6, 8, 10]) g.p(x, 12.4 + b, 0xe9e4f5);
+    eye(g, 5.6, 9.6 + b, 0x7ff6ff);
+    eye(g, 10.4, 9.6 + b, 0x7ff6ff);
+  },
   glitchling(g, f) {
     const hover = f ? -0.6 : 0;
     const glitch = f ? 1 : -1;

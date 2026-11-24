@@ -334,3 +334,87 @@ describe('The Hollow (secret ending)', () => {
     expect(pl.log.find((e) => e.type === 'game.ending')).toMatchObject({ ending: 'the-hollow', title: 'The Hollow' });
   }, 30000);
 });
+
+describe('character arcs', () => {
+  function playPit(pl: Player) {
+    pl.sim.travelTo('industrial');
+    pl.step(2);
+    pl.talk('npc-hale');
+    for (const fighter of ['npc-pit1', 'npc-pit2', 'npc-vik2']) {
+      pl.talk(fighter);
+      pl.winBattle();
+    }
+    pl.talk('npc-hale');
+    pl.choose('dignity');
+    expect(pl.status('the-pit')).toBe('completed');
+  }
+
+  it('Vik: five battles in all, and a friend for the finale', () => {
+    const sim = Simulation.create({ seed: 91, playerName: 'Nova', appearance: APPEARANCE, startMinutes: 20 * 60 });
+    const pl = new Player(sim);
+    playActOne(pl, 'independent');
+    playPit(pl);
+    pl.talk('npc-vik3');
+    expect(pl.status('vik-noodles')).toBe('active');
+    pl.talk('npc-vik3');
+    pl.winBattle();
+    pl.talk('npc-vik3');
+    pl.choose('friend');
+    expect(pl.status('vik-noodles')).toBe('completed');
+
+    pl.talk('npc-vik3');
+    expect(pl.status('vik-high-ground')).toBe('active');
+    pl.talk('npc-vik4');
+    pl.winBattle();
+    pl.talk('npc-vik4');
+    pl.choose('talk-down');
+    expect(sim.progression.flags['vik-clean']).toBe(true);
+
+    pl.talk('npc-vik3');
+    expect(pl.status('vik-title')).toBe('active');
+    pl.talk('npc-vik5');
+    pl.winBattle();
+    pl.talk('npc-vik5');
+    expect(sim.pendingChoice?.options.map((o) => o.id)).toEqual(['friends']);
+    pl.choose('friends');
+    expect(pl.status('vik-title')).toBe('completed');
+    expect(sim.progression.flags['vik-ally']).toBe(true);
+    for (const v of ['npc-vik2', 'npc-vik3', 'npc-vik4', 'npc-vik5']) expect(sim.progression.defeatedTrainers).toContain(v);
+  }, 30000);
+
+  it('Juno and Bram: the recall drive and the field readings', () => {
+    const sim = Simulation.create({ seed: 92, playerName: 'Nova', appearance: APPEARANCE, startMinutes: 20 * 60 });
+    const pl = new Player(sim);
+    playActOne(pl, 'independent');
+    pl.talk('npc-juno');
+    expect(pl.status('juno-stray')).toBe('active');
+    pl.talk('npc-recall');
+    pl.winBattle();
+    pl.talk('npc-juno');
+    pl.choose('keep');
+    expect(pl.status('juno-stray')).toBe('completed');
+    expect(sim.progression.flags['juno-brave']).toBe(true);
+
+    pl.talk('npc-bram');
+    expect(pl.status('bram-readings')).toBe('active');
+    for (const place of ['Halcyon Outreach Kiosk', 'Old Town Substation', 'Marsh Lighthouse']) pl.inspect(place);
+    pl.talk('npc-bram');
+    expect(pl.status('bram-readings')).toBe('completed');
+    expect(sim.progression.inventory['tuning-fork']).toBe(1);
+  }, 30000);
+
+  it('Saltmaw: the drowned ferry at berth nine', () => {
+    const sim = Simulation.create({ seed: 93, playerName: 'Nova', appearance: APPEARANCE, startMinutes: 22 * 60 });
+    const pl = new Player(sim);
+    playActOne(pl, 'independent');
+    playCargo(pl, 'leverage');
+    pl.talk('npc-danso');
+    expect(pl.status('drowned-ferry')).toBe('active');
+    for (const place of ['Fishmonger Row', 'Compact Counting House', 'Container Yard Office']) pl.inspect(place);
+    pl.resolveQuestWildling('saltmaw');
+    pl.talk('npc-danso');
+    expect(pl.status('drowned-ferry')).toBe('completed');
+    expect(sim.progression.flags['saltmaw-found']).toBe(true);
+    expect(sim.progression.index.seen).toContain('saltmaw');
+  }, 30000);
+});
