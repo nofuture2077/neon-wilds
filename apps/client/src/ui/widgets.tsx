@@ -1,3 +1,4 @@
+import { hpColour } from '../settings';
 import { ELEMENT_COLORS, type ElementType, type StatusKind } from '@neon-wilds/sim';
 import { css } from '../game/assets/canvas';
 import { buildCreatureSheet } from '../game/assets/creatures';
@@ -64,7 +65,7 @@ export function StatusBadge({ status }: { status: StatusKind | null }) {
 
 export function HpBar({ hp, max, wide = false }: { hp: number; max: number; wide?: boolean }) {
   const pct = Math.max(0, Math.min(1, hp / Math.max(1, max)));
-  const color = pct > 0.5 ? '#4fffb0' : pct > 0.2 ? '#ffd23f' : '#ff4f5e';
+  const color = hpColour(pct);
   return (
     <div className={`h-2 ${wide ? 'w-full' : 'w-32'} border border-black bg-night-950`}>
       <div className="h-full transition-[width] duration-500" style={{ width: `${pct * 100}%`, background: color }} />

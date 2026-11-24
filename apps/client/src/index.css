@@ -15,6 +15,12 @@
   --color-neon-green: #4fffb0;
 }
 
+/* Colour-blind friendly palette: no red/green pairs for meaning. */
+html[data-palette='cb'] {
+  --color-neon-green: #3fa9ff;
+  --color-neon-pink: #ff8a00;
+}
+
 html,
 body,
 #root {

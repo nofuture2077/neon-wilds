@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { type GameAction, keysFor } from '../../settings';
 
 export interface FrameInput {
   moveX: number;
@@ -18,15 +19,16 @@ const STICK_DEADZONE = 0.2;
  * Maps keyboard and gamepad to abstract per-frame intent. Gameplay code never
  * looks at physical keys, so rebinding and new devices only touch this file.
  *
- * Keyboard: WASD / arrows move, Shift runs (handbrake in cars), E / Space / Enter interacts, F enters/exits vehicles, Esc pauses.
+ * Keyboard bindings come from settings (rebindable; arrows, Enter/Space and Esc always work).
  * Gamepad (standard mapping): left stick / d-pad move, A interacts, B or RT runs, Y enters/exits vehicles, Start pauses.
  */
 export class InputMapper {
-  private readonly keys: Record<string, Phaser.Input.Keyboard.Key>;
+  /** Physical keys currently held (KeyboardEvent.code). */
+  private readonly held = new Set<string>();
   private prevPadConfirm = false;
   private prevPadPause = false;
-  // Edge-triggered actions are latched from keydown events: Phaser's JustDown
-  // loses presses that start and end within a single frame (fast taps).
+  // Edge-triggered actions are latched from keydown events, so presses that start and end
+  // within a single frame (fast taps) are never lost.
   private latchedConfirm = false;
   private latchedPause = false;
   private latchedAction = false;
@@ -35,40 +37,32 @@ export class InputMapper {
   constructor(private readonly scene: Phaser.Scene) {
     const kb = scene.input.keyboard;
     if (!kb) throw new Error('Keyboard input unavailable');
-    const K = Phaser.Input.Keyboard.KeyCodes;
-    this.keys = kb.addKeys({
-      up: K.W,
-      down: K.S,
-      left: K.A,
-      right: K.D,
-      up2: K.UP,
-      down2: K.DOWN,
-      left2: K.LEFT,
-      right2: K.RIGHT,
-      run: K.SHIFT,
-      interact: K.E,
-      space: K.SPACE,
-      enter: K.ENTER,
-      esc: K.ESC,
-    }, false /* no key capture: focused DOM buttons (menus, battle) must receive Enter/Space/arrows */) as Record<string, Phaser.Input.Keyboard.Key>;
+    // No key capture: focused DOM buttons (menus, battle) must still receive Enter/Space/arrows.
     kb.clearCaptures();
-
     const onKeyDown = (ev: KeyboardEvent) => {
+      this.held.add(ev.code);
       if (ev.repeat) return;
-      if (ev.code === 'KeyE' || ev.code === 'Space' || ev.code === 'Enter' || ev.code === 'NumpadEnter') this.latchedConfirm = true;
-      if (ev.code === 'Escape') this.latchedPause = true;
-      if (ev.code === 'KeyF') this.latchedAction = true;
+      if (keysFor('interact').includes(ev.code)) this.latchedConfirm = true;
+      if (keysFor('pause').includes(ev.code) || ev.code === 'Escape') this.latchedPause = true;
+      if (keysFor('vehicle').includes(ev.code)) this.latchedAction = true;
     };
+    const onKeyUp = (ev: KeyboardEvent) => this.held.delete(ev.code);
+    const onBlur = () => this.held.clear();
     kb.on('keydown', onKeyDown);
-    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => kb.off('keydown', onKeyDown));
+    kb.on('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      kb.off('keydown', onKeyDown);
+      kb.off('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
+    });
   }
 
   read(): FrameInput {
-    const k = this.keys;
-    const down = (name: string) => k[name]?.isDown ?? false;
+    const down = (action: GameAction) => keysFor(action).some((code) => this.held.has(code));
 
-    let moveX = (down('right') || down('right2') ? 1 : 0) - (down('left') || down('left2') ? 1 : 0);
-    let moveY = (down('down') || down('down2') ? 1 : 0) - (down('up') || down('up2') ? 1 : 0);
+    let moveX = (down('right') ? 1 : 0) - (down('left') ? 1 : 0);
+    let moveY = (down('down') ? 1 : 0) - (down('up') ? 1 : 0);
     let run = down('run');
     let confirm = this.latchedConfirm;
     let pause = this.latchedPause;

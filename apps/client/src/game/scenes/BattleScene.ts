@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { flash, shake } from '../cameraFx';
 import { ELEMENT_COLORS, type BattleLog, type ElementType, type StatusKind } from '@neon-wilds/sim';
 import { useGameStore } from '../../state/gameStore';
 import { TEXTURES } from '../assets/manifest';
@@ -177,7 +178,7 @@ export class BattleScene extends Phaser.Scene {
         s.setTintFill(0xffffff);
         this.time.delayedCall(90, () => s.clearTint());
         this.tweens.add({ targets: s, x: this.home(e.side).x + 8, duration: 50, yoyo: true, repeat: 3 });
-        if (e.crit || e.effectiveness > 1) this.cameras.main.shake(160, 0.01);
+        if (e.crit || e.effectiveness > 1) shake(this.cameras.main, 160, 0.01);
         break;
       }
       case 'miss': {
@@ -246,7 +247,7 @@ export class BattleScene extends Phaser.Scene {
         }
         break;
       case 'evolve': {
-        this.cameras.main.flash(500, 255, 255, 255);
+        flash(this.cameras.main, 500, 255, 255, 255);
         this.time.delayedCall(250, () => this.syncSpecies(true));
         break;
       }

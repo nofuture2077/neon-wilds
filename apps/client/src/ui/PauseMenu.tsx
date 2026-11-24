@@ -3,6 +3,7 @@ import { type PauseTab, setAutoAdvance, useGameStore } from '../state/gameStore'
 import { type SlotInfo, listSaves, slotLabel, writeSave } from '../services/saves';
 import { SLOTS, type SlotId, formatPlayTime } from '../services/saveFormat';
 import { saveMusicVolume } from '../audio/useMusic';
+import { AccessibilityPanel } from './AccessibilityPanel';
 import { ControlsPanel } from './ControlsPanel';
 import { FactionsTab } from './FactionsTab';
 import { RecordsTab } from './RecordsTab';
@@ -341,6 +342,7 @@ function OptionsTab() {
         </button>
         <p className="mt-2 font-term text-lg text-slate-400">Decisions and menus always wait for you. Press E to skip ahead.</p>
       </div>
+      <AccessibilityPanel />
       <ControlsPanel />
     </div>
   );

@@ -1,3 +1,4 @@
+import { getSettings, keyLabel } from '../settings';
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '../state/gameStore';
 import { useGamepadNav } from './useGamepadNav';
@@ -42,7 +43,7 @@ export function DialogueBox() {
           <span>
             {dialogue.pages.length > 1 ? `${dialogue.page + 1}/${dialogue.pages.length}` : ''}
           </span>
-          <span className="blink">{showChoices ? 'choose' : last ? '[E] close' : '[E] ▾'}</span>
+          <span className="blink">{showChoices ? 'choose' : last ? `[${keyLabel(getSettings().bindings.interact)}] close` : `[${keyLabel(getSettings().bindings.interact)}] ▾`}</span>
         </div>
       </button>
       {showChoices && (

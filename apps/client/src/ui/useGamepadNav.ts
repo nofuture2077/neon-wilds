@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { getSettings } from '../settings';
 
 /**
  * Lets a controller drive menu screens: d-pad / left stick moves focus across
@@ -47,7 +48,7 @@ export function useGamepadNav(enabled = true): void {
       const onNav = !!active?.matches('[data-nav]');
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') move(1);
       else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') move(-1);
-      else if ((e.key === 'e' || e.key === 'E') && onNav && active?.tagName !== 'INPUT') active!.click(); // E = confirm, like the game
+      else if (e.code === getSettings().bindings.interact && onNav && active?.tagName !== 'INPUT') active!.click(); // the interact key confirms, like the game
       else if (e.key === 'Enter' && !onNav) {
         // Nothing focused yet: Enter focuses the first option instead of being lost.
         (document.querySelector<HTMLElement>('[data-nav]:not([disabled])') ?? null)?.focus();

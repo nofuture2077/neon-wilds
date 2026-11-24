@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { getSettings, keyLabel } from '../../settings';
+import { flash, shake } from '../cameraFx';
 import {
   DT,
   NO_INPUT,
@@ -308,10 +310,10 @@ export class WorldScene extends Phaser.Scene {
         this.barks.show(event.actorId, event.text, event.emote);
         break;
       case 'npc.shoved':
-        this.cameras.main.shake(90, 0.004);
+        shake(this.cameras.main, 90, 0.004);
         break;
       case 'vehicle.crash':
-        if (event.vehicleId === this.sim.player.vehicleId) this.cameras.main.shake(120, Math.min(0.02, event.impact * 0.0025));
+        if (event.vehicleId === this.sim.player.vehicleId) shake(this.cameras.main, 120, Math.min(0.02, event.impact * 0.0025));
         break;
       case 'vehicle.honk':
         this.barks.show(event.vehicleId, 'HONK!', 'anger');
@@ -321,8 +323,8 @@ export class WorldScene extends Phaser.Scene {
         else if (event.how === 'stolen') store.pushToast('You hot-wired the car.', 'warning');
         break;
       case 'vehicle.exploded': {
-        this.cameras.main.shake(300, 0.012);
-        this.cameras.main.flash(180, 255, 160, 60);
+        shake(this.cameras.main, 300, 0.012);
+        flash(this.cameras.main, 180, 255, 160, 60);
         break;
       }
       case 'district.entered': {
@@ -332,7 +334,7 @@ export class WorldScene extends Phaser.Scene {
       case 'wanted.changed':
         if (event.stars > 0) {
           store.pushToast(`Wanted: ${'\u2605'.repeat(event.stars)}`, 'warning');
-          this.cameras.main.flash(120, 60, 90, 255);
+          flash(this.cameras.main, 120, 60, 90, 255);
         }
         break;
       case 'territory.changed': {
@@ -575,11 +577,11 @@ export class WorldScene extends Phaser.Scene {
     const focus = sim.focus;
     const driving = sim.playerVehicle;
     let prompt: string | null = null;
-    let promptKey = 'E';
+    let promptKey = keyLabel(getSettings().bindings.interact);
     if (driving) {
       if (Math.abs(driving.speed) < 3) {
         prompt = 'Get out';
-        promptKey = 'F';
+        promptKey = keyLabel(getSettings().bindings.vehicle);
       }
     } else if (focus) {
       prompt = focus.kind === 'npc' ? `Talk to ${focus.label}` : focus.kind === 'spot' ? `Look: ${focus.label}` : `Visit ${focus.label}`;
@@ -587,7 +589,7 @@ export class WorldScene extends Phaser.Scene {
       const car = sim.nearbyVehicle();
       if (car) {
         prompt = car.driver === 'ai' ? 'Carjack' : car.stolen ? 'Get in' : 'Steal car';
-        promptKey = 'F';
+        promptKey = keyLabel(getSettings().bindings.vehicle);
       }
     }
     useGameStore.getState().setHud({

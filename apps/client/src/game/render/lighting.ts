@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TEXTURES } from '../assets/manifest';
 import { Depth } from './depth';
+import { getSettings } from '../../settings';
 
 /**
  * Darkness (0 = full day, 1 = deepest night) for a time of day in minutes.
@@ -75,7 +76,7 @@ export class Lighting {
         continue;
       }
       let a = l.dayStrength + (l.strength - l.dayStrength) * darkness;
-      if (l.flicker > 0) {
+      if (l.flicker > 0 && !getSettings().reduceFlashing) {
         // Occasional stutter, like a failing neon transformer.
         const s = Math.sin(t * 2.1 + l.phase) * Math.sin(t * 5.3 + l.phase * 2);
         if (s > 1 - l.flicker) a *= 0.25;

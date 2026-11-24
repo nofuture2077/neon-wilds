@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../state/gameStore';
 import { readSave } from '../services/saves';
 import type { SlotId } from '../services/saveFormat';
+import { AccessibilityPanel } from './AccessibilityPanel';
 import { ControlsPanel } from './ControlsPanel';
 import { LoadMenu, latestSave } from './LoadMenu';
 import { useGamepadNav } from './useGamepadNav';
@@ -37,7 +38,9 @@ export function MainMenu() {
         </div>
 
         {panel === 'controls' && (
-          <div className="panel w-[min(560px,92vw)] p-6">
+          <div className="panel max-h-[80vh] w-[min(640px,92vw)] overflow-y-auto p-6">
+            <AccessibilityPanel />
+            <div className="mt-6" />
             <ControlsPanel />
             <button ref={first} data-nav data-nav-back className="pixel-button mt-6 w-full" onClick={() => setPanel('main')}>
               Back
@@ -71,7 +74,7 @@ export function MainMenu() {
               Load Game
             </button>
             <button data-nav className="pixel-button" onClick={() => setPanel('controls')}>
-              Controls
+              Options & Controls
             </button>
             <button data-nav className="pixel-button" onClick={() => setPanel('credits')}>
               Credits

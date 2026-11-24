@@ -1,16 +1,22 @@
-const ROWS: Array<[string, string, string]> = [
-  ['Move', 'WASD / Arrows', 'Left stick / D-pad'],
-  ['Run', 'Shift', 'B / RT'],
-  ['Talk / Interact', 'E / Space / Enter', 'A'],
-  ['Enter / exit vehicle', 'F', 'Y'],
-  ['Drive: accelerate / brake / steer', 'W / S / A D', 'Stick'],
-  ['Handbrake (drift)', 'Shift', 'B / RT'],
-  ['Advance dialogue', 'E / Space / Enter', 'A'],
-  ['Pause / menu (party, bag, index, save)', 'Esc', 'Start'],
-  ['Menus', 'Arrows + Enter, Esc = back', 'D-pad + A, B = back'],
-];
+import { type Settings, keyLabel, useSettings } from '../settings';
+
+function rows(s: Settings): Array<[string, string, string]> {
+  const k = (a: keyof Settings['bindings']) => keyLabel(s.bindings[a]);
+  return [
+    ['Move', `${k('up')}${k('left')}${k('down')}${k('right')} / Arrows`, 'Left stick / D-pad'],
+    ['Run', k('run'), 'B / RT'],
+    ['Talk / Interact', `${k('interact')} / Space / Enter`, 'A'],
+    ['Enter / exit vehicle', k('vehicle'), 'Y'],
+    ['Drive: accelerate / brake / steer', `${k('up')} / ${k('down')} / ${k('left')} ${k('right')}`, 'Stick'],
+    ['Handbrake (drift)', k('run'), 'B / RT'],
+    ['Advance dialogue', `${k('interact')} / Space / Enter`, 'A'],
+    ['Pause / menu (party, bag, index, save)', `${k('pause')}${k('pause') === 'Esc' ? '' : ' / Esc'}`, 'Start'],
+    ['Menus', 'Arrows + Enter, Esc = back', 'D-pad + A, B = back'],
+  ];
+}
 
 export function ControlsPanel() {
+  const settings = useSettings();
   return (
     <div>
       <h2 className="mb-4 font-pixel text-sm text-neon-yellow">Controls</h2>
@@ -23,7 +29,7 @@ export function ControlsPanel() {
           </tr>
         </thead>
         <tbody>
-          {ROWS.map(([action, kb, pad]) => (
+          {rows(settings).map(([action, kb, pad]) => (
             <tr key={action} className="border-t border-night-700">
               <td className="py-1 pr-4">{action}</td>
               <td className="py-1 pr-4 text-neon-cyan">{kb}</td>

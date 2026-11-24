@@ -3,12 +3,14 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import './index.css';
 import { applyDevQuickstart } from './devQuickstart';
+import { applyDocumentSettings } from './settings';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root missing');
 
 // Phaser text needs the pixel fonts to be ready before the first frame.
 applyDevQuickstart();
+applyDocumentSettings();
 
 // Offline play: the service worker caches the game after the first visit (production builds only).
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
