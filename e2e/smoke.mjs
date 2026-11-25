@@ -111,29 +111,30 @@ await sim(() => {
   sim.player.heading = Math.PI / 2;
   sim.progression.party[0].level = 12;
 });
-await page.waitForTimeout(150);
-await press('e');
-await dismissDialogues();
-await page.waitForTimeout(700);
+for (let i = 0; i < 8 && !(await sim(() => !!window.__NEON_WILDS__.sim.battle)); i++) {
+  await page.waitForTimeout(250);
+  await press('e');
+  await page.waitForTimeout(400);
+}
 await step('05-trainer-battle');
 assert(await sim(() => !!window.__NEON_WILDS__.sim.battle), 'trainer battle started');
 assert(await fightUntilOver(), 'trainer battle finished');
 await dismissDialogues();
 assert(await sim(() => window.__NEON_WILDS__.sim.progression.defeatedTrainers.includes('npc-aegis')), 'Aegis agent defeated');
 
-await goto('Saint Ottilie Free Clinic');
-await page.waitForTimeout(150);
-await press('e');
-await dismissDialogues();
+await visitUntil('Saint Ottilie Free Clinic', () => window.__NEON_WILDS__.sim.progression.missions[0].status === 'completed');
 assert(await sim(() => window.__NEON_WILDS__.sim.progression.missions[0].status === 'completed'), 'Last Run completed');
 
 // Procedural jobs: the Co-op board opens after Last Run.
-await goto('Vesper Courier Co-op');
-await page.waitForTimeout(150);
-await press('e');
-await page.waitForTimeout(300);
-await step('06a-job-board');
 const accept = page.getByRole('button', { name: 'Accept' }).first();
+for (let i = 0; i < 6 && !(await accept.isVisible().catch(() => false)); i++) {
+  await dismissDialogues();
+  await goto('Vesper Courier Co-op');
+  await page.waitForTimeout(250);
+  await press('e');
+  await accept.waitFor({ state: 'visible', timeout: 2000 }).catch(() => undefined);
+}
+await step('06a-job-board');
 assert(await accept.isVisible().catch(() => false), 'job board offers generated jobs');
 await accept.click();
 await page.waitForTimeout(200);
@@ -245,8 +246,13 @@ await page.keyboard.up('w');
 await step('11-driving');
 const after = await sim(() => ({ ...window.__NEON_WILDS__.sim.player }));
 assert(after.vehicleId && Math.hypot(after.x - before.x, after.y - before.y) > 1, 'stole a car and drove it');
+await page.keyboard.down('s');
 await page.waitForTimeout(1500);
-await press('f');
+await page.keyboard.up('s');
+for (let i = 0; i < 10 && !(await sim(() => window.__NEON_WILDS__.sim.player.vehicleId === null)); i++) {
+  await press('f');
+  await page.waitForTimeout(400);
+}
 assert(await sim(() => window.__NEON_WILDS__.sim.player.vehicleId === null), 'got out of the car');
 
 // Keyboard-only battle: no mouse, auto-advancing text.
