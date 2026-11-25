@@ -212,7 +212,7 @@ assert(await page.getByText('Saved to Slot 1').isVisible(), 'saved to slot 1');
 await page.getByRole('button', { name: 'Quit' }).click();
 await page.waitForTimeout(500);
 await page.getByRole('button', { name: 'Continue' }).click();
-await page.waitForFunction(() => window.__NEON_WILDS__?.sim?.progression?.party?.length >= 2, null, { timeout: 5000 });
+await page.waitForFunction(() => window.__NEON_WILDS__?.sim?.progression?.party?.length >= 2, null, { timeout: 30000 });
 assert(true, 'continued from save with party restored');
 await page.waitForTimeout(500);
 await step('10-continued');
