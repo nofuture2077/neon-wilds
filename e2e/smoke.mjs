@@ -167,12 +167,14 @@ for (let i = 0; i < 60; i++) {
   const snare = page.getByRole('button', { name: 'Snare' });
   if (await snare.isVisible().catch(() => false)) {
     await snare.click();
-    await page.waitForTimeout(250);
     const option = page.locator('.pixel-button').filter({ hasText: 'Snare' }).filter({ hasText: '×' }).first();
+    await option.waitFor({ state: 'visible', timeout: 3000 }).catch(() => undefined);
     if (await option.isVisible().catch(() => false)) await option.click();
+  } else if (await page.locator('.blink').count()) {
+    // Only advance text: pressing E on the action menu would pick Fight and knock it out.
+    await press('e');
   }
   await page.waitForTimeout(200);
-  await press('e', 2);
 }
 const captureState = await sim(() => {
   const { sim } = window.__NEON_WILDS__;
