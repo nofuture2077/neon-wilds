@@ -223,18 +223,24 @@ await sim(() => {
   // Park it on the longest road first, so there is room to drive.
   const roads = sim.roads;
   const longest = [...roads.edges].sort((a, b) => roads.edgeLength(b.id) - roads.edgeLength(a.id))[0];
-  const pose = roads.lane(longest.id, 6, true);
+  const pose = roads.lane(longest.id, roads.edgeLength(longest.id) / 2, true);
   car.x = car.prevX = pose.x;
   car.y = car.prevY = pose.y;
   car.heading = pose.heading;
+  car.speed = 0;
+  // A clear stretch of road ahead.
+  for (const v of sim.vehicles) if (v !== car && Math.hypot(v.x - pose.x, v.y - pose.y) < 25) v.x = v.prevX = v.x + 60;
   sim.player.x = sim.player.prevX = car.x;
   sim.player.y = sim.player.prevY = car.y + 1.2;
 });
-await page.waitForTimeout(200);
-await press('f');
+await dismissDialogues();
+for (let i = 0; i < 6 && !(await sim(() => !!window.__NEON_WILDS__.sim.player.vehicleId)); i++) {
+  await press('f');
+  await page.waitForTimeout(300);
+}
 const before = await sim(() => ({ ...window.__NEON_WILDS__.sim.player }));
 await page.keyboard.down('w');
-await page.waitForTimeout(900);
+await page.waitForTimeout(2000);
 await page.keyboard.up('w');
 await step('11-driving');
 const after = await sim(() => ({ ...window.__NEON_WILDS__.sim.player }));
