@@ -240,8 +240,13 @@ for (let i = 0; i < 6 && !(await sim(() => !!window.__NEON_WILDS__.sim.player.ve
   await page.waitForTimeout(300);
 }
 const before = await sim(() => ({ ...window.__NEON_WILDS__.sim.player }));
+// Hold the throttle until the car has moved: on a slow runner the simulation runs slower than real time.
 await page.keyboard.down('w');
-await page.waitForTimeout(2000);
+for (const until = Date.now() + 10_000; Date.now() < until; ) {
+  await page.waitForTimeout(250);
+  const p = await sim(() => window.__NEON_WILDS__.sim.player);
+  if (Math.hypot(p.x - before.x, p.y - before.y) > 2) break;
+}
 await page.keyboard.up('w');
 await step('11-driving');
 const after = await sim(() => ({ ...window.__NEON_WILDS__.sim.player }));
