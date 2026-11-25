@@ -85,13 +85,18 @@ await dismissDialogues();
 await step('03-world');
 assert(await page.getByText('Pick up the package').isVisible(), 'Last Run objective shown in HUD');
 
-await goto('Vesper Courier Co-op');
-await page.waitForTimeout(150);
-await press('e');
-await dismissDialogues();
-await goto('Halcyon Outreach Kiosk');
-await page.waitForTimeout(150);
-await press('e');
+// Story steps retry until their result shows up (CI runners can be much slower than a dev machine).
+const visitUntil = async (name, done) => {
+  for (let i = 0; i < 8 && !(await sim(done)); i++) {
+    await goto(name);
+    await page.waitForTimeout(250);
+    await press('e');
+    await dismissDialogues();
+    await page.waitForTimeout(300);
+  }
+};
+await visitUntil('Vesper Courier Co-op', () => (window.__NEON_WILDS__.sim.progression.missions.find((m) => m.id === 'last-run')?.objective ?? 0) >= 1);
+await visitUntil('Halcyon Outreach Kiosk', () => window.__NEON_WILDS__.sim.progression.party.length > 0);
 await step('04-hatch');
 await dismissDialogues();
 const party = await sim(() => window.__NEON_WILDS__.sim.progression.party.map((w) => w.speciesId));
