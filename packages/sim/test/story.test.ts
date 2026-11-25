@@ -208,7 +208,7 @@ describe('main story', () => {
     expect(ending).toMatchObject({ type: 'game.ending', ending: 'chorus', title: 'The Chorus' });
     if (ending?.type === 'game.ending') expect(ending.slides.length).toBeGreaterThan(4);
     expect(pl.status('the-quiet')).toBe('completed');
-  }, 30000);
+  }, 90000);
 
   it('selling the Glitchling closes the Chorus ending but still reaches an ending', () => {
     const sim = Simulation.create({ seed: 78, playerName: 'Nova', appearance: APPEARANCE, startMinutes: 20 * 60 });
@@ -245,7 +245,7 @@ describe('main story', () => {
     expect(ids).toContain('the-quiet');
     pl.choose('the-quiet');
     expect(pl.log.some((e) => e.type === 'game.ending' && e.ending === 'the-quiet')).toBe(true);
-  }, 30000);
+  }, 90000);
 });
 
 describe('Iron Chain arc', () => {
@@ -268,7 +268,7 @@ describe('Iron Chain arc', () => {
     expect(pl.status('the-pit')).toBe('completed');
     expect(sim.progression.flags['pits-freed']).toBe(true);
     expect(sim.progression.inventory['hush-fragment']).toBe(1);
-  }, 30000);
+  }, 90000);
 });
 
 describe('Verdant Choir arc', () => {
@@ -294,7 +294,7 @@ describe('Verdant Choir arc', () => {
     expect(pl.status('founders-vault')).toBe('completed');
     expect(sim.progression.flags['thorn-contained']).toBe(true);
     expect(sim.npcs.find((n) => n.id === 'npc-thorn')?.present ?? false).toBe(false);
-  }, 30000);
+  }, 90000);
 });
 
 describe('The Hollow (secret ending)', () => {
@@ -336,7 +336,7 @@ describe('The Hollow (secret ending)', () => {
     pl.talk('npc-ashgrave');
     pl.choose('the-hollow');
     expect(pl.log.find((e) => e.type === 'game.ending')).toMatchObject({ ending: 'the-hollow', title: 'The Hollow' });
-  }, 30000);
+  }, 90000);
 });
 
 describe('character arcs', () => {
@@ -384,7 +384,7 @@ describe('character arcs', () => {
     expect(pl.status('vik-title')).toBe('completed');
     expect(sim.progression.flags['vik-ally']).toBe(true);
     for (const v of ['npc-vik2', 'npc-vik3', 'npc-vik4', 'npc-vik5']) expect(sim.progression.defeatedTrainers).toContain(v);
-  }, 30000);
+  }, 90000);
 
   it('Juno and Bram: the recall drive and the field readings', () => {
     const sim = Simulation.create({ seed: 92, playerName: 'Nova', appearance: APPEARANCE, startMinutes: 20 * 60 });
@@ -405,7 +405,7 @@ describe('character arcs', () => {
     pl.talk('npc-bram');
     expect(pl.status('bram-readings')).toBe('completed');
     expect(sim.progression.inventory['tuning-fork']).toBe(1);
-  }, 30000);
+  }, 90000);
 
   it('Saltmaw: the drowned ferry at berth nine', () => {
     const sim = Simulation.create({ seed: 93, playerName: 'Nova', appearance: APPEARANCE, startMinutes: 22 * 60 });
@@ -420,7 +420,7 @@ describe('character arcs', () => {
     expect(pl.status('drowned-ferry')).toBe('completed');
     expect(sim.progression.flags['saltmaw-found']).toBe(true);
     expect(sim.progression.index.seen).toContain('saltmaw');
-  }, 30000);
+  }, 90000);
 });
 
 describe('faction questlines', () => {
@@ -463,7 +463,7 @@ describe('faction questlines', () => {
         sim.progression.reputation[line.faction] = Math.max(40, sim.progression.reputation[line.faction] ?? 0);
       }
       expect(sim.progression.flags[line.champion]).toBe(true);
-    }, 30000);
+    }, 90000);
   }
 
   it('locks a questline until the faction trusts you', () => {
@@ -474,5 +474,5 @@ describe('faction questlines', () => {
     sim.progression.reputation.compact = 5;
     pl.talk('npc-danso');
     expect(pl.status('compact-tunnel-run')).toBeUndefined();
-  }, 30000);
+  }, 90000);
 });

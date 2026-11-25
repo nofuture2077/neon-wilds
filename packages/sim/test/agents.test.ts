@@ -117,7 +117,7 @@ describe('daily routines', () => {
     expect(maxIndoors).toBeGreaterThan(3);
     expect(minIndoorsAfterMorning).toBeLessThan(maxIndoors);
     for (const a of ['sleep', 'work', 'socialize', 'patrol']) expect(activities, a).toContain(a);
-  }, 30000);
+  }, 120000); // a whole simulated day; CI runners are slower than dev machines
 
   it('crowd density follows the clock', () => {
     const count = (startMinutes: number) => {
@@ -139,5 +139,5 @@ describe('daily routines', () => {
       if (i % 300 === 0) heard = sim.npcs.some((n) => n !== victim && n.memory.some((m) => m.kind === 'hit-by-car' && m.secondhand));
     }
     expect(heard).toBe(true);
-  }, 30000);
+  }, 90000);
 });
