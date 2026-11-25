@@ -45,7 +45,7 @@ const goto = (name) =>
     for (const npc of sim.npcs) if (Math.hypot(npc.x - sim.player.x, npc.y - sim.player.y) < 3 && !npc.stationary) npc.x += 8;
   }, name);
 const fightUntilOver = async () => {
-  for (let i = 0; i < 80; i++) {
+  for (const until = Date.now() + 90_000; Date.now() < until; ) {
     const inBattle = await sim(() => !!document.querySelector('.bottom-52'));
     if (!inBattle) return true;
     const fight = page.getByRole('button', { name: 'Fight' });
@@ -161,7 +161,8 @@ await sim(() => {
   b.enemy.party[0].status = { kind: 'dazed', turns: 99, stacks: 1 };
   sim.progression.inventory['tin-snare'] = 30;
 });
-for (let i = 0; i < 60; i++) {
+// Time-based: on a slow CI runner the battle text types out slowly.
+for (const until = Date.now() + 60_000; Date.now() < until; ) {
   const inBattle = await sim(() => !!window.__NEON_WILDS__.sim.battle);
   if (!inBattle) break;
   const snare = page.getByRole('button', { name: 'Snare' });
@@ -252,7 +253,7 @@ await sim(() => {
 });
 await page.waitForTimeout(400);
 let keyboardTurns = 0;
-for (let round = 0; round < 10 && (await sim(() => !!window.__NEON_WILDS__.sim.battle)); round++) {
+for (let round = 0; round < 25 && (await sim(() => !!window.__NEON_WILDS__.sim.battle)); round++) {
   await page.waitForTimeout(2400);
   await page.keyboard.press('Enter');
   await page.waitForTimeout(400);
