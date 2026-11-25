@@ -32,9 +32,17 @@ export class WildlingViews {
       }
       const x = (w.prevX + (w.x - w.prevX) * alpha) * TILE_SIZE;
       const y = (w.prevY + (w.y - w.prevY) * alpha) * TILE_SIZE;
-      v.sprite.setPosition(Math.round(x), Math.round(y - 4)).setFlipX(w.facingLeft);
-      v.shadow.setPosition(x, y + 3);
       const asleep = w.mode === 'sleep';
+      const moving = w.speed > 0.2;
+      // Moving Wildlings hop, idle ones breathe, sleeping ones breathe slowly, chargers tremble.
+      const hop = moving ? Math.abs(Math.sin(v.animTime * Math.PI)) * 2.5 : 0;
+      const breathe = Math.sin(now / (asleep ? 700 : 320) + v.animTime) * (asleep ? 0.05 : 0.03);
+      const tremble = w.mode === 'charge' ? Math.sin(now / 25) * 0.8 : 0;
+      v.sprite
+        .setPosition(Math.round(x + tremble), Math.round(y - 4 - hop))
+        .setFlipX(w.facingLeft)
+        .setScale(moving ? 1 + hop * 0.02 : 1 - breathe * 0.5, moving ? 1 - hop * 0.015 : 1 + breathe);
+      v.shadow.setPosition(x, y + 3).setScale(0.8 - hop * 0.05);
       v.sprite.setTint(asleep ? 0x9a9ad0 : 0xffffff);
       if (w.speed > 0.2) v.animTime += deltaSeconds * (w.speed * 2.5);
       else v.animTime += deltaSeconds * 1.2;

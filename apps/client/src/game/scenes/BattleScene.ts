@@ -33,6 +33,7 @@ export class BattleScene extends Phaser.Scene {
   private unsubscribe: (() => void) | null = null;
   private backdrop!: Phaser.GameObjects.Graphics;
   private glows: Phaser.GameObjects.Image[] = [];
+  private foeBreath: Phaser.Tweens.Tween | null = null;
 
   constructor() {
     super('battle');
@@ -51,6 +52,11 @@ export class BattleScene extends Phaser.Scene {
     this.mine.setAlpha(0).setX(this.mine.x - 200);
     this.tweens.add({ targets: this.mine, alpha: 1, x: this.minePos().x, duration: 450, ease: 'Cubic.out' });
 
+    // Idle breathing on the battle stage (scaleY only, so attack tweens on x/y stay free).
+    const breathe = (s: Phaser.GameObjects.Sprite, delay: number) =>
+      this.tweens.add({ targets: s, scaleY: this.scaleFactor * 1.035, duration: 900, delay: 500 + delay, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    breathe(this.mine, 0);
+    this.foeBreath = breathe(this.foe, 400);
     this.unsubscribe = onBattleFx((e) => this.fx(e));
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -215,6 +221,7 @@ export class BattleScene extends Phaser.Scene {
         this.pulse(this.spriteOf(e.side), 0x4fffb0);
         break;
       case 'throw': {
+        this.foeBreath?.pause();
         const from = this.minePos();
         const to = this.foePos();
         this.snare?.destroy();
@@ -248,7 +255,8 @@ export class BattleScene extends Phaser.Scene {
             this.snare.destroy();
           }
           this.snare = null;
-          this.tweens.killTweensOf(this.foe);
+          this.foeBreath?.resume();
+          this.tweens.getTweensOf(this.foe).filter((t) => t !== this.foeBreath).forEach((t) => t.remove());
           this.foe.setScale(this.scaleFactor).setAlpha(1).setPosition(this.foePos().x, this.foePos().y);
           this.burst(this.foe.x, this.foe.y, 0xff3fa4);
         }

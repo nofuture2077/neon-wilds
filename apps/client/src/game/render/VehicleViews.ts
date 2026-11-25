@@ -21,6 +21,9 @@ export class VehicleViews {
   private readonly views = new Map<string, View>();
   private readonly pool: View[] = [];
   private readonly puffs: Phaser.GameObjects.Image[] = [];
+  /** Tyre marks left by drifting and hard braking, recycled oldest-first. */
+  private readonly skids: Array<{ mark: Phaser.GameObjects.Rectangle; age: number }> = [];
+  private skidNext = 0;
 
   constructor(private readonly scene: Phaser.Scene) {}
 
@@ -65,6 +68,12 @@ export class VehicleViews {
       const sirenOn = v.classId === 'cruiser' && v.driver === 'police';
       view.siren.setPosition(x, y).setVisible(sirenOn).setTint(Math.floor(now / 180) % 2 ? 0xff3b3b : 0x3b6bff);
 
+      // Drifting or braking hard leaves tyre marks at the rear wheels.
+      const lateral = -v.vx * fy + v.vy * fx;
+      if (occupied && Math.abs(v.speed) > 3 && (Math.abs(lateral) > 2.2 || (v.braking && Math.abs(v.speed) > 6))) {
+        for (const side of [-1, 1]) this.skid(x - fx * half * 0.7 - fy * side * 4, y - fy * half * 0.7 + fx * side * 4, rot);
+      }
+
       const damaged = v.hp / vehicleClass(v).hp < 0.35 && !v.exploded;
       view.smokeTimer -= deltaMs;
       if ((damaged || (wrecked && !v.exploded)) && view.smokeTimer <= 0) {
@@ -72,11 +81,24 @@ export class VehicleViews {
         this.puff(x + fx * half * 0.6, y + fy * half * 0.6, wrecked ? 0x2a2622 : 0x777788);
       }
     }
+    for (const s of this.skids) {
+      if (s.age > 6000) continue;
+      s.age += deltaMs;
+      s.mark.setAlpha(Math.max(0, 0.35 * (1 - s.age / 6000)));
+    }
     for (const [id, view] of this.views) {
       if (alive.has(id)) continue;
       this.release(view);
       this.views.delete(id);
     }
+  }
+
+  private skid(x: number, y: number, rot: number): void {
+    if (this.skids.length < 400) this.skids.push({ mark: this.scene.add.rectangle(0, 0, 2, 3, 0x0a0810).setDepth(Depth.ground + 1), age: 0 });
+    const s = this.skids[this.skidNext % this.skids.length]!;
+    this.skidNext++;
+    s.age = 0;
+    s.mark.setPosition(x, y).setRotation(rot).setAlpha(0.35);
   }
 
   private puff(x: number, y: number, tint: number): void {

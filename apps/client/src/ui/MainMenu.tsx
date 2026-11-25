@@ -91,6 +91,7 @@ function Credits() {
   return (
     <div className="flex flex-col gap-3 font-term text-xl text-slate-300">
       <h2 className="font-pixel text-sm text-neon-yellow">Credits</h2>
+      <p className="text-neon-pink">God prompt by NoFuture. Built by Claude.</p>
       <p>
         NEON WILDS: an original creature RPG set in Vesper City. Every character, creature, place, sprite, line of text and note of music is original, made for this game.
       </p>
