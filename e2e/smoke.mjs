@@ -153,7 +153,7 @@ await sim(() => {
 await page.waitForTimeout(700);
 await step('06-wild-battle');
 assert(await sim(() => window.__NEON_WILDS__.sim.battle?.kind === 'wild'), 'wild battle started');
-await press('e');
+// Weaken it before any input: an early E could pick Fight and knock it out.
 await sim(() => {
   const { sim } = window.__NEON_WILDS__;
   const b = sim.battle;
