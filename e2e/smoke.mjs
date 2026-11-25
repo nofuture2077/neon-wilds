@@ -245,6 +245,10 @@ await page.waitForTimeout(2000);
 await page.keyboard.up('w');
 await step('11-driving');
 const after = await sim(() => ({ ...window.__NEON_WILDS__.sim.player }));
+if (!(after.vehicleId && Math.hypot(after.x - before.x, after.y - before.y) > 1)) {
+  await step('fail-drive');
+  console.error('drive diagnostics:', JSON.stringify({ before: { x: before.x, y: before.y, v: before.vehicleId }, after: { x: after.x, y: after.y, v: after.vehicleId }, paused: await sim(() => document.body.innerText.includes('Paused')) }));
+}
 assert(after.vehicleId && Math.hypot(after.x - before.x, after.y - before.y) > 1, 'stole a car and drove it');
 await page.keyboard.down('s');
 await page.waitForTimeout(1500);
