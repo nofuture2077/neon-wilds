@@ -188,6 +188,7 @@ const caught = await sim(() => window.__NEON_WILDS__.sim.progression.index.caugh
 if (caught < 2) {
   await step('fail-capture');
   console.error('capture diagnostics:', JSON.stringify(captureState));
+  console.error('page errors so far:', errors.slice(0, 5));
 }
 assert(caught >= 2, `captured a wild Wildling (${caught} species caught)`);
 
