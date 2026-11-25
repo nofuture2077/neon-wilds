@@ -305,6 +305,8 @@ function pump(set: (p: Partial<GameStore>) => void, get: () => GameStore): void 
     switch (e.t) {
       case 'text':
         message = e.text;
+        // "X used Y!" and its attack animation belong together: play the move's effect with its line.
+        while (queue[0]?.t === 'use') emitBattleFx(queue.shift()!);
         break;
       case 'damage':
       case 'heal':

@@ -278,7 +278,7 @@ export class WorldScene extends Phaser.Scene {
 
     const weather = this.sim.world.weather;
     const gloom = weather === 'storm' ? 0.18 : weather === 'rain' ? 0.1 : weather === 'drizzle' ? 0.04 : 0;
-    this.lighting.update(darkness, this.time.now, gloom, this.sim.world.event?.id === 'blackout');
+    this.lighting.update(darkness, this.time.now, gloom, this.sim.world.event?.id === 'blackout', this.weatherViews.wetness);
     this.weatherViews.update(weather, deltaSeconds * 1000, this.time.now);
     this.vignetteViews.update(this.sim.hour);
     this.culler.update();

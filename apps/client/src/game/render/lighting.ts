@@ -76,7 +76,9 @@ export class Lighting {
   }
 
   /** `gloom` darkens for weather; during a blackout the grid (neon, lamps, most windows) goes dark. */
-  update(darkness: number, timeMs: number, gloom = 0, blackout = false): void {
+  update(darkness: number, timeMs: number, gloom = 0, blackout = false, wetness = 0): void {
+    // On wet streets, lights stretch into vertical reflections.
+    const stretch = 1 + wetness * 0.55;
     this.overlay.setAlpha(Math.min(0.75, darkness * 0.42 + gloom + (blackout ? 0.18 : 0)));
     const t = timeMs / 1000;
     for (const l of this.lights) {
@@ -92,6 +94,11 @@ export class Lighting {
         if (s > 1 - l.flicker) a *= 0.25;
       }
       l.image.setAlpha(a);
+      if (l.category !== 'window') {
+        // The reflection runs down the wet street below the light.
+        l.image.scaleY = l.image.scaleX * stretch;
+        l.image.setOrigin(0.5, 0.5 - wetness * 0.12);
+      }
     }
   }
 }

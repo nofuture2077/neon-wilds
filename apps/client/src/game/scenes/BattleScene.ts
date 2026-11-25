@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import { playBattleSfx } from '../../audio/eventSfx';
 import { flash, shake } from '../cameraFx';
-import { ELEMENT_COLORS, type BattleLog, type ElementType, type StatusKind } from '@neon-wilds/sim';
+import { type BattleLog, type ElementType, type StatusKind } from '@neon-wilds/sim';
 import { useGameStore } from '../../state/gameStore';
 import { TEXTURES } from '../assets/manifest';
 import { onBattleFx } from '../battleFx';
+import { playElementFx, playStatusFx } from '../elementFx';
 
 const STATUS_TINT: Record<StatusKind, number> = {
   shorted: 0xffd23f,
@@ -172,7 +173,7 @@ export class BattleScene extends Phaser.Scene {
         const dir = e.side === 'player' ? 1 : -1;
         this.tweens.add({ targets: s, x: this.home(e.side).x + dir * 40, duration: 110, yoyo: true, ease: 'Quad.out' });
         const target = this.spriteOf(e.side === 'player' ? 'enemy' : 'player');
-        this.burst(target.x, target.y, ELEMENT_COLORS[e.type as ElementType] ?? 0xffffff);
+        playElementFx(this, e.type as ElementType, { x: s.x, y: s.y }, { x: target.x, y: target.y });
         break;
       }
       case 'damage': {
@@ -204,7 +205,11 @@ export class BattleScene extends Phaser.Scene {
         break;
       }
       case 'status':
-        if (e.status) this.pulse(this.spriteOf(e.side), STATUS_TINT[e.status]);
+        if (e.status) {
+          const s = this.spriteOf(e.side);
+          this.pulse(s, STATUS_TINT[e.status]);
+          playStatusFx(this, e.status, { x: s.x, y: s.y });
+        }
         break;
       case 'heal':
         this.pulse(this.spriteOf(e.side), 0x4fffb0);
